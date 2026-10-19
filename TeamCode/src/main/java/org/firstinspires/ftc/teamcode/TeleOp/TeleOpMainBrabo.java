@@ -4,6 +4,7 @@
     import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
     import org.firstinspires.ftc.teamcode.subsystems.Drive.Drive;
+    import org.firstinspires.ftc.teamcode.subsystems.Drive.DriveField;
     import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Flywheel;
     import org.firstinspires.ftc.teamcode.subsystems.Intake.Intake;
     import org.firstinspires.ftc.teamcode.subsystems.Trigger.Trigger;
@@ -14,14 +15,14 @@
 
         private static final double FLYWHEEL_TARGET_RPM = 2800;
 
-        private Drive drive;
+        private DriveField drive;
         private Intake intake;
         private Flywheel flywheel;
         private Trigger trigger;
 
         @Override
         public void runOpMode() {
-            drive = new Drive(hardwareMap, telemetry);
+            drive = new DriveField(hardwareMap, telemetry);
             intake = new Intake(hardwareMap, telemetry);
             flywheel = new Flywheel(hardwareMap, telemetry);
             trigger = new Trigger(hardwareMap, telemetry);

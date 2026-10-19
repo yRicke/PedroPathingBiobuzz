@@ -2,8 +2,6 @@ package org.firstinspires.ftc.teamcode.subsystems.Trigger;
 
 import androidx.annotation.NonNull;
 
-import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
-import com.acmerobotics.roadrunner.Action;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 
@@ -15,7 +13,7 @@ public class Trigger {
 
     private Telemetry telemetry;
 
-    public final double TRIGGER_OPEN_POSITION = 1.0; // Posição aberta do gatilho
+    public final double TRIGGER_OPEN_POSITION = 0.7; // Posição aberta do gatilho
     public final double TRIGGER_CLOSED_POSITION = 0.0; // Posição fechada do gatilho
 
     // Construtor recebe o hardwareMap e telemetry do OpMode
@@ -46,34 +44,5 @@ public class Trigger {
         double servoPosition = trigger.getPosition();
         telemetry.addData("Trigger State", servoPosition == TRIGGER_CLOSED_POSITION ? "Closed" : "Open");
         telemetry.addData("Trigger Position", servoPosition);
-    }
-
-    public Action triggerOpen() {
-        return new Action() {
-            private boolean initialized = false;
-
-            @Override
-            public boolean run(@NonNull TelemetryPacket packet) {
-                if (!initialized) {
-                    setTriggerOpen();
-                    initialized = true;
-                }
-                return false;
-            }
-        };
-    }
-    public Action triggerClosed() {
-        return new Action() {
-            private boolean initialized = false;
-
-            @Override
-            public boolean run(@NonNull TelemetryPacket packet) {
-                if (!initialized) {
-                    setTriggerClosed();
-                    initialized = true;
-                }
-                return false;
-            }
-        };
     }
 }

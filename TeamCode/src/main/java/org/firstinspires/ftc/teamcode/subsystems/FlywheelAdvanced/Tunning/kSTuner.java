@@ -9,7 +9,7 @@ import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Flywheel;
 public class kSTuner extends OpMode {
     private Flywheel flywheel;
 
-    public static double kS = 0.043;
+    public static double kS = 0.087;
 
     double[] increments = {0.000001, 0.00001, 0.0001, 0.001, 0.01};
     int incrementIdx = 4; // Passo inicial: 0.01
@@ -21,9 +21,9 @@ public class kSTuner extends OpMode {
 
     @Override
     public void loop() {
-        if (gamepad1.dpadRightWasPressed() && incrementIdx < 4) {
+        if (gamepad1.dpadLeftWasPressed() && incrementIdx < 4) {
             incrementIdx++;
-        } else if (gamepad1.dpadLeftWasPressed() && incrementIdx > 0) {
+        } else if (gamepad1.dpadRightWasPressed() && incrementIdx > 0) {
             incrementIdx--;
         }
 

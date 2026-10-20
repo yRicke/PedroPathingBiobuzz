@@ -9,11 +9,11 @@ import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Flywheel;
 public class kVTuner extends OpMode {
     private Flywheel flywheel;
 
-    public static double kV = 0.000146;
-    public double kS = 0.043;
+    public static double kV = 0.0001476;
+    public double kS = 0.087;
     public double goalRPM = 2800;
 
-    double[] increments = {0.000001, 0.00001, 0.0001, 0.001, 0.01};
+    double[] increments = {0.00000001,0.0000001,0.000001, 0.00001, 0.0001, 0.001, 0.01};
     int incrementIdx = 4; // Passo inicial: 0.01
 
     @Override
@@ -23,9 +23,9 @@ public class kVTuner extends OpMode {
 
     @Override
     public void loop() {
-        if (gamepad1.dpadRightWasPressed() && incrementIdx < 4) {
+        if (gamepad1.dpadLeftWasPressed() && incrementIdx < 4) {
             incrementIdx++;
-        } else if (gamepad1.dpadLeftWasPressed() && incrementIdx > 0) {
+        } else if (gamepad1.dpadRightWasPressed() && incrementIdx > 0) {
             incrementIdx--;
         }
 
@@ -45,8 +45,8 @@ public class kVTuner extends OpMode {
         double power = (kV * goalRPM) + kS;
         flywheel.setMotorPower(power);
 
-        telemetry.addData("Step", "%.6f", currentStep);
-        telemetry.addData("kV", "%.6f", kV);
+        telemetry.addData("Step", "%.8f", currentStep);
+        telemetry.addData("kV", "%.8f", kV);
         telemetry.addData("Target RPM", goalRPM);
         telemetry.addData("RPM", flywheel.getRPM());
         telemetry.addData("Ticks per Sec", flywheel.getTicksPerSec());

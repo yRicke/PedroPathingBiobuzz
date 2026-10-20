@@ -24,11 +24,14 @@ public class Intake {
     }
 
     // Recolhe continuamente e inverte os motores quando solicitado.
-    public void run(boolean eject) {
-        if (eject) {
-            eject();
-        } else {
+    public void run(boolean a, boolean b,boolean eject) {
+        if (a) {
             onMotor();
+        } else if (b) {
+            offMotor();
+        } else if (eject) {
+            eject();
+
         }
     }
 

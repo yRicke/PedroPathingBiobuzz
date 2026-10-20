@@ -9,9 +9,9 @@ import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Flywheel;
 public class kPTuner extends OpMode {
     private Flywheel flywheel;
 
-    public static double kV = 0.000146;
-    public double kS = 0.043;
-    public double kP = 0.0021;
+    public static double kV = 0.0001476;
+    public double kS = 0.087;
+    public double kP = 0.00065;
     public double goalRPM = 2800;
 
     double[] increments = {0.000001, 0.00001, 0.0001, 0.001, 0.01};
@@ -24,9 +24,9 @@ public class kPTuner extends OpMode {
 
     @Override
     public void loop() {
-        if (gamepad1.dpadRightWasPressed() && incrementIdx < 4) {
+        if (gamepad1.dpadLeftWasPressed() && incrementIdx < 4) {
             incrementIdx++;
-        } else if (gamepad1.dpadLeftWasPressed() && incrementIdx > 0) {
+        } else if (gamepad1.dpadRightWasPressed() && incrementIdx > 0) {
             incrementIdx--;
         }
 
@@ -49,8 +49,8 @@ public class kPTuner extends OpMode {
 
         flywheel.setMotorPower(feedForward + feedBack);
 
-        telemetry.addData("Step", "%.6f", currentStep);
-        telemetry.addData("kP", "%.6f", kP);
+        telemetry.addData("Step", "%.8f", currentStep);
+        telemetry.addData("kP", "%.8f", kP);
         telemetry.addData("Target RPM", goalRPM);
         telemetry.addData("Error", error);
         telemetry.addData("RPM", flywheel.getRPM());

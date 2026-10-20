@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.subsystems.Intake;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
@@ -18,9 +19,9 @@ public class Intake {
     public Intake(HardwareMap hardwareMap, Telemetry telemetry) {
         this.telemetry = telemetry;
         intakeMotorOne = hardwareMap.get(DcMotorEx.class, "intake_motor_one");
-        intakeMotorOne.setDirection(DcMotor.Direction.FORWARD);
+        intakeMotorOne.setDirection(DcMotor.Direction.REVERSE);
         intakeMotorTwo = hardwareMap.get(DcMotorEx.class, "intake_motor_two");
-        intakeMotorTwo.setDirection(DcMotor.Direction.FORWARD);
+        intakeMotorTwo.setDirection(DcMotor.Direction.REVERSE);
     }
 
     // Recolhe continuamente e inverte os motores quando solicitado.
@@ -37,7 +38,7 @@ public class Intake {
 
     public void onMotor(){
         intakeMotorOne.setPower(intakeMaxPower);
-        intakeMotorTwo.setPower(intakeMaxPower);
+        intakeMotorTwo.setPower(0.7);
     }
     public void offMotor(){
         intakeMotorOne.setPower(0);

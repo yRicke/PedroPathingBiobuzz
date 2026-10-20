@@ -35,7 +35,7 @@ public class Intake {
 
     public void onMotor(){
         intakeMotorOne.setPower(intakeMaxPower);
-        intakeMotorTwo.setPower(intakeMaxPower);
+        intakeMotorTwo.setPower(0.7);
     }
     public void offMotor(){
         intakeMotorOne.setPower(0);

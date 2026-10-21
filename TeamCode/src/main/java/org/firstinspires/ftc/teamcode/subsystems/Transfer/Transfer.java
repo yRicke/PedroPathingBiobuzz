@@ -9,7 +9,7 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 public class Transfer {
 
     private DcMotorEx transferMotor;
-    private double transferMaxPower = 0.7;
+    private double transferMaxPower = 1;
 
     private Telemetry telemetry;
 
@@ -22,8 +22,14 @@ public class Transfer {
     }
 
     // Mantem o motor ligado somente enquanto o gatilho estiver pressionado.
-    public void run(boolean rightTrigger) {
-        if (rightTrigger) {
+    public void run(boolean on) {
+        run(on, false);
+    }
+
+    public void run(boolean on, boolean eject) {
+        if (eject) {
+            eject();
+        } else if (on) {
             onMotor();
         } else {
             offMotor();
@@ -36,6 +42,10 @@ public class Transfer {
 
     public void offMotor() {
         transferMotor.setPower(0);
+    }
+
+    public void eject() {
+        transferMotor.setPower(-transferMaxPower);
     }
 
     public void sendTelemetry() {

@@ -16,7 +16,7 @@ public class TransferTest extends LinearOpMode {
         waitForStart();
         try {
             while (opModeIsActive()) {
-                transfer.run(gamepad1.right_trigger > 0);
+                transfer.run(gamepad1.right_trigger > 0, gamepad1.left_bumper);
                 transfer.sendTelemetry();
                 telemetry.update();
             }

@@ -8,6 +8,7 @@
     import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Flywheel;
     import org.firstinspires.ftc.teamcode.subsystems.Intake.Intake;
     import org.firstinspires.ftc.teamcode.subsystems.Trigger.Trigger;
+    import org.firstinspires.ftc.teamcode.subsystems.Transfer.Transfer;
 
     @TeleOp(name="TeleOpMainBrabo", group="TeleOpMode")
 
@@ -19,6 +20,7 @@
         private Intake intake;
         private Flywheel flywheel;
         private Trigger trigger;
+        private Transfer transfer;
 
         @Override
         public void runOpMode() {
@@ -26,6 +28,7 @@
             intake = new Intake(hardwareMap, telemetry);
             flywheel = new Flywheel(hardwareMap, telemetry);
             trigger = new Trigger(hardwareMap, telemetry);
+            transfer = new Transfer(hardwareMap, telemetry);
 
             telemetry.addLine("Status: Inicializado");
             telemetry.update();
@@ -40,6 +43,7 @@
                     intake.run(gamepad1.a, gamepad1.left_bumper);
                     flywheel.run(FLYWHEEL_TARGET_RPM);
                     trigger.run(gamepad1.right_trigger > 0);
+                    transfer.run(gamepad1.left_bumper);
                     // Telemetry Organizado
                     drive.sendTelemetry();
                     intake.sendTelemetry();

@@ -31,7 +31,7 @@ public class Flywheel {
 
     public void setMotorPower(double power) {
         motor_one.setPower(power);
-        motor_two.setPower(power);
+        motor_two.setPower(-power);
     }
 
     public void stopMotors() {

@@ -13,16 +13,16 @@
 
     public class TeleOpMainBrabo extends LinearOpMode {
 
-        private static final double FLYWHEEL_TARGET_RPM = 2800;
+        private static final double FLYWHEEL_TARGET_RPM = 2700;
 
-        private DriveField drive;
+        private Drive drive;
         private Intake intake;
         private Flywheel flywheel;
         private Trigger trigger;
 
         @Override
         public void runOpMode() {
-            drive = new DriveField(hardwareMap, telemetry);
+            drive = new Drive(hardwareMap, telemetry);
             intake = new Intake(hardwareMap, telemetry);
             flywheel = new Flywheel(hardwareMap, telemetry);
             trigger = new Trigger(hardwareMap, telemetry);
@@ -36,7 +36,7 @@
                 while (opModeIsActive()) {
 
                     //Subsistemas
-                    drive.run(gamepad1.left_stick_y, -gamepad1.left_stick_x, gamepad1.right_stick_x, gamepad1.left_trigger > 0, gamepad2.right_stick_x);
+                    drive.run(-gamepad1.left_stick_y,-gamepad1.left_stick_x, gamepad1.right_stick_x, gamepad1.left_trigger > 0, gamepad2.right_stick_x);
                     intake.run(gamepad1.a, gamepad1.b,gamepad1.left_bumper);
                     flywheel.run(FLYWHEEL_TARGET_RPM);
                     trigger.run(gamepad1.right_trigger > 0);

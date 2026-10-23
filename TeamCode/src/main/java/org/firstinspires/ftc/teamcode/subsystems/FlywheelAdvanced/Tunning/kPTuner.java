@@ -11,7 +11,7 @@ public class kPTuner extends OpMode {
 
     public static double kV = 0.0001476;
     public double kS = 0.078;
-    public double kP = 0.00065;
+    public double kP = 0.00059;
     public double goalRPM = 2800;
 
     double[] increments = {0.000001, 0.00001, 0.0001, 0.001, 0.01};

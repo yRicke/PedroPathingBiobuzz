@@ -34,7 +34,7 @@ public class PedroDrive {
 
     public void run(double axial, double lateral, double yaw, boolean precisionMode) {
         if (aimPose != null) {
-            // Soltar o gatilho cancela o alvo de giro, inclusive com sticks neutros.
+            // Sair da mira cancela o alvo de giro, inclusive com sticks neutros.
             follower.hold(follower.pose());
             aimPose = null;
         }

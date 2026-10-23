@@ -39,14 +39,15 @@ A seleção é feita por `limelight.run(gamepad1.dpad_left, gamepad1.dpad_right)
 
 - D-pad esquerdo seleciona **39**; direito seleciona **43**. A seleção inicial é 43.
 - A seleção permanece ao soltar o D-pad; pressionar os dois lados mantém a anterior.
-- Segurar o **right trigger do gamepad 1** ativa **mira e disparo juntos**.
+- Segurar o **right bumper do gamepad 1** ativa a **busca e a mira**.
   O Pedro captura X/Y, ignora os sticks da base durante a mira e altera apenas
   o heading para centralizar a tag selecionada, com tolerância inicial de 1 grau.
 - Sem enxergar essa tag, busca com giro lento, inicialmente horário. Depois de
   detectar a tag, a busca segue a direção do último erro observado.
+- O **right trigger do gamepad 1** aciona o disparo, independentemente da mira.
 - Desconexão, pipeline incorreta e imagens antigas/congeladas interrompem a busca
   e mantêm a pose. O disparo continua obedecendo ao gatilho, inclusive sem visão.
-- Soltar o gatilho cancela o alvo de rotação e devolve o drive field-centric.
+- Soltar o right bumper cancela o alvo de rotação e devolve o drive field-centric.
 
 O subsistema usa o erro horizontal da tag selecionada sem deslocamento do
 crosshair. A montagem invertida corrige esse sinal no código. A opção de
@@ -58,7 +59,7 @@ congelado são rejeitados. O limite de correção inicial é de 8 graus por imag
 Para o teste físico, selecione cada tag pelo D-pad e observe `AprilTag selecionada`
 e `AprilTag erro horizontal (deg)` na telemetria. Com a tag deslocada para a direita,
 o robô deve girar para a direita e reduzir o erro até perto de zero. Confira esse
-sentido também na montagem invertida. Segure o gatilho para verificar a manutenção
+sentido também na montagem invertida. Segure o right bumper para verificar a manutenção
 de X/Y e o acompanhamento do alvo; solte para conferir a retomada pelos sticks.
 A telemetria `Mira` distingue busca, centralização, alinhamento e ausência de visão.
 

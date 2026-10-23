@@ -46,7 +46,8 @@
             telemetry.addLine("Drive: Pedro field-centric com hold automatico");
             telemetry.addLine("Frente do campo: orientacao do robo ao apertar Play");
             telemetry.addLine("D-pad: esquerda tag 39 / direita tag 43");
-            telemetry.addLine("Right trigger: mirar e disparar enquanto pressionado");
+            telemetry.addLine("Right bumper: buscar e manter AprilTag centralizada");
+            telemetry.addLine("Right trigger: disparar");
             telemetry.update();
 
             try {
@@ -62,8 +63,9 @@
 
                     //Subsistemas
                     limelight.run(gamepad1.dpad_left, gamepad1.dpad_right);
-                    boolean aimAndShoot = gamepad1.right_trigger > 0;
-                    if (aimAndShoot) {
+                    boolean aimRequested = gamepad1.right_bumper;
+                    boolean shootRequested = gamepad1.right_trigger > 0;
+                    if (aimRequested) {
                         drive.aim(limelight.getObservation());
                     } else {
                         drive.run(-gamepad1.left_stick_y, gamepad1.left_stick_x,
@@ -71,8 +73,8 @@
                     }
                     intake.run(gamepad1.a, gamepad1.left_bumper);
                     flywheel.run(FLYWHEEL_TARGET_RPM);
-                    transfer.run(aimAndShoot, gamepad1.left_bumper);
-                    trigger.run(aimAndShoot);
+                    transfer.run(shootRequested, gamepad1.left_bumper);
+                    trigger.run(shootRequested);
                     // Telemetry Organizado
                     drive.sendTelemetry();
                     limelight.sendTelemetry();

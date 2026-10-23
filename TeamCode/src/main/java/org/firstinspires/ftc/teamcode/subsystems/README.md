@@ -10,7 +10,7 @@ Os grupos no Driver Station seguem o nome do subsistema.
 | `Drive/` | `Drive`, `DriveField`, `PedroDrive` | `Drive` |
 | `FlywheelAdvanced/` | `Flywheel` | `Flywheel` |
 | `Intake/` | `Intake` | `Intake` |
-| `Limelight/` | `Limelight`, `AprilTagObservation` | Integrado ao TeleOp |
+| `Limelight/` | `Limelight`, `AprilTagObservation`, `HiveCenterEstimator` | Integrado ao TeleOp |
 | `Launcher/` | `LauncherPower`, `LauncherVelocity`, `LauncherPIDado` | `Launcher` |
 | `Trigger/` | `Trigger` | `Trigger` |
 | `Voltage/` | `Voltage` | `Voltage` |
@@ -32,32 +32,58 @@ a posição em polegadas e o heading em graus.
 No `TeleOpMainTransferTest`, configure `LIMELIGHT_UPSIDE_DOWN` como `false`
 para montagem normal ou `true` para a câmera fisicamente de cabeça para baixo.
 Configure o dispositivo como `limelight` no Robot Controller e prepare uma
-pipeline **AprilTag** com os IDs 39 e 43 habilitados. O índice padrão é **0**,
-alterável em `LIMELIGHT_PIPELINE` no TeleOp.
+pipeline **AprilTag 36h11** com os IDs **38 a 45** habilitados. O índice fica
+em `LIMELIGHT_PIPELINE` no TeleOp. Ative **Full3D** nas opções avançadas e configure
+o tamanho da tag como **3,25 polegadas (82,55 mm)**. A pose 3D individual é necessária
+para estimar o centro e a distância, conforme a
+[API oficial da Limelight para FTC](https://docs.limelightvision.io/docs/docs-limelight/apis/ftc-programming).
 
 A seleção é feita por `limelight.run(gamepad1.dpad_left, gamepad1.dpad_right)`:
 
-- D-pad esquerdo seleciona **39**; direito seleciona **43**. A seleção inicial é 43.
+- D-pad esquerdo seleciona o hive **38, 39, 40, 41**; direito seleciona
+  **42, 43, 44, 45**. O hive direito é a seleção inicial.
 - A seleção permanece ao soltar o D-pad; pressionar os dois lados mantém a anterior.
 - Segurar o **right bumper do gamepad 1** ativa a **busca e a mira**.
   O Pedro captura X/Y, ignora os sticks da base durante a mira e altera apenas
-  o heading para centralizar a tag selecionada, com tolerância inicial de 1 grau.
-- Sem enxergar essa tag, busca com giro lento, inicialmente horário. Depois de
-  detectar a tag, a busca segue a direção do último erro observado.
+  o heading para mirar no **centro estimado do hive**, com tolerância inicial de 1 grau.
+- Basta enxergar **uma** das quatro tags do lado selecionado. Sem enxergar nenhuma,
+  busca com giro lento, inicialmente horário. Depois de detectar o hive, a busca
+  segue a direção do último erro observado.
 - O **right trigger do gamepad 1** aciona o disparo, independentemente da mira.
 - Desconexão, pipeline incorreta e imagens antigas/congeladas interrompem a busca
   e mantêm a pose. O disparo continua obedecendo ao gatilho, inclusive sem visão.
 - Soltar o right bumper cancela o alvo de rotação e devolve o drive field-centric.
 
-O subsistema usa o erro horizontal da tag selecionada sem deslocamento do
-crosshair. A montagem invertida corrige esse sinal no código. A opção de
+O `HiveCenterEstimator` aplica à pose 3D de cada tag o deslocamento até o centro
+do seu hive, considerando a rotação da tag. Pela figura 9-15 do
+[manual oficial BIOBUZZ, seção 9](https://ftc-resources.firstinspires.org/ftc/game/manual-09),
+as posições horizontais das tags em relação ao centro são **−6,5; −2,75; +2,75;
++6,5 polegadas**, na ordem crescente dos IDs de cada lado. O espaçamento não é uniforme.
+Quando várias tags estão visíveis, combina as posições do centro estimadas por
+cada uma, ponderando pela área da tag na imagem. Não calcula a média dos centros
+das tags visíveis, pois isso deslocaria a mira quando uma tag desaparecesse.
+
+O ângulo do centro é calculado no
+[espaço da câmera](https://docs.limelightvision.io/docs/docs-limelight/pipeline-apriltag/apriltag-coordinate-systems),
+com origem na lente, X para a direita, Y para baixo e Z para a frente.
+A montagem invertida corrige o sinal horizontal no código. A opção de
 [orientação do stream](https://docs.limelightvision.io/docs/docs-limelight/getting-started/pipelines)
 da interface da câmera altera a exibição, sem corrigir os dados de detecção.
 Frames repetidos não acumulam correções; dados com mais de 150 ms ou timestamp
 congelado são rejeitados. O limite de correção inicial é de 8 graus por imagem.
 
-Para o teste físico, selecione cada tag pelo D-pad e observe `AprilTag selecionada`
-e `AprilTag erro horizontal (deg)` na telemetria. Com a tag deslocada para a direita,
+Depois de chamar `run()`, `limelight.getDistanceMeters()` retorna um `OptionalDouble`
+com a **distância em linha reta da lente ao centro estimado**, em metros, incluindo
+a diferença de altura. O valor fica vazio sem leitura válida; não retorna zero nem
+reutiliza a distância anterior. A telemetria mostra `Distancia ate centro hive (cm)`,
+`Hive selecionado`, `Tags usadas no centro` e `Centro hive erro horizontal (deg)`.
+Se uma tag do hive aparece sem pose 3D válida, mostra a orientação para conferir
+Full3D e mantém a pose do robô.
+
+Para o teste físico, selecione cada hive pelo D-pad e observe os valores na telemetria.
+Cubra três tags e confira se a mira continua no mesmo centro usando qualquer uma
+das quatro. Compare a distância com uma medida da lente até esse centro.
+Com o centro deslocado para a direita,
 o robô deve girar para a direita e reduzir o erro até perto de zero. Confira esse
 sentido também na montagem invertida. Segure o right bumper para verificar a manutenção
 de X/Y e o acompanhamento do alvo; solte para conferir a retomada pelos sticks.

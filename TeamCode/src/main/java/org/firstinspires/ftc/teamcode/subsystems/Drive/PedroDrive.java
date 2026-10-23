@@ -21,7 +21,7 @@ public class PedroDrive {
     private final Follower follower;
     private final Telemetry telemetry;
     private Pose aimPose;
-    private int aimTagId;
+    private int aimFirstTagId;
     private double lastAimFrameTimestamp = Double.NaN;
     private double searchDirection = -1;
     private boolean visionWasReady;
@@ -59,13 +59,13 @@ public class PedroDrive {
         Pose current = follower.pose();
         if (aimPose == null) {
             aimPose = current;
-            aimTagId = observation.getTagId();
+            aimFirstTagId = observation.getFirstTagId();
             lastAimFrameTimestamp = Double.NaN;
             searchDirection = -1;
             visionWasReady = false;
         }
-        if (aimTagId != observation.getTagId()) {
-            aimTagId = observation.getTagId();
+        if (aimFirstTagId != observation.getFirstTagId()) {
+            aimFirstTagId = observation.getFirstTagId();
             lastAimFrameTimestamp = Double.NaN;
             searchDirection = -1;
         }
@@ -79,7 +79,7 @@ public class PedroDrive {
             double heading = current.heading()
                     + searchDirection * Math.toRadians(SEARCH_HEADING_STEP_DEGREES);
             aimPose = aimPose.withHeading(Angle.normalizeSigned(heading));
-            aimStatus = "Buscando AprilTag " + aimTagId;
+            aimStatus = "Buscando hive " + aimFirstTagId + "-" + (aimFirstTagId + 3);
         } else {
             double error = observation.getTxDegrees();
             boolean aligned = Math.abs(error) <= AIM_TOLERANCE_DEGREES;
@@ -94,7 +94,7 @@ public class PedroDrive {
                     searchDirection = -Math.signum(error);
                 }
             }
-            aimStatus = aligned ? "Alinhado" : "Centralizando AprilTag " + aimTagId;
+            aimStatus = aligned ? "Alinhado" : "Centralizando hive " + aimFirstTagId + "-" + (aimFirstTagId + 3);
         }
 
         visionWasReady = observation.isVisionReady();

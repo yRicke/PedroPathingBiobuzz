@@ -45,8 +45,8 @@
             telemetry.addLine("Status: Inicializado");
             telemetry.addLine("Drive: Pedro field-centric com hold automatico");
             telemetry.addLine("Frente do campo: orientacao do robo ao apertar Play");
-            telemetry.addLine("D-pad: esquerda tag 39 / direita tag 43");
-            telemetry.addLine("Right bumper: buscar e manter AprilTag centralizada");
+            telemetry.addLine("D-pad: hive esquerdo 38-41 / direito 42-45");
+            telemetry.addLine("Right bumper: buscar e manter centro do hive na mira");
             telemetry.addLine("Right trigger: disparar");
             telemetry.update();
 

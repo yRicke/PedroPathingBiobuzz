@@ -111,55 +111,55 @@ public class PedroDriveTest {
     public void aimCapturesXYAndLimitsHeadingCorrectionPerImage() {
         localizer.setPose(new Pose(10, 20, Math.toRadians(90)));
 
-        drive.aim(AprilTagObservation.detected(43, 10, 1));
+        drive.aim(AprilTagObservation.detected(42, 10, 2.0, 1, 1));
 
         assertHoldAt(10, 20, Math.toRadians(82));
         assertTrue(drivetrain.powers.turn() < 0);
 
         localizer.setPose(new Pose(11, 19, Math.toRadians(86)));
-        drive.aim(AprilTagObservation.detected(43, 3, 2));
+        drive.aim(AprilTagObservation.detected(42, 3, 2.0, 1, 2));
         assertHoldAt(10, 20, Math.toRadians(83));
     }
 
     @Test
     public void searchRotatesClockwiseAndKeepsCapturedXY() {
         localizer.setPose(new Pose(5, 6, 0));
-        drive.aim(AprilTagObservation.searching(43, 1));
+        drive.aim(AprilTagObservation.searching(42, 1));
         assertHoldAt(5, 6, Math.toRadians(-2));
 
         localizer.setPose(new Pose(5.5, 6.5, Math.toRadians(-1)));
-        drive.aim(AprilTagObservation.searching(43, 2));
+        drive.aim(AprilTagObservation.searching(42, 2));
         assertHoldAt(5, 6, Math.toRadians(-3));
     }
 
     @Test
     public void repeatedImageDoesNotAccumulateHeadingCorrections() {
-        drive.aim(AprilTagObservation.detected(43, 6, 1));
+        drive.aim(AprilTagObservation.detected(42, 6, 2.0, 1, 1));
         assertHoldAt(0, 0, Math.toRadians(-6));
 
         localizer.setPose(new Pose(0, 0, Math.toRadians(-2)));
-        drive.aim(AprilTagObservation.detected(43, 6, 1));
+        drive.aim(AprilTagObservation.detected(42, 6, 2.0, 1, 1));
         assertHoldAt(0, 0, Math.toRadians(-6));
 
-        drive.aim(AprilTagObservation.detected(43, 3, 2));
+        drive.aim(AprilTagObservation.detected(42, 3, 2.0, 1, 2));
         assertHoldAt(0, 0, Math.toRadians(-5));
     }
 
     @Test
-    public void centeredTagHoldsCurrentHeadingAndKeepsTracking() {
+    public void centeredHiveHoldsCurrentHeadingAndKeepsTracking() {
         localizer.setPose(new Pose(1, 2, Math.toRadians(5)));
-        drive.aim(AprilTagObservation.detected(43, 0.5, 1));
+        drive.aim(AprilTagObservation.detected(42, 0.5, 2.0, 1, 1));
         assertHoldAt(1, 2, Math.toRadians(5));
 
-        drive.aim(AprilTagObservation.detected(43, -3, 2));
+        drive.aim(AprilTagObservation.detected(42, -3, 2.0, 1, 2));
         assertHoldAt(1, 2, Math.toRadians(8));
     }
 
     @Test
     public void lostTargetSearchesTowardLastSeenDirection() {
-        drive.aim(AprilTagObservation.detected(43, -4, 1));
+        drive.aim(AprilTagObservation.detected(42, -4, 2.0, 1, 1));
 
-        drive.aim(AprilTagObservation.searching(43, 2));
+        drive.aim(AprilTagObservation.searching(42, 2));
 
         assertHoldAt(0, 0, Math.toRadians(2));
     }
@@ -167,10 +167,10 @@ public class PedroDriveTest {
     @Test
     public void disconnectedVisionStopsSearchAndKeepsCapturedXY() {
         localizer.setPose(new Pose(5, 6, 0.4));
-        drive.aim(AprilTagObservation.searching(43, 1));
+        drive.aim(AprilTagObservation.searching(42, 1));
 
         localizer.setPose(new Pose(5.5, 6.5, 0.35));
-        drive.aim(AprilTagObservation.unavailable(43));
+        drive.aim(AprilTagObservation.unavailable(42));
 
         assertHoldAt(5, 6, 0.35);
         assertEquals(0, drivetrain.powers.turn(), EPSILON);
@@ -179,19 +179,19 @@ public class PedroDriveTest {
     @Test
     public void disconnectedVisionKeepsFrozenHeadingOnLaterLoops() {
         localizer.setPose(new Pose(5, 6, 0.4));
-        drive.aim(AprilTagObservation.searching(43, 1));
+        drive.aim(AprilTagObservation.searching(42, 1));
         localizer.setPose(new Pose(5, 6, 0.35));
-        drive.aim(AprilTagObservation.unavailable(43));
+        drive.aim(AprilTagObservation.unavailable(42));
 
         localizer.setPose(new Pose(5, 6, 0.3));
-        drive.aim(AprilTagObservation.unavailable(43));
+        drive.aim(AprilTagObservation.unavailable(42));
 
         assertHoldAt(5, 6, 0.35);
     }
 
     @Test
     public void releaseWithNeutralSticksCancelsPreviousTurn() {
-        drive.aim(AprilTagObservation.detected(43, 12, 1));
+        drive.aim(AprilTagObservation.detected(42, 12, 2.0, 1, 1));
 
         drive.run(0, 0, 0, false);
 
@@ -200,23 +200,23 @@ public class PedroDriveTest {
 
     @Test
     public void releaseAllowsManualDriveAndNextAimCapturesNewXY() {
-        drive.aim(AprilTagObservation.searching(43, 1));
+        drive.aim(AprilTagObservation.searching(42, 1));
 
         drive.run(0.6, 0, 0, false);
         assertTrue(follower.manual());
         assertPowers(0.6, 0, 0);
 
         localizer.setPose(new Pose(25, 30, 0));
-        drive.aim(AprilTagObservation.searching(43, 2));
+        drive.aim(AprilTagObservation.searching(42, 2));
         assertHoldAt(25, 30, Math.toRadians(-2));
     }
 
     @Test
-    public void changingTagProcessesItsOffsetEvenWithinSameImage() {
-        drive.aim(AprilTagObservation.detected(43, 6, 1));
+    public void changingHiveProcessesItsOffsetEvenWithinSameImage() {
+        drive.aim(AprilTagObservation.detected(42, 6, 2.0, 1, 1));
         localizer.setPose(new Pose(0, 0, Math.toRadians(-1)));
 
-        drive.aim(AprilTagObservation.detected(39, -3, 1));
+        drive.aim(AprilTagObservation.detected(38, -3, 2.0, 1, 1));
 
         assertHoldAt(0, 0, Math.toRadians(2));
     }
@@ -225,18 +225,18 @@ public class PedroDriveTest {
     public void searchNormalizesHeadingAcrossWraparound() {
         localizer.setPose(new Pose(0, 0, Math.toRadians(-179)));
 
-        drive.aim(AprilTagObservation.searching(43, 1));
+        drive.aim(AprilTagObservation.searching(42, 1));
 
         assertHoldAt(0, 0, Math.toRadians(179));
     }
 
     @Test
     public void stopClearsAimCaptureForNextActivation() {
-        drive.aim(AprilTagObservation.searching(43, 1));
+        drive.aim(AprilTagObservation.searching(42, 1));
         drive.stop();
         localizer.setPose(new Pose(7, 8, 0));
 
-        drive.aim(AprilTagObservation.unavailable(43));
+        drive.aim(AprilTagObservation.unavailable(42));
 
         assertHoldAt(7, 8, 0);
     }

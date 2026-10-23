@@ -8,10 +8,12 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 
-/** Seleciona AprilTags e corrige a leitura para a montagem fisica da camera. */
+/** Estima o centro e a distancia do hive escolhido usando suas AprilTags. */
 public class Limelight {
     private static final long MAX_FRAME_AGE_MS = 150;
 
@@ -21,8 +23,8 @@ public class Limelight {
     private final int pipelineIndex;
     private final LongSupplier nanoClock;
 
-    private int selectedTagId = 43;
-    private AprilTagObservation observation = AprilTagObservation.unavailable(selectedTagId);
+    private int selectedFirstTagId = 42;
+    private AprilTagObservation observation = AprilTagObservation.unavailable(selectedFirstTagId);
     private double lastFrameTimestamp = Double.NaN;
     private long lastNewFrameNanos;
     private String status = "Sem imagem";
@@ -54,9 +56,9 @@ public class Limelight {
 
     public void run(boolean dpadLeft, boolean dpadRight) {
         if (dpadLeft != dpadRight) {
-            selectedTagId = dpadLeft ? 39 : 43;
+            selectedFirstTagId = dpadLeft ? 38 : 42;
         }
-        observation = AprilTagObservation.unavailable(selectedTagId);
+        observation = AprilTagObservation.unavailable(selectedFirstTagId);
 
         if (camera == null || !camera.isRunning() || !camera.isConnected()) {
             status = "Desconectada";
@@ -88,8 +90,8 @@ public class Limelight {
             return;
         }
 
-        observation = AprilTagObservation.searching(selectedTagId, timestamp);
-        status = "Tag selecionada nao visivel";
+        observation = AprilTagObservation.searching(selectedFirstTagId, timestamp);
+        status = "Hive selecionado nao visivel";
         if (!result.isValid()) {
             return;
         }
@@ -97,15 +99,22 @@ public class Limelight {
         if (tags == null) {
             return;
         }
+        Optional<HiveCenterEstimator.Estimate> estimate =
+                HiveCenterEstimator.estimate(tags, selectedFirstTagId);
+        if (estimate.isPresent()) {
+            HiveCenterEstimator.Estimate center = estimate.get();
+            observation = AprilTagObservation.detected(selectedFirstTagId,
+                    upsideDown ? -center.txDegrees : center.txDegrees,
+                    center.distanceMeters, center.tagsUsed, timestamp);
+            status = "Centro do hive estimado";
+            return;
+        }
         for (LLResultTypes.FiducialResult tag : tags) {
-            if (tag.getFiducialId() == selectedTagId) {
-                double tx = tag.getTargetXDegreesNoCrosshair();
-                if (Double.isFinite(tx)) {
-                    observation = AprilTagObservation.detected(selectedTagId,
-                            upsideDown ? -tx : tx, timestamp);
-                    status = "Tag selecionada visivel";
-                    return;
-                }
+            if (tag != null && tag.getFiducialId() >= selectedFirstTagId
+                    && tag.getFiducialId() <= selectedFirstTagId + 3) {
+                observation = AprilTagObservation.unavailable(selectedFirstTagId);
+                status = "Tag sem pose 3D valida: confira Full3D";
+                return;
             }
         }
     }
@@ -114,18 +123,30 @@ public class Limelight {
         return observation;
     }
 
+    /** Distancia em linha reta, da lente ao centro estimado; vazia sem leitura valida. */
+    public OptionalDouble getDistanceMeters() {
+        return observation.getDistanceMeters();
+    }
+
     public void sendTelemetry() {
         telemetry.addData("Limelight", status);
         telemetry.addData("Limelight Mount", upsideDown ? "Invertida" : "Normal");
         telemetry.addData("Limelight Pipeline", pipelineIndex);
-        telemetry.addData("AprilTag selecionada", selectedTagId);
+        telemetry.addData("Hive selecionado", selectedFirstTagId == 38
+                ? "Esquerdo (38-41)" : "Direito (42-45)");
+        telemetry.addData("Tags usadas no centro", observation.getTagsUsed());
         if (observation.hasTarget()) {
-            telemetry.addData("AprilTag erro horizontal (deg)", observation.getTxDegrees());
+            telemetry.addData("Centro hive erro horizontal (deg)", observation.getTxDegrees());
+            telemetry.addData("Distancia ate centro hive (cm)",
+                    getDistanceMeters().getAsDouble() * 100);
+        } else {
+            telemetry.addData("Centro hive erro horizontal (deg)", "Indisponivel");
+            telemetry.addData("Distancia ate centro hive (cm)", "Indisponivel");
         }
     }
 
     public void stop() {
-        observation = AprilTagObservation.unavailable(selectedTagId);
+        observation = AprilTagObservation.unavailable(selectedFirstTagId);
         status = "Parada";
         if (camera != null) {
             camera.stop();

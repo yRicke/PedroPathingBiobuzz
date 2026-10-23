@@ -16,7 +16,7 @@ public class Flywheel {
     private double encoderCPM = 28;
 
     private double gearRatio = 1;
-    private double kS = 0.078, kV = 0.0001476, kP = 0.00059; //p = 0.00065
+    private double kS = 0.078, kV = 0.0001476, kP = 0.00159; //p = 0.00059
 
     public Flywheel(HardwareMap hardwareMap, Telemetry telemetry) {
         this.telemetry = telemetry;

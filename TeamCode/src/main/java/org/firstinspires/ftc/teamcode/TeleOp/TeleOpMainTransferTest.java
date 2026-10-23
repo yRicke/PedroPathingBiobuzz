@@ -13,7 +13,7 @@
 
     public class TeleOpMainTransferTest extends LinearOpMode {
 
-        private static final double FLYWHEEL_TARGET_RPM = 2750;
+        private static final double FLYWHEEL_TARGET_RPM = 2700;
 
         private Drive drive;
         private Intake intake;

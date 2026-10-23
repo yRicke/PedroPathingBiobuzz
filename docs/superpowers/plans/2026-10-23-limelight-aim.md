@@ -47,7 +47,7 @@ e `detected(id, txDegrees, timestamp)` com getters imutáveis.
 - [x] Implementar leitura, validação e lifecycle da câmera, sem rede no loop
   além da leitura do resultado já disponível no SDK.
 - [x] Rodar os testes do subsistema; esperar zero falhas.
-- [ ] Commit em português: `feat (limelight): adiciona seleção e leitura de AprilTags.`
+- [x] Commit em português: `feat (limelight): adiciona seleção e leitura de AprilTags.`
 
 ## Task 2: Mira com hold e integração
 
@@ -57,14 +57,14 @@ e `detected(id, txDegrees, timestamp)` com getters imutáveis.
 **Interfaces:** consome `AprilTagObservation`; produz `PedroDrive.aim(observation)`.
 `run(axial, lateral, yaw, precisionMode)` cancela a mira antes de retomar o manual.
 
-- [ ] Escrever testes com Follower real: X/Y capturados, heading com erro de
+- [x] Escrever testes com Follower real: X/Y capturados, heading com erro de
   10 graus limitado a 8, busca de 2 graus, erro de 0.5 grau alinhado, frame
   repetido, novo frame, troca de ID, desconexão, soltura e nova captura.
-- [ ] Rodar teste PedroDrive e observar a falha antes da implementação.
-- [ ] Implementar os estados manual/busca/rastreio/alinhado/sem visão.
-- [ ] Integrar a seleção por D-pad e o gatilho, preservando disparo e cleanup.
+- [x] Rodar teste PedroDrive e observar a falha antes da implementação.
+- [x] Implementar os estados manual/busca/rastreio/alinhado/sem visão.
+- [x] Integrar a seleção por D-pad e o gatilho, preservando disparo e cleanup.
   Documentar montagem, pipeline, telemetria e procedimento de teste físico.
-- [ ] Rodar `gradlew.bat test :TeamCode:assembleDebug`; esperar sucesso e
+- [x] Rodar `gradlew.bat test :TeamCode:assembleDebug`; esperar sucesso e
   zero falhas nas variantes debug/release.
-- [ ] Fazer uma revisão independente do conjunto e tratar achados relevantes.
-- [ ] Commit em português: `feat (teleop): integra mira de AprilTag com hold do Pedro.`
+- [x] Fazer uma revisão independente do conjunto e tratar achados relevantes.
+- [x] Commit em português: `feat (teleop): integra mira de AprilTag com hold do Pedro.`

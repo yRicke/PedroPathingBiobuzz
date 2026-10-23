@@ -9,6 +9,7 @@
     import org.firstinspires.ftc.teamcode.subsystems.Drive.PedroDrive;
     import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Flywheel;
     import org.firstinspires.ftc.teamcode.subsystems.Intake.Intake;
+    import org.firstinspires.ftc.teamcode.subsystems.Limelight.Limelight;
     import org.firstinspires.ftc.teamcode.subsystems.Transfer.Transfer;
     import org.firstinspires.ftc.teamcode.subsystems.Trigger.Trigger;
 
@@ -17,8 +18,13 @@
     public class TeleOpMainTransferTest extends LinearOpMode {
 
         private static final double FLYWHEEL_TARGET_RPM = 2700;
+        // true para a camera fisicamente montada de cabeca para baixo.
+        private static final boolean LIMELIGHT_UPSIDE_DOWN = false;
+        // Configure esta pipeline como AprilTag na interface da Limelight.
+        private static final int LIMELIGHT_PIPELINE = 0;
 
         private PedroDrive drive;
+        private Limelight limelight;
         private Intake intake;
         private Flywheel flywheel;
         private Transfer transfer;
@@ -33,10 +39,14 @@
             transfer = new Transfer(hardwareMap, telemetry);
             trigger = new Trigger(hardwareMap, telemetry);
             trigger.setTriggerClosed();
+            limelight = new Limelight(hardwareMap, telemetry,
+                    LIMELIGHT_UPSIDE_DOWN, LIMELIGHT_PIPELINE);
 
             telemetry.addLine("Status: Inicializado");
             telemetry.addLine("Drive: Pedro field-centric com hold automatico");
             telemetry.addLine("Frente do campo: orientacao do robo ao apertar Play");
+            telemetry.addLine("D-pad: esquerda tag 39 / direita tag 43");
+            telemetry.addLine("Right trigger: mirar e disparar enquanto pressionado");
             telemetry.update();
 
             try {
@@ -51,14 +61,21 @@
                 while (opModeIsActive()) {
 
                     //Subsistemas
-                    drive.run(-gamepad1.left_stick_y, gamepad1.left_stick_x,
-                            gamepad1.right_stick_x, gamepad1.left_trigger > 0);
+                    limelight.run(gamepad1.dpad_left, gamepad1.dpad_right);
+                    boolean aimAndShoot = gamepad1.right_trigger > 0;
+                    if (aimAndShoot) {
+                        drive.aim(limelight.getObservation());
+                    } else {
+                        drive.run(-gamepad1.left_stick_y, gamepad1.left_stick_x,
+                                gamepad1.right_stick_x, gamepad1.left_trigger > 0);
+                    }
                     intake.run(gamepad1.a, gamepad1.left_bumper);
                     flywheel.run(FLYWHEEL_TARGET_RPM);
-                    transfer.run(gamepad1.right_trigger > 0, gamepad1.left_bumper);
-                    trigger.run(gamepad1.right_trigger > 0);
+                    transfer.run(aimAndShoot, gamepad1.left_bumper);
+                    trigger.run(aimAndShoot);
                     // Telemetry Organizado
                     drive.sendTelemetry();
+                    limelight.sendTelemetry();
                     intake.sendTelemetry();
                     flywheel.sendTelemetry();
                     transfer.sendTelemetry();
@@ -69,8 +86,15 @@
                 try {
                     drive.stop();
                 } finally {
-                    trigger.setTriggerClosed();
-                    flywheel.stopMotors();
+                    try {
+                        limelight.stop();
+                    } finally {
+                        try {
+                            trigger.setTriggerClosed();
+                        } finally {
+                            flywheel.stopMotors();
+                        }
+                    }
                 }
             }
         }

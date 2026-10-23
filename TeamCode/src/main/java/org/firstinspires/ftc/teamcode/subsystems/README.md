@@ -22,6 +22,6 @@ O controle segue a [documentação oficial de TeleOp do Pedro Pathing](https://p
 soltos e o robô para. Mover os sticks retoma o controle manual.
 
 A orientação ao apertar **Play** define a frente do campo. O gatilho esquerdo do
-gamepad 1 mantém o modo precisão com 30% da potência, e o stick direito horizontal
-do gamepad 2 mantém a correção de giro. A telemetria mostra o modo (`MANUAL`/`HOLD`),
+gamepad 1 mantém o modo precisão com 30% da potência, e seu stick direito horizontal
+controla o giro. A telemetria mostra o modo (`MANUAL`/`HOLD`),
 a posição em polegadas e o heading em graus.

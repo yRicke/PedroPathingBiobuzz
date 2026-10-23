@@ -9,7 +9,6 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 /** Drive field-centric do Pedro com hold automatico quando os controles sao soltos. */
 public class PedroDrive {
     private static final double PRECISION_MULTIPLIER = 0.3;
-    private static final double CORRECTION_YAW_MULTIPLIER = 0.3;
     private static final double HOLD_INPUT_THRESHOLD = 0.1;
     private static final double HOLD_VELOCITY_THRESHOLD = 0.2;
 
@@ -21,15 +20,14 @@ public class PedroDrive {
         this.telemetry = telemetry;
     }
 
-    public void run(double axial, double lateral, double yaw,
-                    boolean precisionMode, double correctionYaw) {
+    public void run(double axial, double lateral, double yaw, boolean precisionMode) {
         double multiplier = precisionMode ? PRECISION_MULTIPLIER : 1.0;
 
         // Pedro usa lateral para a esquerda e giro anti-horario positivos.
         DrivePowers powers = ManualDrive.fieldCentric(
                 axial * multiplier,
                 -lateral * multiplier,
-                -(yaw + correctionYaw * CORRECTION_YAW_MULTIPLIER) * multiplier,
+                -yaw * multiplier,
                 follower.pose().heading());
 
         // Ajusta o limiar junto com a potencia para preservar os comandos no modo precisao.

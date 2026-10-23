@@ -39,7 +39,7 @@ public class PedroDriveTest {
     public void forwardRemainsFieldRelativeAfterQuarterTurn() {
         localizer.setPose(new Pose(0, 0, Math.PI / 2));
 
-        drive.run(1, 0, 0, false, 0);
+        drive.run(1, 0, 0, false);
 
         assertPowers(0, -1, 0);
         assertTrue(drivetrain.manual);
@@ -47,27 +47,27 @@ public class PedroDriveTest {
 
     @Test
     public void rightStrafeAndClockwiseTurnKeepDriverDirections() {
-        drive.run(0, 1, 0.5, false, 0);
+        drive.run(0, 1, 0.5, false);
 
         assertPowers(0, -1, -0.5);
     }
 
     @Test
-    public void precisionScalesTranslationAndCombinedTurn() {
-        drive.run(1, 0.5, 0.5, true, 0.5);
+    public void precisionScalesTranslationAndTurn() {
+        drive.run(1, 0.5, 0.5, true);
 
-        assertPowers(0.3, -0.15, -0.195);
+        assertPowers(0.3, -0.15, -0.15);
     }
 
     @Test
-    public void secondDriverCanLeaveHoldInPrecisionMode() {
-        drive.run(0, 0, 0, true, 0);
+    public void driverCanLeaveHoldWithSmallTurnInPrecisionMode() {
+        drive.run(0, 0, 0, true);
         assertTrue(follower.holding());
 
-        drive.run(0, 0, 0, true, 1);
+        drive.run(0, 0, 0.2, true);
 
         assertTrue(follower.manual());
-        assertPowers(0, 0, -0.09);
+        assertPowers(0, 0, -0.06);
     }
 
     @Test
@@ -75,30 +75,30 @@ public class PedroDriveTest {
         Pose stoppedPose = new Pose(10, 20, 0.6);
         localizer.setPose(stoppedPose);
         localizer.velocity = new Velocity(1, 0, 0);
-        drive.run(0.5, 0, 0, false, 0);
+        drive.run(0.5, 0, 0, false);
 
-        drive.run(0, 0, 0, false, 0);
+        drive.run(0, 0, 0, false);
         assertTrue(follower.manual());
         assertPowers(0, 0, 0);
 
         localizer.velocity = Velocity.zero();
-        drive.run(0, 0, 0, false, 0);
+        drive.run(0, 0, 0, false);
         assertTrue(follower.holding());
         assertSame(stoppedPose, follower.poseAt(0));
 
         localizer.setPose(new Pose(12, 19, 0.8));
-        drive.run(0, 0, 0, false, 0);
+        drive.run(0, 0, 0, false);
         assertTrue(follower.holding());
         assertSame(stoppedPose, follower.poseAt(0));
 
-        drive.run(0.5, 0, 0, false, 0);
+        drive.run(0.5, 0, 0, false);
         assertTrue(follower.manual());
         assertTrue(drivetrain.manual);
     }
 
     @Test
     public void stopImmediatelyRemovesMotorPower() {
-        drive.run(1, 0, 0, false, 0);
+        drive.run(1, 0, 0, false);
 
         drive.stop();
 

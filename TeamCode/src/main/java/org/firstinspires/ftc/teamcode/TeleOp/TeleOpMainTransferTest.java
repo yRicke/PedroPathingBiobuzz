@@ -22,9 +22,9 @@
         public static double RPM_BASE = 2700;
         public static double DISTANCIA_BASE_CM = 308;
         // true para a camera fisicamente montada de cabeca para baixo.
-        private static final boolean LIMELIGHT_UPSIDE_DOWN = false;
+        private static final boolean LIMELIGHT_UPSIDE_DOWN = true;
         // Configure esta pipeline como AprilTag na interface da Limelight.
-        private static final int LIMELIGHT_PIPELINE = 0;
+        private static final int LIMELIGHT_PIPELINE = 8;
 
         private PedroDrive drive;
         private Limelight limelight;

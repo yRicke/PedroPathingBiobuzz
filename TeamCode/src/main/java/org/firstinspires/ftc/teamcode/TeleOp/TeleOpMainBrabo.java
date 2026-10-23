@@ -1,5 +1,6 @@
     package org.firstinspires.ftc.teamcode.TeleOp;
 
+    import com.qualcomm.robotcore.eventloop.opmode.Disabled;
     import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
     import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
@@ -9,7 +10,7 @@
     import org.firstinspires.ftc.teamcode.subsystems.Intake.Intake;
     import org.firstinspires.ftc.teamcode.subsystems.Trigger.Trigger;
     import org.firstinspires.ftc.teamcode.subsystems.Transfer.Transfer;
-
+    @Disabled
     @TeleOp(name="TeleOpMainBrabo", group="TeleOpMode")
 
     public class TeleOpMainBrabo extends LinearOpMode {

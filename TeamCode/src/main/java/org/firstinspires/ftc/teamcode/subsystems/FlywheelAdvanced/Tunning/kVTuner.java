@@ -10,7 +10,7 @@ public class kVTuner extends OpMode {
     private Flywheel flywheel;
 
     public static double kV = 0.0001476;
-    public double kS = 0.087;
+    public double kS = 0.078;
     public double goalRPM = 2800;
 
     double[] increments = {0.00000001,0.0000001,0.000001, 0.00001, 0.0001, 0.001, 0.01};

@@ -10,7 +10,7 @@ public class kPTuner extends OpMode {
     private Flywheel flywheel;
 
     public static double kV = 0.0001476;
-    public double kS = 0.087;
+    public double kS = 0.078;
     public double kP = 0.00065;
     public double goalRPM = 2800;
 

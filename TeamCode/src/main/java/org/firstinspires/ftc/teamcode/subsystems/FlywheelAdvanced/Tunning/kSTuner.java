@@ -9,7 +9,7 @@ import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Flywheel;
 public class kSTuner extends OpMode {
     private Flywheel flywheel;
 
-    public static double kS = 0.087;
+    public static double kS = 0.078;
 
     double[] increments = {0.000001, 0.00001, 0.0001, 0.001, 0.01};
     int incrementIdx = 4; // Passo inicial: 0.01

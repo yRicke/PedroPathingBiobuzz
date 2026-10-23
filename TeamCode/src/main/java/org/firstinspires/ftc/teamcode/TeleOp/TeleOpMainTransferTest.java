@@ -8,6 +8,7 @@
     import org.firstinspires.ftc.teamcode.pedro.Constants;
     import org.firstinspires.ftc.teamcode.subsystems.Drive.PedroDrive;
     import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Flywheel;
+    import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.FlywheelRpmCalculator;
     import org.firstinspires.ftc.teamcode.subsystems.Intake.Intake;
     import org.firstinspires.ftc.teamcode.subsystems.Limelight.Limelight;
     import org.firstinspires.ftc.teamcode.subsystems.Transfer.Transfer;
@@ -17,7 +18,9 @@
 
     public class TeleOpMainTransferTest extends LinearOpMode {
 
-        private static final double FLYWHEEL_TARGET_RPM = 2700;
+        // Referencia ajustavel: RPM_BASE e o RPM ideal a DISTANCIA_BASE_CM.
+        public static double RPM_BASE = 2700;
+        public static double DISTANCIA_BASE_CM = 308;
         // true para a camera fisicamente montada de cabeca para baixo.
         private static final boolean LIMELIGHT_UPSIDE_DOWN = false;
         // Configure esta pipeline como AprilTag na interface da Limelight.
@@ -72,7 +75,9 @@
                                 gamepad1.right_stick_x, gamepad1.left_trigger > 0);
                     }
                     intake.run(gamepad1.a, gamepad1.left_bumper);
-                    flywheel.run(FLYWHEEL_TARGET_RPM);
+                    double targetRpm = FlywheelRpmCalculator.calculate(
+                            limelight.getDistanceMeters(), RPM_BASE, DISTANCIA_BASE_CM);
+                    flywheel.run(targetRpm);
                     transfer.run(shootRequested, gamepad1.left_bumper);
                     trigger.run(shootRequested);
                     // Telemetry Organizado

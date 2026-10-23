@@ -92,3 +92,24 @@ A telemetria `Mira` distingue busca, centralização, alinhamento e ausência de
 Os valores de tolerância, passo de busca e limite de correção ficam no início de
 `Drive/PedroDrive.java` para ajuste no robô. O controle de pose usa o Foresight
 e a calibração do Pinpoint já existentes em `pedro.Constants`.
+
+## RPM pela distância ao hive
+
+No `TeleOpMainTransferTest`, as variáveis públicas `RPM_BASE = 2700` e
+`DISTANCIA_BASE_CM = 308` definem a referência de lançamento. Ajuste esses valores
+no início da classe para alterar a calibração. A cada ciclo, o TeleOp passa a
+distância atual da Limelight ao `FlywheelRpmCalculator` e atualiza o alvo do flywheel:
+
+`RPM alvo = RPM_BASE × (distância em cm / DISTANCIA_BASE_CM)`
+
+O getter da Limelight retorna metros; o calculador converte para centímetros.
+Com os valores iniciais, 154 cm produzem 1350 RPM, 308 cm produzem 2700 RPM e
+462 cm produzem 4050 RPM. Esse é um modelo proporcional inicial para testar;
+é necessário conferir os lançamentos em outras distâncias no robô.
+
+Sem distância válida, o alvo volta imediatamente a `RPM_BASE`. Uma referência de
+distância inválida também usa o RPM base; um RPM base zero, negativo ou não finito
+desliga os motores. A telemetria existente `Flywheel RPM alvo` mostra o valor
+calculado, junto de `Flywheel RPM medido` e da distância ao centro do hive.
+O ajuste independe do right bumper: ele controla a mira, enquanto o right trigger
+continua acionando o disparo.

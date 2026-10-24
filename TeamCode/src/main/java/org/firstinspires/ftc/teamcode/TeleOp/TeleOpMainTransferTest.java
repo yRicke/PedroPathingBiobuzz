@@ -6,6 +6,7 @@
     import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
     import org.firstinspires.ftc.teamcode.pedro.Constants;
+    import org.firstinspires.ftc.teamcode.subsystems.DedinhoNervoso.DedinhoNervoso;
     import org.firstinspires.ftc.teamcode.subsystems.Drive.PedroDrive;
     import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Flywheel;
     import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.FlywheelRpmCalculator;
@@ -32,6 +33,7 @@
         private Flywheel flywheel;
         private Transfer transfer;
         private Trigger trigger;
+        private DedinhoNervoso dedo;
 
         @Override
         public void runOpMode() {
@@ -41,6 +43,8 @@
             flywheel = new Flywheel(hardwareMap, telemetry);
             transfer = new Transfer(hardwareMap, telemetry);
             trigger = new Trigger(hardwareMap, telemetry);
+            dedo = new DedinhoNervoso(hardwareMap, telemetry);
+            dedo.setDedinhoNervosoClosed();
             trigger.setTriggerClosed();
             limelight = new Limelight(hardwareMap, telemetry,
                     LIMELIGHT_UPSIDE_DOWN, LIMELIGHT_PIPELINE);
@@ -80,6 +84,7 @@
                     flywheel.run(targetRpm);
                     transfer.run(shootRequested, gamepad1.left_bumper);
                     trigger.run(shootRequested);
+                    dedo.run(gamepad1.b);
                     // Telemetry Organizado
                     drive.sendTelemetry();
                     limelight.sendTelemetry();
@@ -87,6 +92,7 @@
                     flywheel.sendTelemetry();
                     transfer.sendTelemetry();
                     trigger.sendTelemetry();
+                    dedo.sendTelemetry();
                     telemetry.update();
                 }
             } finally {

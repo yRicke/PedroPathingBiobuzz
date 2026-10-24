@@ -13,8 +13,8 @@ public class DedinhoNervoso {
 
     private Telemetry telemetry;
 
-    public final double DedinhoNervoso_OPEN_POSITION = 0.7; // Posição aberta do gatilho
-    public final double DedinhoNervoso_CLOSED_POSITION = 0.0; // Posição fechada do gatilho
+    public final double DedinhoNervoso_OPEN_POSITION = 0.1; // Posição aberta do gatilho
+    public final double DedinhoNervoso_CLOSED_POSITION = 0.4; // Posição fechada do gatilho
 
     // Construtor recebe o hardwareMap e telemetry do OpMode
     public DedinhoNervoso(HardwareMap hardwareMap, Telemetry telemetry) {

@@ -10,12 +10,11 @@
     import org.firstinspires.ftc.teamcode.subsystems.Intake.Intake;
     import org.firstinspires.ftc.teamcode.subsystems.Trigger.Trigger;
     import org.firstinspires.ftc.teamcode.subsystems.Transfer.Transfer;
-    @Disabled
     @TeleOp(name="TeleOpMainBrabo", group="TeleOpMode")
 
     public class TeleOpMainBrabo extends LinearOpMode {
 
-        private static final double FLYWHEEL_TARGET_RPM = 2700;
+        private static final double FLYWHEEL_TARGET_RPM = 2850;
 
         private Drive drive;
         private Intake intake;
@@ -44,7 +43,7 @@
                     intake.run(gamepad1.a, gamepad1.left_bumper);
                     flywheel.run(FLYWHEEL_TARGET_RPM);
                     trigger.run(gamepad1.right_trigger > 0);
-                    transfer.run(gamepad1.left_bumper);
+                    transfer.run(gamepad1.left_bumper,gamepad1.left_bumper);
                     // Telemetry Organizado
                     drive.sendTelemetry();
                     intake.sendTelemetry();

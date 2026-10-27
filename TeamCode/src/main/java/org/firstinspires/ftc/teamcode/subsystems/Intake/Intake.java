@@ -9,7 +9,7 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 public class Intake {
 
     private DcMotorEx intakeMotor = null;
-    private double intakeMaxPower = 0.7;
+    private double intakeMaxPower = 1;
     private boolean intakeOn = false;
     private boolean previousOn = false;
 
@@ -39,13 +39,13 @@ public class Intake {
     }
 
     public void onMotor(){
-        intakeMotor.setPower(intakeMaxPower);
+        intakeMotor.setPower(-intakeMaxPower);
     }
     public void offMotor(){
         intakeMotor.setPower(0);
     }
     public void eject(){
-        intakeMotor.setPower(-intakeMaxPower);
+        intakeMotor.setPower(intakeMaxPower);
     }
 
 

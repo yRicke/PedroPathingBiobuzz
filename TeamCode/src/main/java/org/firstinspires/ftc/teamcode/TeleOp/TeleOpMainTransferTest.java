@@ -20,7 +20,7 @@
     public class TeleOpMainTransferTest extends LinearOpMode {
 
         // Referencia ajustavel: RPM_BASE e o RPM ideal a DISTANCIA_BASE_CM.
-        public static double RPM_BASE = 2700;
+        public static double RPM_BASE = 2900;
         public static double DISTANCIA_BASE_CM = 308;
         // true para a camera fisicamente montada de cabeca para baixo.
         private static final boolean LIMELIGHT_UPSIDE_DOWN = true;

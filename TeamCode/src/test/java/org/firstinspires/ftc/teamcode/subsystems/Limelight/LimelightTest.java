@@ -10,6 +10,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
+import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.FlywheelRpmCalculator;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -280,6 +281,10 @@ public class LimelightTest {
         verify(camera).pipelineSwitch(0);
         verify(camera).start();
 
+        readDistance(1, 0, 2);
+        readDistance(2, 25_000_000L, 4);
+        assertTrue(limelight.getDistanceMeters().isPresent());
+
         limelight.stop();
 
         verify(camera).stop();
@@ -287,20 +292,162 @@ public class LimelightTest {
         assertFalse(limelight.getDistanceMeters().isPresent());
     }
 
+    @Test
+    public void flywheelUsesMeanOfCentralTwentyOfFortyDistances() {
+        // Dez baixas, quinze de 2 m, cinco de 6 m e dez altas: centro tem media 3 m.
+        for (int i = 0; i < 40; i++) {
+            int index = (i * 17) % 40;
+            double distance = index < 10 ? 0.5 : index < 25 ? 2 : index < 30 ? 6 : 20;
+            readDistance(i + 1, i * 25_000_000L, distance);
+        }
+
+        assertEquals(3, limelight.getDistanceMeters().getAsDouble(), 1e-9);
+        assertEquals(2700, FlywheelRpmCalculator.calculate(
+                limelight.getDistanceMeters(), 2700, 300), 1e-9);
+        assertEquals(2, limelight.getObservation().getDistanceMeters().getAsDouble(), 1e-9);
+    }
+
+    @Test
+    public void distanceFilterUsesAvailableSamplesWhileWarmingUp() {
+        readDistance(1, 0, 2);
+        assertEquals(2, limelight.getDistanceMeters().getAsDouble(), 1e-9);
+        readDistance(2, 25_000_000L, 4);
+        assertEquals(3, limelight.getDistanceMeters().getAsDouble(), 1e-9);
+        readDistance(3, 50_000_000L, 6);
+        assertEquals(4, limelight.getDistanceMeters().getAsDouble(), 1e-9);
+        readDistance(4, 75_000_000L, 100);
+        assertEquals(5, limelight.getDistanceMeters().getAsDouble(), 1e-9);
+    }
+
+    @Test
+    public void repeatedFrameDoesNotBiasDistanceFilter() {
+        for (int i = 0; i < 4; i++) {
+            readDistance(i + 1, i * 25_000_000L, 2);
+        }
+        readDistance(5, 100_000_000L, 8);
+
+        for (int i = 1; i <= 40; i++) {
+            clock.set(100_000_000L + i * 1_000_000L);
+            limelight.run(false, false);
+        }
+
+        assertEquals(2, limelight.getDistanceMeters().getAsDouble(), 1e-9);
+    }
+
+    @Test
+    public void limitsDistanceSamplingToOneNewFrameEveryTwentyFiveMilliseconds() {
+        readDistance(1, 0, 2);
+        for (int i = 1; i < 25; i++) {
+            readDistance(i + 1, i * 1_000_000L, 8);
+            assertEquals(2, limelight.getDistanceMeters().getAsDouble(), 1e-9);
+        }
+        readDistance(26, 25_000_000L, 4);
+        assertEquals(3, limelight.getDistanceMeters().getAsDouble(), 1e-9);
+    }
+
+    @Test
+    public void distanceSamplesExpireAfterOneSecond() {
+        readDistance(1, 0, 2);
+        readDistance(2, 25_000_000L, 4);
+        readDistance(3, 1_000_000_000L, 8);
+
+        assertEquals(6, limelight.getDistanceMeters().getAsDouble(), 1e-9);
+
+        readDistance(4, 1_025_000_000L, 10);
+        assertEquals(9, limelight.getDistanceMeters().getAsDouble(), 1e-9);
+    }
+
+    @Test
+    public void losingTargetClearsDistanceHistoryAndUsesBaseRpm() {
+        readDistance(1, 0, 2);
+        readDistance(2, 25_000_000L, 4);
+        when(frame.isValid()).thenReturn(false);
+        limelight.run(false, false);
+        assertFalse(limelight.getDistanceMeters().isPresent());
+        assertEquals(2700, FlywheelRpmCalculator.calculate(
+                limelight.getDistanceMeters(), 2700, 300), 1e-9);
+
+        when(frame.isValid()).thenReturn(true);
+        readDistance(3, 50_000_000L, 8);
+        assertEquals(8, limelight.getDistanceMeters().getAsDouble(), 1e-9);
+    }
+
+    @Test
+    public void switchingHiveDoesNotMixDistanceSamplesEvenInSameFrame() {
+        setTags(tag(43, 0, 2), tag(39, 0, 8));
+        limelight.run(false, true);
+        assertEquals(2, limelight.getDistanceMeters().getAsDouble(), 1e-9);
+
+        limelight.run(true, false);
+
+        assertEquals(8, limelight.getDistanceMeters().getAsDouble(), 1e-9);
+    }
+
+    @Test
+    public void disconnectClearsDistanceHistoryBeforeReacquisition() {
+        readDistance(1, 0, 2);
+        readDistance(2, 25_000_000L, 4);
+        when(camera.isConnected()).thenReturn(false);
+        limelight.run(false, false);
+        assertFalse(limelight.getDistanceMeters().isPresent());
+
+        when(camera.isConnected()).thenReturn(true);
+        readDistance(3, 50_000_000L, 8);
+        assertEquals(8, limelight.getDistanceMeters().getAsDouble(), 1e-9);
+    }
+
+    @Test
+    public void frozenFramesClearDistanceHistoryBeforeReacquisition() {
+        readDistance(1, 0, 2);
+        readDistance(2, 25_000_000L, 4);
+        clock.set(176_000_000L);
+        limelight.run(false, false);
+        assertFalse(limelight.getDistanceMeters().isPresent());
+
+        readDistance(3, 177_000_000L, 8);
+
+        assertEquals(8, limelight.getDistanceMeters().getAsDouble(), 1e-9);
+    }
+
+    @Test
+    public void telemetryDistinguishesFilteredAndInstantaneousDistances() {
+        Telemetry telemetry = mock(Telemetry.class);
+        limelight = new Limelight(camera, telemetry, false, 0, clock::get);
+        readDistance(1, 0, 2);
+        readDistance(2, 25_000_000L, 4);
+
+        limelight.sendTelemetry();
+
+        verify(telemetry).addData("Distancia ate centro hive (cm)", 300.0);
+        verify(telemetry).addData("Distancia instantanea centro hive (cm)", 400.0);
+        verify(telemetry).addData("Amostras distancia flywheel", 2);
+    }
+
+    private void readDistance(double timestamp, long nanos, double distance) {
+        clock.set(nanos);
+        when(frame.getTimestamp()).thenReturn(timestamp);
+        setTags(tag(43, 0, distance));
+        limelight.run(false, true);
+    }
+
     private void setTags(LLResultTypes.FiducialResult... tags) {
         when(frame.getFiducialResults()).thenReturn(Arrays.asList(tags));
     }
 
     private LLResultTypes.FiducialResult tag(int id, double tx) {
+        return tag(id, tx, 2);
+    }
+
+    private LLResultTypes.FiducialResult tag(int id, double tx, double depth) {
         LLResultTypes.FiducialResult tag = mock(LLResultTypes.FiducialResult.class);
         when(tag.getFiducialId()).thenReturn(id);
         when(tag.getTargetXDegreesNoCrosshair()).thenReturn(tx);
         when(tag.getTargetXDegrees()).thenReturn(20.0);
         double[] offsets = {0.1651, 0.06985, -0.06985, -0.1651};
-        double centerX = 2 * Math.tan(Math.toRadians(tx));
+        double centerX = depth * Math.tan(Math.toRadians(tx));
         double offset = offsets[(id - 38) % 4];
         when(tag.getTargetPoseCameraSpace()).thenReturn(new Pose3D(
-                new Position(DistanceUnit.METER, centerX - offset, 0, 2, 0),
+                new Position(DistanceUnit.METER, centerX - offset, 0, depth, 0),
                 new YawPitchRollAngles(AngleUnit.DEGREES, 0, 0, 0, 0)));
         when(tag.getTargetArea()).thenReturn(1.0);
         return tag;

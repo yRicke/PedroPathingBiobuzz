@@ -22,9 +22,11 @@ public class Limelight {
     private final boolean upsideDown;
     private final int pipelineIndex;
     private final LongSupplier nanoClock;
+    private final CenterDistanceFilter distanceFilter = new CenterDistanceFilter();
 
     private int selectedFirstTagId = 42;
     private AprilTagObservation observation = AprilTagObservation.unavailable(selectedFirstTagId);
+    private OptionalDouble filteredDistanceMeters = OptionalDouble.empty();
     private double lastFrameTimestamp = Double.NaN;
     private long lastNewFrameNanos;
     private String status = "Sem imagem";
@@ -55,6 +57,12 @@ public class Limelight {
     }
 
     public void run(boolean dpadLeft, boolean dpadRight) {
+        long now = nanoClock.getAsLong();
+        readObservation(dpadLeft, dpadRight, now);
+        filteredDistanceMeters = distanceFilter.update(observation, now);
+    }
+
+    private void readObservation(boolean dpadLeft, boolean dpadRight, long now) {
         if (dpadLeft != dpadRight) {
             selectedFirstTagId = dpadLeft ? 38 : 42;
         }
@@ -80,7 +88,6 @@ public class Limelight {
             return;
         }
 
-        long now = nanoClock.getAsLong();
         if (timestamp != lastFrameTimestamp) {
             lastFrameTimestamp = timestamp;
             lastNewFrameNanos = now;
@@ -123,9 +130,9 @@ public class Limelight {
         return observation;
     }
 
-    /** Distancia em linha reta, da lente ao centro estimado; vazia sem leitura valida. */
+    /** Media aparada da distancia ao centro no ultimo segundo; vazia sem leitura valida. */
     public OptionalDouble getDistanceMeters() {
-        return observation.getDistanceMeters();
+        return filteredDistanceMeters;
     }
 
     public void sendTelemetry() {
@@ -135,18 +142,27 @@ public class Limelight {
         telemetry.addData("Hive selecionado", selectedFirstTagId == 38
                 ? "Esquerdo (38-41)" : "Direito (42-45)");
         telemetry.addData("Tags usadas no centro", observation.getTagsUsed());
+        telemetry.addData("Amostras distancia flywheel", distanceFilter.sampleCount());
         if (observation.hasTarget()) {
             telemetry.addData("Centro hive erro horizontal (deg)", observation.getTxDegrees());
-            telemetry.addData("Distancia ate centro hive (cm)",
-                    getDistanceMeters().getAsDouble() * 100);
+            telemetry.addData("Distancia instantanea centro hive (cm)",
+                    observation.getDistanceMeters().getAsDouble() * 100);
         } else {
             telemetry.addData("Centro hive erro horizontal (deg)", "Indisponivel");
+            telemetry.addData("Distancia instantanea centro hive (cm)", "Indisponivel");
+        }
+        if (filteredDistanceMeters.isPresent()) {
+            telemetry.addData("Distancia ate centro hive (cm)",
+                    filteredDistanceMeters.getAsDouble() * 100);
+        } else {
             telemetry.addData("Distancia ate centro hive (cm)", "Indisponivel");
         }
     }
 
     public void stop() {
         observation = AprilTagObservation.unavailable(selectedFirstTagId);
+        distanceFilter.clear();
+        filteredDistanceMeters = OptionalDouble.empty();
         status = "Parada";
         if (camera != null) {
             camera.stop();

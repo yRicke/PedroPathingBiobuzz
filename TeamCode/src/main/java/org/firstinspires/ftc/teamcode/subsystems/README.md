@@ -74,11 +74,14 @@ congelado são rejeitados. O limite de correção inicial é de 8 graus por imag
 
 Depois de chamar `run()`, `limelight.getDistanceMeters()` retorna um `OptionalDouble`
 com a **distância em linha reta da lente ao centro estimado**, em metros, incluindo
-a diferença de altura. O valor fica vazio sem leitura válida; não retorna zero nem
-reutiliza a distância anterior. A telemetria mostra `Distancia ate centro hive (cm)`,
+a diferença de altura, filtrada pela média aparada descrita abaixo. A leitura
+instantânea continua em `limelight.getObservation().getDistanceMeters()`.
+O getter filtrado fica vazio sem leitura válida. A telemetria mostra a distância
+filtrada em `Distancia ate centro hive (cm)`, a leitura bruta em
+`Distancia instantanea centro hive (cm)` e `Amostras distancia flywheel`, além de
 `Hive selecionado`, `Tags usadas no centro` e `Centro hive erro horizontal (deg)`.
 Se uma tag do hive aparece sem pose 3D válida, mostra a orientação para conferir
-Full3D e mantém a pose do robô.
+Full3D e devolve o giro ao piloto.
 
 Para o teste físico, selecione cada hive pelo D-pad e observe os valores na telemetria.
 Cubra três tags e confira se a mira continua no mesmo centro usando qualquer uma
@@ -103,11 +106,24 @@ também reduz a translação e o giro durante a mira para 30%.
 No `TeleOpMainTransferTest`, as variáveis públicas `RPM_BASE = 2700` e
 `DISTANCIA_BASE_CM = 308` definem a referência de lançamento. Ajuste esses valores
 no início da classe para alterar a calibração. A cada ciclo, o TeleOp passa a
-distância atual da Limelight ao `FlywheelRpmCalculator` e atualiza o alvo do flywheel:
+distância filtrada da Limelight ao `FlywheelRpmCalculator` e atualiza o alvo do flywheel:
 
 `RPM alvo = RPM_BASE × (distância em cm / DISTANCIA_BASE_CM)`
 
 O getter da Limelight retorna metros; o calculador converte para centímetros.
+O `Limelight/CenterDistanceFilter` mantém uma janela móvel de **1 segundo**, com
+**até 40 amostras** válidas e novas, separadas por pelo menos **25 ms**. Frames
+repetidos não aumentam a contagem. Ordena as distâncias, descarta os **25% menores
+e 25% maiores** e calcula a média das restantes: com 40, usa as **20 centrais**.
+Na partida usa as amostras disponíveis, arredondando o descarte para baixo; não
+bloqueia o loop para preencher a janela. A frequência real depende dos frames
+novos da câmera e da frequência do TeleOp.
+
+O histórico é limpo ao trocar de hive, perder o alvo, receber dados inválidos ou
+parar a Limelight. A mira usa o ângulo instantâneo, sem o atraso do filtro de distância.
+Para ajustar a janela e a quantidade de amostras, altere `WINDOW_NANOS` e
+`MAX_SAMPLES` em `CenterDistanceFilter`.
+
 Com os valores iniciais, 154 cm produzem 1350 RPM, 308 cm produzem 2700 RPM e
 462 cm produzem 4050 RPM. Esse é um modelo proporcional inicial para testar;
 é necessário conferir os lançamentos em outras distâncias no robô.

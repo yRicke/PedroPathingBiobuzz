@@ -43,15 +43,15 @@ A seleção é feita por `limelight.run(gamepad1.dpad_left, gamepad1.dpad_right)
 - D-pad esquerdo seleciona o hive **38, 39, 40, 41**; direito seleciona
   **42, 43, 44, 45**. O hive direito é a seleção inicial.
 - A seleção permanece ao soltar o D-pad; pressionar os dois lados mantém a anterior.
-- Segurar o **right bumper do gamepad 1** ativa a **busca e a mira**.
-  O Pedro captura X/Y, ignora os sticks da base durante a mira e altera apenas
-  o heading para mirar no **centro estimado do hive**, com tolerância inicial de 1 grau.
+- Segurar o **right bumper do gamepad 1** ativa a mira no **centro estimado do hive**,
+  com tolerância inicial de 1 grau. O stick esquerdo continua controlando X/Y
+  em field-centric; somente o giro é substituído pela correção visual.
 - Basta enxergar **uma** das quatro tags do lado selecionado. Sem enxergar nenhuma,
-  busca com giro lento, inicialmente horário. Depois de detectar o hive, a busca
-  segue a direção do último erro observado.
+  o giro volta imediatamente ao stick direito, mesmo com o bumper pressionado.
+  A mira retoma quando o hive selecionado reaparece; não há giro de busca automático.
 - O **right trigger do gamepad 1** aciona o disparo, independentemente da mira.
-- Desconexão, pipeline incorreta e imagens antigas/congeladas interrompem a busca
-  e mantêm a pose. O disparo continua obedecendo ao gatilho, inclusive sem visão.
+- Desconexão, pipeline incorreta e imagens antigas/congeladas também devolvem
+  o giro ao piloto. O disparo continua obedecendo ao gatilho, inclusive sem visão.
 - Soltar o right bumper cancela o alvo de rotação e devolve o drive field-centric.
 
 O `HiveCenterEstimator` aplica à pose 3D de cada tag o deslocamento até o centro
@@ -85,13 +85,18 @@ Cubra três tags e confira se a mira continua no mesmo centro usando qualquer um
 das quatro. Compare a distância com uma medida da lente até esse centro.
 Com o centro deslocado para a direita,
 o robô deve girar para a direita e reduzir o erro até perto de zero. Confira esse
-sentido também na montagem invertida. Segure o right bumper para verificar a manutenção
-de X/Y e o acompanhamento do alvo; solte para conferir a retomada pelos sticks.
-A telemetria `Mira` distingue busca, centralização, alinhamento e ausência de visão.
+sentido também na montagem invertida. Segure o right bumper e mova o stick esquerdo:
+X/Y devem responder enquanto o heading acompanha o centro. Cubra todas as tags e
+confira o giro pelo stick direito sem soltar o bumper. Descubra as tags para retomar
+a mira e solte o bumper para conferir o giro manual. Com sticks neutros e sem mira,
+o hold automático normal continua disponível.
+A telemetria `Mira` distingue centralização, alinhamento e giro manual sem alvo/visão.
 
-Os valores de tolerância, passo de busca e limite de correção ficam no início de
-`Drive/PedroDrive.java` para ajuste no robô. O controle de pose usa o Foresight
-e a calibração do Pinpoint já existentes em `pedro.Constants`.
+Os valores de tolerância e limite de correção ficam no início de
+`Drive/PedroDrive.java` para ajuste no robô. A mira usa `ManualDrive.headingLock()`
+com o controlador de heading calibrado em `pedro.Constants`, limita a correção
+a 8 graus por imagem nova e mantém o alvo em imagens repetidas. O modo precisão
+também reduz a translação e o giro durante a mira para 30%.
 
 ## RPM pela distância ao hive
 

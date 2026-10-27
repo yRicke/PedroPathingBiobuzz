@@ -38,7 +38,8 @@
         @Override
         public void runOpMode() {
             Follower follower = Constants.create(hardwareMap);
-            drive = new PedroDrive(follower, telemetry);
+            drive = new PedroDrive(follower, telemetry,
+                    Constants.foresightConfig.headingFeedback.get());
             intake = new Intake(hardwareMap, telemetry);
             flywheel = new Flywheel(hardwareMap, telemetry);
             transfer = new Transfer(hardwareMap, telemetry);
@@ -53,7 +54,8 @@
             telemetry.addLine("Drive: Pedro field-centric com hold automatico");
             telemetry.addLine("Frente do campo: orientacao do robo ao apertar Play");
             telemetry.addLine("D-pad: hive esquerdo 38-41 / direito 42-45");
-            telemetry.addLine("Right bumper: buscar e manter centro do hive na mira");
+            telemetry.addLine("Right bumper: mirar no hive visivel com translacao livre");
+            telemetry.addLine("Sem alvo: giro manual, mesmo segurando right bumper");
             telemetry.addLine("Right trigger: disparar");
             telemetry.update();
 
@@ -73,7 +75,9 @@
                     boolean aimRequested = gamepad1.right_bumper;
                     boolean shootRequested = gamepad1.right_trigger > 0;
                     if (aimRequested) {
-                        drive.aim(limelight.getObservation());
+                        drive.aim(-gamepad1.left_stick_y, gamepad1.left_stick_x,
+                                gamepad1.right_stick_x, gamepad1.left_trigger > 0,
+                                limelight.getObservation());
                     } else {
                         drive.run(-gamepad1.left_stick_y, gamepad1.left_stick_x,
                                 gamepad1.right_stick_x, gamepad1.left_trigger > 0);

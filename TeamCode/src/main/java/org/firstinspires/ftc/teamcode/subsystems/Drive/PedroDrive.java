@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.subsystems.Drive;
 
+import com.pedropathing.controllers.Controller;
 import com.pedropathing.drivetrain.DrivePowers;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.follower.ManualDrive;
@@ -16,28 +17,24 @@ public class PedroDrive {
     private static final double HOLD_VELOCITY_THRESHOLD = 0.2;
     private static final double AIM_TOLERANCE_DEGREES = 1.0;
     private static final double MAX_AIM_CORRECTION_DEGREES = 8.0;
-    private static final double SEARCH_HEADING_STEP_DEGREES = 2.0;
 
     private final Follower follower;
     private final Telemetry telemetry;
-    private Pose aimPose;
+    private final Controller aimHeadingController;
+    private boolean aiming;
+    private double aimHeading;
     private int aimFirstTagId;
     private double lastAimFrameTimestamp = Double.NaN;
-    private double searchDirection = -1;
-    private boolean visionWasReady;
     private String aimStatus = "Manual";
 
-    public PedroDrive(Follower follower, Telemetry telemetry) {
+    public PedroDrive(Follower follower, Telemetry telemetry, Controller aimHeadingController) {
         this.follower = follower;
         this.telemetry = telemetry;
+        this.aimHeadingController = aimHeadingController;
     }
 
     public void run(double axial, double lateral, double yaw, boolean precisionMode) {
-        if (aimPose != null) {
-            // Sair da mira cancela o alvo de giro, inclusive com sticks neutros.
-            follower.hold(follower.pose());
-            aimPose = null;
-        }
+        clearAim();
         aimStatus = "Manual";
         double multiplier = precisionMode ? PRECISION_MULTIPLIER : 1.0;
 
@@ -54,52 +51,52 @@ public class PedroDrive {
         follower.update();
     }
 
-    /** Mantem X/Y capturados e usa a camera somente para ajustar o heading. */
-    public void aim(AprilTagObservation observation) {
+    /** Transla pelo stick; corrige so o heading com alvo visivel, senao libera o giro. */
+    public void aim(double axial, double lateral, double yaw, boolean precisionMode,
+                    AprilTagObservation observation) {
+        if (!observation.isVisionReady() || !observation.hasTarget()) {
+            run(axial, lateral, yaw, precisionMode);
+            aimStatus = observation.isVisionReady()
+                    ? "Sem alvo: giro manual" : "Sem visao: giro manual";
+            return;
+        }
+
         Pose current = follower.pose();
-        if (aimPose == null) {
-            aimPose = current;
-            aimFirstTagId = observation.getFirstTagId();
+        if (!aiming || aimFirstTagId != observation.getFirstTagId()) {
+            aimHeadingController.reset();
             lastAimFrameTimestamp = Double.NaN;
-            searchDirection = -1;
-            visionWasReady = false;
         }
-        if (aimFirstTagId != observation.getFirstTagId()) {
-            aimFirstTagId = observation.getFirstTagId();
-            lastAimFrameTimestamp = Double.NaN;
-            searchDirection = -1;
+        aiming = true;
+        aimFirstTagId = observation.getFirstTagId();
+        double error = observation.getTxDegrees();
+        boolean aligned = Math.abs(error) <= AIM_TOLERANCE_DEGREES;
+        if (observation.getFrameTimestamp() != lastAimFrameTimestamp) {
+            double correction = aligned ? 0 : Math.max(-MAX_AIM_CORRECTION_DEGREES,
+                    Math.min(MAX_AIM_CORRECTION_DEGREES, error));
+            // tx positivo significa alvo a direita; heading positivo e anti-horario.
+            aimHeading = Angle.normalizeSigned(current.heading() - Math.toRadians(correction));
+            lastAimFrameTimestamp = observation.getFrameTimestamp();
         }
+        aimStatus = aligned ? "Alinhado"
+                : "Centralizando hive " + aimFirstTagId + "-" + (aimFirstTagId + 3);
 
-        if (!observation.isVisionReady()) {
-            if (visionWasReady) {
-                aimPose = aimPose.withHeading(current.heading());
-            }
-            aimStatus = "Sem visao: mantendo pose";
-        } else if (!observation.hasTarget()) {
-            double heading = current.heading()
-                    + searchDirection * Math.toRadians(SEARCH_HEADING_STEP_DEGREES);
-            aimPose = aimPose.withHeading(Angle.normalizeSigned(heading));
-            aimStatus = "Buscando hive " + aimFirstTagId + "-" + (aimFirstTagId + 3);
-        } else {
-            double error = observation.getTxDegrees();
-            boolean aligned = Math.abs(error) <= AIM_TOLERANCE_DEGREES;
-            if (observation.getFrameTimestamp() != lastAimFrameTimestamp) {
-                double correction = aligned ? 0 : Math.max(-MAX_AIM_CORRECTION_DEGREES,
-                        Math.min(MAX_AIM_CORRECTION_DEGREES, error));
-                double heading = current.heading() - Math.toRadians(correction);
-                aimPose = aimPose.withHeading(Angle.normalizeSigned(heading));
-                lastAimFrameTimestamp = observation.getFrameTimestamp();
-                if (!aligned) {
-                    // tx positivo significa alvo a direita; heading positivo e anti-horario.
-                    searchDirection = -Math.signum(error);
-                }
-            }
-            aimStatus = aligned ? "Alinhado" : "Centralizando hive " + aimFirstTagId + "-" + (aimFirstTagId + 3);
-        }
-
-        visionWasReady = observation.isVisionReady();
-        follower.hold(aimPose);
+        double multiplier = precisionMode ? PRECISION_MULTIPLIER : 1.0;
+        DrivePowers translation = ManualDrive.fieldCentric(
+                axial * multiplier, -lateral * multiplier, 0, current.heading());
+        DrivePowers powers = ManualDrive.headingLock(
+                follower, aimHeadingController, translation, aimHeading);
+        // Nao usa driveOrHold aqui: o hold de pose prenderia X/Y e poderia ignorar giros pequenos.
+        follower.manual(new DrivePowers(powers.forward(), powers.strafe(),
+                Math.max(-1, Math.min(1, powers.turn())) * multiplier));
         follower.update();
+    }
+
+    private void clearAim() {
+        if (aiming) {
+            aimHeadingController.reset();
+        }
+        aiming = false;
+        lastAimFrameTimestamp = Double.NaN;
     }
 
     public void sendTelemetry() {
@@ -111,7 +108,7 @@ public class PedroDrive {
     }
 
     public void stop() {
-        aimPose = null;
+        clearAim();
         aimStatus = "Manual";
         follower.stop();
         follower.drivetrain.stop();

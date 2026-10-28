@@ -7,7 +7,6 @@
     import org.firstinspires.ftc.teamcode.subsystems.Drive.Drive;
     import org.firstinspires.ftc.teamcode.subsystems.Drive.DriveField;
     import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Flywheel;
-    import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.FlywheelConfig;
     import org.firstinspires.ftc.teamcode.subsystems.Intake.Intake;
     import org.firstinspires.ftc.teamcode.subsystems.Trigger.Trigger;
     import org.firstinspires.ftc.teamcode.subsystems.Transfer.Transfer;
@@ -40,7 +39,7 @@
                     //Subsistemas
                     drive.run(-gamepad1.left_stick_y,-gamepad1.left_stick_x, gamepad1.right_stick_x, gamepad1.left_trigger > 0, gamepad2.right_stick_x);
                     intake.run(gamepad1.a, gamepad1.left_bumper);
-                    flywheel.run(FlywheelConfig.BASE_RPM);
+                    flywheel.run(Flywheel.BASE_RPM);
                     trigger.run(gamepad1.right_trigger > 0);
                     transfer.run(gamepad1.left_bumper,gamepad1.left_bumper);
                     // Telemetry Organizado

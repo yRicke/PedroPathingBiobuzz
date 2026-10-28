@@ -1,6 +1,8 @@
 package org.firstinspires.ftc.teamcode.subsystems.Limelight;
 
 import com.qualcomm.hardware.limelightvision.LLResultTypes.FiducialResult;
+import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.hardware.limelightvision.Limelight3A;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
@@ -10,7 +12,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.Optional;
+import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -18,7 +20,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class HiveCenterEstimatorTest {
+public class LimelightCenterTest {
     private static final double EPSILON = 1e-9;
 
     @Test
@@ -31,36 +33,36 @@ public class HiveCenterEstimatorTest {
             FiducialResult tag = tag(ids[i], tagX[i], -0.4, 2, 0, 0, 0, 1);
             int firstTag = ids[i] <= 41 ? 38 : 42;
 
-            Optional<HiveCenterEstimator.Estimate> result =
-                    HiveCenterEstimator.estimate(Arrays.asList(tag), firstTag);
+            AprilTagObservation result =
+                    estimate(Arrays.asList(tag), firstTag);
 
-            assertTrue("Tag " + ids[i], result.isPresent());
-            assertEquals(8.530765609948133, result.get().txDegrees, EPSILON);
-            assertEquals(1, result.get().tagsUsed);
+            assertTrue("Tag " + ids[i], result.hasTarget());
+            assertEquals(8.530765609948133, result.getTxDegrees(), EPSILON);
+            assertEquals(1, result.getTagsUsed());
         }
     }
 
     @Test
     public void hiddenRightmostTagDoesNotMoveEstimatedCenter() {
-        Optional<HiveCenterEstimator.Estimate> result = HiveCenterEstimator.estimate(
+        AprilTagObservation result = estimate(
                 Arrays.asList(tag(42, -0.1651, 0, 2, 0, 0, 0, 1),
                         tag(43, -0.06985, 0, 2, 0, 0, 0, 1),
                         tag(44, 0.06985, 0, 2, 0, 0, 0, 1)), 42);
 
-        assertTrue(result.isPresent());
-        assertEquals(0, result.get().txDegrees, EPSILON);
-        assertEquals(3, result.get().tagsUsed);
+        assertTrue(result.hasTarget());
+        assertEquals(0, result.getTxDegrees(), EPSILON);
+        assertEquals(3, result.getTagsUsed());
     }
 
     @Test
     public void areaWeightedFusionCombinesCenterPositionsRatherThanTagCenters() {
-        Optional<HiveCenterEstimator.Estimate> result = HiveCenterEstimator.estimate(
+        AprilTagObservation result = estimate(
                 Arrays.asList(tag(42, -0.1651, 0, 2, 0, 0, 0, 1),
                         tag(45, 0.5651, 0, 2, 0, 0, 0, 3)), 42);
 
-        assertTrue(result.isPresent());
-        assertEquals(8.530765609948133, result.get().txDegrees, EPSILON);
-        assertEquals(2, result.get().tagsUsed);
+        assertTrue(result.hasTarget());
+        assertEquals(8.530765609948133, result.getTxDegrees(), EPSILON);
+        assertEquals(2, result.getTagsUsed());
     }
 
     @Test
@@ -68,22 +70,22 @@ public class HiveCenterEstimatorTest {
         FiducialResult tilted = tag(42, 0.2285096029175946, -0.441275,
                 2.142980794164811, 17, 60, 30, 1);
 
-        Optional<HiveCenterEstimator.Estimate> result =
-                HiveCenterEstimator.estimate(Arrays.asList(tilted), 42);
+        AprilTagObservation result =
+                estimate(Arrays.asList(tilted), 42);
 
-        assertTrue(result.isPresent());
-        assertEquals(8.530765609948133, result.get().txDegrees, EPSILON);
+        assertTrue(result.hasTarget());
+        assertEquals(8.530765609948133, result.getTxDegrees(), EPSILON);
     }
 
     @Test
     public void upsideDownCameraPoseRotatesTheTagOffsetBeforeProjection() {
         FiducialResult rotated = tag(42, -0.1349, 0.4, 2, 0, 0, 180, 1);
 
-        Optional<HiveCenterEstimator.Estimate> result =
-                HiveCenterEstimator.estimate(Arrays.asList(rotated), 42);
+        AprilTagObservation result =
+                estimate(Arrays.asList(rotated), 42);
 
-        assertTrue(result.isPresent());
-        assertEquals(-8.530765609948133, result.get().txDegrees, EPSILON);
+        assertTrue(result.hasTarget());
+        assertEquals(-8.530765609948133, result.getTxDegrees(), EPSILON);
     }
 
     @Test
@@ -94,17 +96,17 @@ public class HiveCenterEstimatorTest {
                 new Position(DistanceUnit.INCH, -6.5, 0, 40, 0),
                 new YawPitchRollAngles(AngleUnit.DEGREES, 0, 0, 0, 0)));
 
-        Optional<HiveCenterEstimator.Estimate> result =
-                HiveCenterEstimator.estimate(Arrays.asList(inches), 42);
+        AprilTagObservation result =
+                estimate(Arrays.asList(inches), 42);
 
-        assertTrue(result.isPresent());
-        assertEquals(0, result.get().txDegrees, EPSILON);
+        assertTrue(result.hasTarget());
+        assertEquals(0, result.getTxDegrees(), EPSILON);
     }
 
     @Test
     public void otherHiveDoesNotContributeToEstimate() {
-        assertFalse(HiveCenterEstimator.estimate(
-                Arrays.asList(tag(38, 0, 0, 2, 0, 0, 0, 1)), 42).isPresent());
+        assertFalse(estimate(
+                Arrays.asList(tag(38, 0, 0, 2, 0, 0, 0, 1)), 42).hasTarget());
     }
 
     @Test
@@ -112,21 +114,36 @@ public class HiveCenterEstimatorTest {
         FiducialResult missing = mock(FiducialResult.class);
         when(missing.getFiducialId()).thenReturn(43);
 
-        assertFalse(HiveCenterEstimator.estimate(Arrays.asList(missing,
+        assertFalse(estimate(Arrays.asList(missing,
                 tag(43, 0, 0, 0, 0, 0, 0, 1),
                 tag(43, 0, 0, -2, 0, 0, 0, 1),
                 tag(43, Double.NaN, 0, 2, 0, 0, 0, 1),
-                tag(43, 0, 0, 2, 0, Double.NaN, 0, 1)), 42).isPresent());
+                tag(43, 0, 0, 2, 0, Double.NaN, 0, 1)), 42).hasTarget());
     }
 
     @Test
     public void invalidTagDoesNotDiscardAnotherUsableTag() {
-        Optional<HiveCenterEstimator.Estimate> result = HiveCenterEstimator.estimate(
+        AprilTagObservation result = estimate(
                 Arrays.asList(tag(42, 0, 0, 0, 0, 0, 0, 1),
                         tag(43, -0.06985, 0, 2, 0, 0, 0, 1)), 42);
 
-        assertTrue(result.isPresent());
-        assertEquals(1, result.get().tagsUsed);
+        assertTrue(result.hasTarget());
+        assertEquals(1, result.getTagsUsed());
+    }
+
+    private AprilTagObservation estimate(List<FiducialResult> tags, int firstTagId) {
+        Limelight3A camera = mock(Limelight3A.class);
+        LLResult frame = mock(LLResult.class);
+        when(camera.isConnected()).thenReturn(true);
+        when(camera.isRunning()).thenReturn(true);
+        when(camera.getLatestResult()).thenReturn(frame);
+        when(frame.getTimestamp()).thenReturn(1.0);
+        when(frame.getPipelineIndex()).thenReturn(8);
+        when(frame.isValid()).thenReturn(true);
+        when(frame.getFiducialResults()).thenReturn(tags);
+        Limelight limelight = new Limelight(camera, null, false, 8, System::nanoTime);
+        limelight.run(firstTagId == 38, firstTagId == 42);
+        return limelight.getObservation();
     }
 
     private FiducialResult tag(int id, double x, double y, double z,

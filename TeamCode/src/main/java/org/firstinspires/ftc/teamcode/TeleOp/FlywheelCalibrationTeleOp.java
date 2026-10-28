@@ -5,11 +5,8 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.subsystems.DedinhoNervoso.DedinhoNervoso;
 import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Flywheel;
-import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.FlywheelConfig;
-import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.FlywheelCalibrationControls;
 import org.firstinspires.ftc.teamcode.subsystems.Intake.Intake;
 import org.firstinspires.ftc.teamcode.subsystems.Limelight.Limelight;
-import org.firstinspires.ftc.teamcode.subsystems.Limelight.LimelightConfig;
 import org.firstinspires.ftc.teamcode.subsystems.Transfer.Transfer;
 import org.firstinspires.ftc.teamcode.subsystems.Trigger.Trigger;
 
@@ -19,10 +16,60 @@ import java.util.OptionalDouble;
 /** Calibracao com robo parado: RPM manual, leitura tdist e captura para anotacao. */
 @TeleOp(name = "Flywheel Calibration - tdist", group = "Flywheel")
 public class FlywheelCalibrationTeleOp extends LinearOpMode {
+    private static final int[] STEPS_TENTHS = {1, 10, 100, 1000, 10000};
+    private int maxTenths;
+    private int targetTenths;
+    private int stepIndex = 2;
+    private boolean enabled;
+    private boolean previousUp, previousDown, previousLeft, previousRight, previousA;
+
+    void resetCalibrationControls(double initialRpm, double maxRpm) {
+        if (!Double.isFinite(initialRpm) || !Double.isFinite(maxRpm)
+                || initialRpm < 0 || maxRpm <= 0 || initialRpm > maxRpm
+                || maxRpm > Integer.MAX_VALUE / 10.0) {
+            throw new IllegalArgumentException("Limites de RPM invalidos");
+        }
+        maxTenths = (int) Math.round(maxRpm * 10);
+        targetTenths = (int) Math.round(initialRpm * 10);
+        stepIndex = 2;
+        enabled = false;
+        previousUp = previousDown = previousLeft = previousRight = previousA = false;
+    }
+
+    void updateCalibrationControls(boolean up, boolean down, boolean left, boolean right,
+                       boolean a, boolean stop) {
+        if (left != right) {
+            if (left && !previousLeft) stepIndex = Math.max(0, stepIndex - 1);
+            if (right && !previousRight) {
+                stepIndex = Math.min(STEPS_TENTHS.length - 1, stepIndex + 1);
+            }
+        }
+        if (up != down) {
+            if (up && !previousUp) {
+                targetTenths = (int) Math.min((long) maxTenths,
+                        (long) targetTenths + STEPS_TENTHS[stepIndex]);
+            }
+            if (down && !previousDown) {
+                targetTenths = Math.max(0, targetTenths - STEPS_TENTHS[stepIndex]);
+            }
+        }
+        if (stop) enabled = false;
+        else if (a && !previousA) enabled = !enabled;
+        previousUp = up;
+        previousDown = down;
+        previousLeft = left;
+        previousRight = right;
+        previousA = a;
+    }
+
+    double getCalibrationRpm() { return targetTenths / 10.0; }
+    double getCalibrationStep() { return STEPS_TENTHS[stepIndex] / 10.0; }
+    boolean isFlywheelEnabled() { return enabled; }
+    double getCommandedRpm() { return enabled ? getCalibrationRpm() : 0; }
+
     @Override
     public void runOpMode() {
-        FlywheelCalibrationControls controls = new FlywheelCalibrationControls(
-                FlywheelConfig.BASE_RPM, FlywheelConfig.MAX_RPM);
+        resetCalibrationControls(Flywheel.BASE_RPM, Flywheel.MAX_RPM);
         Flywheel flywheel = new Flywheel(hardwareMap, telemetry);
         Transfer transfer = new Transfer(hardwareMap, telemetry);
         Trigger trigger = new Trigger(hardwareMap, telemetry);
@@ -47,7 +94,7 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
             if (isStopRequested()) return;
 
             while (opModeIsActive()) {
-                controls.update(gamepad1.dpad_up, gamepad1.dpad_down,
+                updateCalibrationControls(gamepad1.dpad_up, gamepad1.dpad_down,
                         gamepad1.dpad_left, gamepad1.dpad_right, gamepad1.a, gamepad1.b);
                 if (gamepad1.y && !previousY) leftHive = !leftHive;
                 previousY = gamepad1.y;
@@ -57,14 +104,14 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
                 OptionalDouble distance = limelight.getDistanceMeters();
 
                 if (gamepad1.x && !previousX) {
-                    if (controls.isEnabled() && controls.getTargetRpm() > 0
+                    if (isFlywheelEnabled() && getCalibrationRpm() > 0
                             && distance.isPresent() && Double.isFinite(currentRpm)) {
                         capturedPair = String.format(Locale.US,
                                 "{%.3f, %.1f}, // tdist cm, RPM desejada",
-                                distance.getAsDouble() * 100, controls.getTargetRpm());
+                                distance.getAsDouble() * 100, getCalibrationRpm());
                         capturedDetails = String.format(Locale.US,
                                 "Hive %d-%d | RPM medida %.1f | %d amostras",
-                                firstTagId, firstTagId + LimelightConfig.TAGS_PER_HIVE - 1,
+                                firstTagId, firstTagId + Limelight.TAGS_PER_HIVE - 1,
                                 currentRpm, limelight.getDistanceSampleCount());
                     } else {
                         capturedDetails = "Captura recusada: ligue flywheel e confira tdist valido";
@@ -72,16 +119,16 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
                 }
                 previousX = gamepad1.x;
 
-                flywheel.run(controls.getCommandedRpm());
-                boolean shoot = controls.getCommandedRpm() > 0 && gamepad1.right_trigger > 0;
+                flywheel.run(getCommandedRpm());
+                boolean shoot = getCommandedRpm() > 0 && gamepad1.right_trigger > 0;
                 transfer.run(shoot);
                 trigger.run(shoot);
                 intake.run(gamepad1.left_bumper, false);
                 dedo.run(gamepad1.right_bumper);
 
-                telemetry.addData("Flywheel", controls.isEnabled() ? "LIGADA" : "DESLIGADA (A liga)");
-                telemetry.addData("RPM desejada", "%.1f", controls.getTargetRpm());
-                telemetry.addData("Passo RPM", "%.1f", controls.getStepRpm());
+                telemetry.addData("Flywheel", isFlywheelEnabled() ? "LIGADA" : "DESLIGADA (A liga)");
+                telemetry.addData("RPM desejada", "%.1f", getCalibrationRpm());
+                telemetry.addData("Passo RPM", "%.1f", getCalibrationStep());
                 flywheel.sendTelemetry();
                 limelight.sendTelemetry();
                 telemetry.addData("PAR ANOTADO", capturedPair);

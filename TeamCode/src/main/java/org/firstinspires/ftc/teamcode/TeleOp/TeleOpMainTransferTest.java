@@ -15,13 +15,23 @@
     import org.firstinspires.ftc.teamcode.subsystems.Transfer.Transfer;
     import org.firstinspires.ftc.teamcode.subsystems.Trigger.Trigger;
 
+    import java.util.OptionalDouble;
+    import java.util.concurrent.TimeUnit;
+
     @TeleOp(name="TeleOpMainTransferTest", group="TeleOpMode")
 
     public class TeleOpMainTransferTest extends LinearOpMode {
 
-        // Referencia ajustavel: RPM_BASE e o RPM ideal a DISTANCIA_BASE_CM.
-        public static double RPM_BASE = 2900;
-        public static double DISTANCIA_BASE_CM = 308;
+        // Preencha com tdist FILTRADO (cm) e RPM desejada do TeleOp de calibracao.
+        // Distancia zero desativa o par. Os antigos 308 cm NAO eram tdist.
+        public static double RPM_BASE = 2720;
+        public static double DISTANCIA_BASE_CM = 0;
+        public static double RPM_BASE_2 = 0;
+        public static double DISTANCIA_BASE_2_CM = 0;
+        public static double RPM_BASE_3 = 0;
+        public static double DISTANCIA_BASE_3_CM = 0;
+        private static final long RPM_UPDATE_NANOS = TimeUnit.MILLISECONDS.toNanos(100);
+        private static final double RPM_DEADBAND = 10;
         // true para a camera fisicamente montada de cabeca para baixo.
         private static final boolean LIMELIGHT_UPSIDE_DOWN = true;
         // Configure esta pipeline como AprilTag na interface da Limelight.
@@ -37,6 +47,16 @@
 
         @Override
         public void runOpMode() {
+            double[][] calibrationPairs = {
+                    {DISTANCIA_BASE_CM, RPM_BASE},
+                    {DISTANCIA_BASE_2_CM, RPM_BASE_2},
+                    {DISTANCIA_BASE_3_CM, RPM_BASE_3}
+            };
+            // Valide antes de iniciar hardware/polling da camera.
+            int pointCount = FlywheelRpmCalculator.pointCount(calibrationPairs);
+            double targetRpm = FlywheelRpmCalculator.calculate(
+                    OptionalDouble.empty(), RPM_BASE, calibrationPairs);
+            long lastRpmUpdate = System.nanoTime();
             Follower follower = Constants.create(hardwareMap);
             drive = new PedroDrive(follower, telemetry,
                     Constants.foresightConfig.headingFeedback.get());
@@ -83,8 +103,16 @@
                                 gamepad1.right_stick_x, gamepad1.left_trigger > 0);
                     }
                     intake.run(gamepad1.a, gamepad1.left_bumper);
-                    double targetRpm = FlywheelRpmCalculator.calculate(
-                            limelight.getDistanceMeters(), RPM_BASE, DISTANCIA_BASE_CM);
+                    OptionalDouble shotDistance = limelight.getTdistMeters();
+                    double requestedRpm = FlywheelRpmCalculator.calculate(
+                            shotDistance, RPM_BASE, calibrationPairs);
+                    long now = System.nanoTime();
+                    if (requestedRpm <= 0 || (now - lastRpmUpdate >= RPM_UPDATE_NANOS
+                            && Math.abs(requestedRpm - targetRpm) >= RPM_DEADBAND)) {
+                        targetRpm = requestedRpm;
+                        lastRpmUpdate = now;
+                    }
+                    // O controle do motor continua rodando em TODOS os ciclos.
                     flywheel.run(targetRpm);
                     transfer.run(shootRequested, gamepad1.left_bumper);
                     trigger.run(shootRequested);
@@ -94,6 +122,13 @@
                     limelight.sendTelemetry();
                     intake.sendTelemetry();
                     flywheel.sendTelemetry();
+                    telemetry.addData("Pares RPM calibrados", pointCount);
+                    telemetry.addData("RPM calculada antes da banda morta", requestedRpm);
+                    telemetry.addData("Modo RPM", !shotDistance.isPresent()
+                            ? "Sem tdist: RPM_BASE fixa"
+                            : pointCount < 2 ? "Menos de 2 pares: RPM fixa"
+                            : FlywheelRpmCalculator.isInCalibratedRange(shotDistance, calibrationPairs)
+                            ? "Interpolacao tdist" : "Fora da faixa: RPM limitada ao extremo");
                     transfer.sendTelemetry();
                     trigger.sendTelemetry();
                     dedo.sendTelemetry();

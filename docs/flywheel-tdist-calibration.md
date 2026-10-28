@@ -8,7 +8,7 @@
    38–41). Aguarde uma leitura válida de `tdist filtrado (cm)`.
 3. A RPM desejada começa em **2720**, com a flywheel desligada. A liga/desliga;
    B desliga sem perder o ajuste. Ajuste a RPM e o passo pelo D-pad.
-4. Aguarde a RPM atual se aproximar da desejada e a distância estabilizar
+4. Aguarde a `Flywheel RPM medido` se aproximar da RPM desejada e a distância estabilizar
    depois de mover o robô (a janela do filtro é de um segundo).
 5. Faça lançamentos com RT. LB alterna o intake; RB abre o dedinho enquanto
    pressionado. Verifique a repetibilidade com POLLEN.
@@ -35,9 +35,8 @@ o par capturado fica congelado. Se uma captura falhar, o último par permanece.
 | X | Congela o par distância/RPM para anotação |
 
 O passo inicial é 10 RPM. Segurar D-pad/A/Y/X não repete o comando a cada loop.
-A RPM fica entre zero e `MAX_RPM` (6000 inicialmente, um limite do ajuste deste
-teste; configure conforme o launcher). `INITIAL_RPM`, `PIPELINE` e
-`UPSIDE_DOWN` ficam no início da classe. Ao parar o OpMode, a flywheel, o
+A RPM fica entre zero e `FlywheelConfig.MAX_RPM` (6000 inicialmente; configure conforme o launcher). `BASE_RPM` e `MAX_RPM` ficam em `FlywheelConfig`; `PIPELINE_INDEX` e
+`UPSIDE_DOWN` ficam em `LimelightConfig`. Ao parar o OpMode, a flywheel, o
 transfer e o intake são desligados, os servos são fechados e a câmera é parada.
 
 ## Configuração da Limelight
@@ -77,32 +76,33 @@ e [rastreamento 3D](https://docs.limelightvision.io/docs/docs-limelight/pipeline
 O acesso por `LLResult.toString()` foi conferido no código-fonte do artefato
 `org.firstinspires.ftc:Hardware:12.0.0` e em testes com a classe real.
 
-## Aplicar os pares no TeleOp principal
+## Aplicar os pares
 
-Edite `TeamCode/src/main/java/org/firstinspires/ftc/teamcode/TeleOp/TeleOpMainTransferTest.java`:
+Edite `subsystems/FlywheelAdvanced/FlywheelConfig.java`:
 
-| Par | Distância filtrada anotada (cm) | RPM desejada anotada |
+| Par | tdist filtrado anotado (cm) | RPM desejada anotada |
 | --- | --- | --- |
-| 1 | `DISTANCIA_BASE_CM` | `RPM_BASE` |
-| 2 | `DISTANCIA_BASE_2_CM` | `RPM_BASE_2` |
-| 3 | `DISTANCIA_BASE_3_CM` | `RPM_BASE_3` |
+| 1 | `BASE_DISTANCE_CM` | `BASE_RPM` |
+| 2 | `BASE_DISTANCE_2_CM` | `BASE_RPM_2` |
+| 3 | `BASE_DISTANCE_3_CM` | `BASE_RPM_3` |
 
-As três distâncias começam em **zero**, desativadas. Não reutilize os antigos
-308 cm como se fossem `tdist`. Preencha ambos os valores de cada par medido,
-sem duplicar distâncias. O calculador aceita os pares em qualquer ordem.
-Para mais pontos, adicione novas linhas ao array `calibrationPairs`.
+Distância zero desativa o par até a medição. Preencha distância e RPM de cada
+par validado, sem duplicar distâncias. A tabela aceita qualquer ordem e copia
+os valores na inicialização. Para mais pontos, adicione pares em
+`FlywheelConfig.createRpmTable()` e gere o programa novamente.
 
-- **Sem pares:** mantém `RPM_BASE` (2720 inicialmente).
-- **Um par:** mantém a RPM desse par; ainda não há curva conhecida.
-- **Dois ou mais:** interpola entre os pontos vizinhos.
-- **Fora da faixa:** limita ao extremo mais próximo e sinaliza na telemetria;
-  isso não significa que essa posição tenha sido calibrada.
-- **Sem tdist:** volta ao pedido de `RPM_BASE`, conforme indicado na telemetria.
+- Sem pares: usa `BASE_RPM` (2720 inicialmente).
+- Um par: mantém a RPM desse par; não existe curva medida ainda.
+- Dois ou mais: interpola entre os pontos vizinhos.
+- Fora da faixa: limita ao extremo e sinaliza que a posição não foi calibrada.
+- Sem tdist válido: volta imediatamente ao pedido de `BASE_RPM`.
+- `BASE_RPM` zero: desliga a RPM automática.
 
-O pedido é estabilizado por uma banda morta de 10 RPM e intervalo mínimo de
-100 ms entre mudanças. O controle dos motores continua em todos os ciclos.
-O TeleOp de calibração usa o ajuste manual diretamente, inclusive o passo 0,1,
-sem essa banda morta. Os parâmetros da estabilização ficam no TeleOp principal.
+O controlador automático aplica banda morta de 10 RPM e intervalo mínimo de
+100 ms, configurados em `FlywheelConfig`. A malha dos motores continua sendo
+executada a cada ciclo. A calibração manual aplica diretamente os passos,
+inclusive 0,1 RPM. O controle limita a potência ao sentido de lançamento;
+quando acima da RPM desejada, pode reduzir a potência até zero.
 
 Registre novos pares ao alterar ângulo, câmera/POI, compressão, flywheel ou
 elemento lançado. Esta calibração é de POLLEN; não foi medida para NECTAR.

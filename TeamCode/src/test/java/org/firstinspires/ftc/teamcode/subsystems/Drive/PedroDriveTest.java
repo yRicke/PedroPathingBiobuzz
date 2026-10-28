@@ -112,13 +112,13 @@ public class PedroDriveTest {
     public void aimDoesNotHoldXYWhileCorrectingHeading() {
         localizer.setPose(new Pose(10, 20, Math.toRadians(90)));
 
-        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 10, 2.0, 1, 1));
+        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 10, 1, 1));
 
         assertTrue(follower.manual());
         assertPowers(0, 0, Math.toRadians(-8));
 
         localizer.setPose(new Pose(11, 19, Math.toRadians(86)));
-        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 3, 2.0, 1, 2));
+        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 3, 1, 2));
         assertPowers(0, 0, Math.toRadians(-3));
     }
 
@@ -127,7 +127,7 @@ public class PedroDriveTest {
         localizer.setPose(new Pose(10, 20, Math.PI / 2));
 
         drive.aim(0.6, 0.4, -0.8, false,
-                AprilTagObservation.detected(42, 6, 2.0, 1, 1));
+                AprilTagObservation.detected(42, 6, 1, 1));
 
         assertTrue(follower.manual());
         assertPowers(-0.4, -0.6, Math.toRadians(-6));
@@ -137,7 +137,7 @@ public class PedroDriveTest {
     @Test
     public void aimPrecisionScalesTranslationAndCorrection() {
         drive.aim(0.6, 0.4, 1, true,
-                AprilTagObservation.detected(42, -6, 2.0, 1, 1));
+                AprilTagObservation.detected(42, -6, 1, 1));
 
         assertPowers(0.18, -0.12, Math.toRadians(1.8));
     }
@@ -155,31 +155,31 @@ public class PedroDriveTest {
 
     @Test
     public void repeatedImageDoesNotAccumulateHeadingCorrections() {
-        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 6, 2.0, 1, 1));
+        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 6, 1, 1));
         assertPowers(0, 0, Math.toRadians(-6));
 
         localizer.setPose(new Pose(0, 0, Math.toRadians(-2)));
-        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 6, 2.0, 1, 1));
+        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 6, 1, 1));
         assertPowers(0, 0, Math.toRadians(-4));
 
-        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 3, 2.0, 1, 2));
+        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 3, 1, 2));
         assertPowers(0, 0, Math.toRadians(-3));
     }
 
     @Test
     public void centeredHiveKeepsTrackingWithoutHoldingPosition() {
         localizer.setPose(new Pose(1, 2, Math.toRadians(5)));
-        drive.aim(0, 0, 0.8, false, AprilTagObservation.detected(42, 0.5, 2.0, 1, 1));
+        drive.aim(0, 0, 0.8, false, AprilTagObservation.detected(42, 0.5, 1, 1));
         assertTrue(follower.manual());
         assertPowers(0, 0, 0);
 
-        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, -3, 2.0, 1, 2));
+        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, -3, 1, 2));
         assertPowers(0, 0, Math.toRadians(3));
     }
 
     @Test
     public void lostTargetImmediatelyReturnsYawToDriverWhileBumperStaysPressed() {
-        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, -4, 2.0, 1, 1));
+        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, -4, 1, 1));
 
         drive.aim(0.6, 0.4, 0.5, false, AprilTagObservation.searching(42, 2));
 
@@ -189,7 +189,7 @@ public class PedroDriveTest {
 
     @Test
     public void disconnectedVisionReturnsAllAxesToDriverInPrecisionMode() {
-        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, -4, 2.0, 1, 1));
+        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, -4, 1, 1));
 
         drive.aim(0.6, 0.4, 0.5, true, AprilTagObservation.unavailable(42));
 
@@ -198,7 +198,7 @@ public class PedroDriveTest {
 
     @Test
     public void lostTargetWithNeutralSticksCancelsPreviousCorrection() {
-        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 8, 2.0, 1, 1));
+        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 8, 1, 1));
         localizer.setPose(new Pose(5, 6, 0.35));
 
         drive.aim(0, 0, 0, false, AprilTagObservation.unavailable(42));
@@ -209,11 +209,11 @@ public class PedroDriveTest {
 
     @Test
     public void reacquiredTargetUsesCurrentHeadingEvenIfTimestampRepeats() {
-        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 6, 2.0, 1, 1));
+        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 6, 1, 1));
         drive.aim(0, 0, 0.5, false, AprilTagObservation.unavailable(42));
         localizer.setPose(new Pose(25, 30, Math.toRadians(80)));
 
-        drive.aim(0.4, 0, 0, false, AprilTagObservation.detected(42, 3, 2.0, 1, 1));
+        drive.aim(0.4, 0, 0, false, AprilTagObservation.detected(42, 3, 1, 1));
 
         assertTrue(follower.manual());
         assertEquals(Math.toRadians(-3), drivetrain.powers.turn(), EPSILON);
@@ -221,7 +221,7 @@ public class PedroDriveTest {
 
     @Test
     public void releaseWithNeutralSticksCancelsPreviousTurn() {
-        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 12, 2.0, 1, 1));
+        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 12, 1, 1));
 
         drive.run(0, 0, 0, false);
 
@@ -231,23 +231,23 @@ public class PedroDriveTest {
 
     @Test
     public void releaseAllowsManualDriveAndNextAimUsesNewHeading() {
-        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 6, 2.0, 1, 1));
+        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 6, 1, 1));
 
         drive.run(0.6, 0, -0.5, false);
         assertTrue(follower.manual());
         assertPowers(0.6, 0, 0.5);
 
         localizer.setPose(new Pose(25, 30, Math.toRadians(90)));
-        drive.aim(0.6, 0, 0, false, AprilTagObservation.detected(42, -3, 2.0, 1, 1));
+        drive.aim(0.6, 0, 0, false, AprilTagObservation.detected(42, -3, 1, 1));
         assertPowers(0, -0.6, Math.toRadians(3));
     }
 
     @Test
     public void changingHiveProcessesItsOffsetEvenWithinSameImage() {
-        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 6, 2.0, 1, 1));
+        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 6, 1, 1));
         localizer.setPose(new Pose(0, 0, Math.toRadians(-1)));
 
-        drive.aim(0, 0, 0, false, AprilTagObservation.detected(38, -3, 2.0, 1, 1));
+        drive.aim(0, 0, 0, false, AprilTagObservation.detected(38, -3, 1, 1));
 
         assertPowers(0, 0, Math.toRadians(3));
     }
@@ -257,7 +257,7 @@ public class PedroDriveTest {
         drive.run(0, 0, 0, false);
         assertTrue(follower.holding());
 
-        drive.aim(0.6, 0, 0, false, AprilTagObservation.detected(42, 0, 2.0, 1, 1));
+        drive.aim(0.6, 0, 0, false, AprilTagObservation.detected(42, 0, 1, 1));
 
         assertTrue(follower.manual());
         assertPowers(0.6, 0, 0);
@@ -267,18 +267,18 @@ public class PedroDriveTest {
     public void aimNormalizesHeadingAcrossWraparound() {
         localizer.setPose(new Pose(0, 0, Math.toRadians(-179)));
 
-        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 4, 2.0, 1, 1));
+        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 4, 1, 1));
 
         assertPowers(0, 0, Math.toRadians(-4));
     }
 
     @Test
     public void stopClearsAimHeadingForNextActivation() {
-        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 4, 2.0, 1, 1));
+        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 4, 1, 1));
         drive.stop();
         localizer.setPose(new Pose(7, 8, Math.toRadians(90)));
 
-        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, -3, 2.0, 1, 1));
+        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, -3, 1, 1));
 
         assertPowers(0, 0, Math.toRadians(3));
     }

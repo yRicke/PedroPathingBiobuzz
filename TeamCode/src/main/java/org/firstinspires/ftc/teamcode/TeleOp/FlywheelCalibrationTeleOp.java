@@ -5,9 +5,11 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.subsystems.DedinhoNervoso.DedinhoNervoso;
 import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Flywheel;
+import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.FlywheelConfig;
 import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.FlywheelCalibrationControls;
 import org.firstinspires.ftc.teamcode.subsystems.Intake.Intake;
 import org.firstinspires.ftc.teamcode.subsystems.Limelight.Limelight;
+import org.firstinspires.ftc.teamcode.subsystems.Limelight.LimelightConfig;
 import org.firstinspires.ftc.teamcode.subsystems.Transfer.Transfer;
 import org.firstinspires.ftc.teamcode.subsystems.Trigger.Trigger;
 
@@ -17,23 +19,18 @@ import java.util.OptionalDouble;
 /** Calibracao com robo parado: RPM manual, leitura tdist e captura para anotacao. */
 @TeleOp(name = "Flywheel Calibration - tdist", group = "Flywheel")
 public class FlywheelCalibrationTeleOp extends LinearOpMode {
-    public static double INITIAL_RPM = 2720;
-    // Limite de ajuste do teste; configure conforme os limites reais do launcher.
-    public static double MAX_RPM = 6000;
-    private static final int PIPELINE = 8;
-    private static final boolean UPSIDE_DOWN = true;
-
     @Override
     public void runOpMode() {
-        FlywheelCalibrationControls controls = new FlywheelCalibrationControls(INITIAL_RPM, MAX_RPM);
+        FlywheelCalibrationControls controls = new FlywheelCalibrationControls(
+                FlywheelConfig.BASE_RPM, FlywheelConfig.MAX_RPM);
         Flywheel flywheel = new Flywheel(hardwareMap, telemetry);
-        Limelight limelight = new Limelight(hardwareMap, telemetry, UPSIDE_DOWN, PIPELINE);
         Transfer transfer = new Transfer(hardwareMap, telemetry);
         Trigger trigger = new Trigger(hardwareMap, telemetry);
         Intake intake = new Intake(hardwareMap, telemetry);
         DedinhoNervoso dedo = new DedinhoNervoso(hardwareMap, telemetry);
         trigger.setTriggerClosed();
         dedo.setDedinhoNervosoClosed();
+        Limelight limelight = new Limelight(hardwareMap, telemetry);
         boolean leftHive = false;
         boolean previousX = false, previousY = false;
         String capturedPair = "Nenhum: X captura; anote antes de sair";
@@ -55,8 +52,9 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
                 if (gamepad1.y && !previousY) leftHive = !leftHive;
                 previousY = gamepad1.y;
                 limelight.run(leftHive, !leftHive);
+                int firstTagId = limelight.getObservation().getFirstTagId();
                 double currentRpm = flywheel.getRPM();
-                OptionalDouble distance = limelight.getTdistMeters();
+                OptionalDouble distance = limelight.getDistanceMeters();
 
                 if (gamepad1.x && !previousX) {
                     if (controls.isEnabled() && controls.getTargetRpm() > 0
@@ -66,8 +64,8 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
                                 distance.getAsDouble() * 100, controls.getTargetRpm());
                         capturedDetails = String.format(Locale.US,
                                 "Hive %d-%d | RPM medida %.1f | %d amostras",
-                                leftHive ? 38 : 42, leftHive ? 41 : 45,
-                                currentRpm, limelight.getTdistSampleCount());
+                                firstTagId, firstTagId + LimelightConfig.TAGS_PER_HIVE - 1,
+                                currentRpm, limelight.getDistanceSampleCount());
                     } else {
                         capturedDetails = "Captura recusada: ligue flywheel e confira tdist valido";
                     }
@@ -83,17 +81,9 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
 
                 telemetry.addData("Flywheel", controls.isEnabled() ? "LIGADA" : "DESLIGADA (A liga)");
                 telemetry.addData("RPM desejada", "%.1f", controls.getTargetRpm());
-                telemetry.addData("RPM atual", "%.1f", currentRpm);
                 telemetry.addData("Passo RPM", "%.1f", controls.getStepRpm());
-                telemetry.addData("Hive", leftHive ? "38-41" : "42-45");
-                telemetry.addData("tdist filtrado (cm)", distance.isPresent()
-                        ? String.format(Locale.US, "%.3f", distance.getAsDouble() * 100)
-                        : "Indisponivel");
-                telemetry.addData("tdist instantaneo (cm)", limelight.getRawTdistMeters().isPresent()
-                        ? String.format(Locale.US, "%.3f", limelight.getRawTdistMeters().getAsDouble() * 100)
-                        : "Indisponivel");
-                telemetry.addData("tdist", limelight.getTdistStatus());
-                telemetry.addData("Amostras tdist", limelight.getTdistSampleCount());
+                flywheel.sendTelemetry();
+                limelight.sendTelemetry();
                 telemetry.addData("PAR ANOTADO", capturedPair);
                 telemetry.addData("Captura", capturedDetails);
                 telemetry.addLine("Cima/baixo RPM | Esq/dir passo | A liga | B desliga");

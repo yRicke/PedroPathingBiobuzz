@@ -18,8 +18,7 @@ final class TdistReader {
         // tdist pertence ao alvo principal da pipeline, nao ao centro calculado em Java.
         // O SDK nao identifica esse alvo: rejeitamos frames que misturem outros alvos.
         for (FiducialResult tag : tags) {
-            if (tag == null || tag.getFiducialId() < firstTagId
-                    || tag.getFiducialId() > firstTagId + 3) {
+            if (tag == null || !LimelightConfig.containsTag(firstTagId, tag.getFiducialId())) {
                 return Reading.unavailable("Isole as tags do hive selecionado na pipeline");
             }
         }
@@ -32,7 +31,7 @@ final class TdistReader {
                 return Reading.unavailable("tdist ausente/invalido: confira OS 2026.1+ e Full3D");
             }
             return new Reading(OptionalDouble.of(distance), "tdist (camera -> alvo/POI)");
-        } catch (JSONException | NullPointerException e) {
+        } catch (JSONException e) {
             return Reading.unavailable("JSON do LLResult sem tdist legivel");
         }
     }

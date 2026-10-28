@@ -36,7 +36,6 @@ public class HiveCenterEstimatorTest {
 
             assertTrue("Tag " + ids[i], result.isPresent());
             assertEquals(8.530765609948133, result.get().txDegrees, EPSILON);
-            assertEquals(2.0615528128088303, result.get().distanceMeters, EPSILON);
             assertEquals(1, result.get().tagsUsed);
         }
     }
@@ -50,7 +49,6 @@ public class HiveCenterEstimatorTest {
 
         assertTrue(result.isPresent());
         assertEquals(0, result.get().txDegrees, EPSILON);
-        assertEquals(2, result.get().distanceMeters, EPSILON);
         assertEquals(3, result.get().tagsUsed);
     }
 
@@ -62,7 +60,6 @@ public class HiveCenterEstimatorTest {
 
         assertTrue(result.isPresent());
         assertEquals(8.530765609948133, result.get().txDegrees, EPSILON);
-        assertEquals(2.0223748416156684, result.get().distanceMeters, EPSILON);
         assertEquals(2, result.get().tagsUsed);
     }
 
@@ -76,7 +73,6 @@ public class HiveCenterEstimatorTest {
 
         assertTrue(result.isPresent());
         assertEquals(8.530765609948133, result.get().txDegrees, EPSILON);
-        assertEquals(2.0615528128088303, result.get().distanceMeters, EPSILON);
     }
 
     @Test
@@ -88,7 +84,6 @@ public class HiveCenterEstimatorTest {
 
         assertTrue(result.isPresent());
         assertEquals(-8.530765609948133, result.get().txDegrees, EPSILON);
-        assertEquals(2.0615528128088303, result.get().distanceMeters, EPSILON);
     }
 
     @Test
@@ -104,7 +99,6 @@ public class HiveCenterEstimatorTest {
 
         assertTrue(result.isPresent());
         assertEquals(0, result.get().txDegrees, EPSILON);
-        assertEquals(1.016, result.get().distanceMeters, EPSILON);
     }
 
     @Test
@@ -114,7 +108,7 @@ public class HiveCenterEstimatorTest {
     }
 
     @Test
-    public void missingZeroBehindOrNonFinitePoseCannotProduceDistance() {
+    public void missingZeroBehindOrNonFinitePoseCannotProduceHeading() {
         FiducialResult missing = mock(FiducialResult.class);
         when(missing.getFiducialId()).thenReturn(43);
 
@@ -132,7 +126,6 @@ public class HiveCenterEstimatorTest {
                         tag(43, -0.06985, 0, 2, 0, 0, 0, 1)), 42);
 
         assertTrue(result.isPresent());
-        assertEquals(2, result.get().distanceMeters, EPSILON);
         assertEquals(1, result.get().tagsUsed);
     }
 

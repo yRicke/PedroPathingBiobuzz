@@ -4,11 +4,10 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Flywheel;
+import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.FlywheelConfig;
 
 @TeleOp(name = "Flywheel Test", group = "Flywheel")
 public class FlywheelTest extends LinearOpMode {
-
-    private static final double TARGET_RPM = 2800.0;
 
     @Override
     public void runOpMode() {
@@ -24,7 +23,7 @@ public class FlywheelTest extends LinearOpMode {
 
             while (opModeIsActive()) {
                 boolean enabled = gamepad1.right_trigger > 0;
-                flywheel.run(enabled ? TARGET_RPM : 0.0);
+                flywheel.run(enabled ? FlywheelConfig.BASE_RPM : 0.0);
                 telemetry.addData("Flywheel habilitada", enabled);
                 flywheel.sendTelemetry();
                 telemetry.update();

@@ -4,18 +4,19 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Flywheel;
+import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.FlywheelConfig;
 
 @TeleOp(name = "kP Tuner", group = "Flywheel")
 public class kPTuner extends OpMode {
     private Flywheel flywheel;
 
-    public static double kV = 0.0001476;
-    public double kS = 0.078;
-    public double kP = 0.00059;
+    public static double kV = FlywheelConfig.KV;
+    public double kS = FlywheelConfig.KS;
+    public double kP = FlywheelConfig.KP;
     public double goalRPM = 2800;
 
     double[] increments = {0.000001, 0.00001, 0.0001, 0.001, 0.01};
-    int incrementIdx = 4; // Passo inicial: 0.01
+    int incrementIdx = 2;
 
     @Override
     public void init() {
@@ -24,7 +25,7 @@ public class kPTuner extends OpMode {
 
     @Override
     public void loop() {
-        if (gamepad1.dpadLeftWasPressed() && incrementIdx < 4) {
+        if (gamepad1.dpadLeftWasPressed() && incrementIdx < increments.length - 1) {
             incrementIdx++;
         } else if (gamepad1.dpadRightWasPressed() && incrementIdx > 0) {
             incrementIdx--;
@@ -41,18 +42,19 @@ public class kPTuner extends OpMode {
 
         // change kP
         if (gamepad1.dpadUpWasPressed()) { kP += currentStep; }
-        if (gamepad1.dpadDownWasPressed()) { kP -= currentStep; }
+        if (gamepad1.dpadDownWasPressed()) { kP = Math.max(0, kP - currentStep); }
 
-        double feedForward = (kV * goalRPM) + kS;
-        double error = goalRPM - flywheel.getRPM();
-        double feedBack = error * kP;
-
-        flywheel.setMotorPower(feedForward + feedBack);
+        flywheel.setGains(kS, kV, kP);
+        flywheel.run(goalRPM);
 
         telemetry.addData("Step", "%.8f", currentStep);
         telemetry.addData("kP", "%.8f", kP);
         telemetry.addData("Target RPM", goalRPM);
-        telemetry.addData("Error", error);
+        telemetry.addData("Error", goalRPM - flywheel.getRPM());
         telemetry.addData("RPM", flywheel.getRPM());
+    }
+    @Override
+    public void stop() {
+        flywheel.stopMotors();
     }
 }

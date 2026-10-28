@@ -20,11 +20,10 @@ final class HiveCenterEstimator {
     private HiveCenterEstimator() { }
 
     static Optional<Estimate> estimate(List<FiducialResult> tags, int firstTagId) {
-        if (tags == null || (firstTagId != 38 && firstTagId != 42)) {
+        if (tags == null || !LimelightConfig.isHive(firstTagId)) {
             return Optional.empty();
         }
         double sumX = 0;
-        double sumY = 0;
         double sumZ = 0;
         double totalWeight = 0;
         int tagsUsed = 0;
@@ -51,15 +50,13 @@ final class HiveCenterEstimator {
             // transforma o deslocamento local (d, 0, 0) para o espaco da camera.
             double offset = TAG_TO_CENTER_METERS[index];
             double x = position.x + offset * Math.cos(pitch) * Math.cos(yaw);
-            double y = position.y + offset * Math.cos(pitch) * Math.sin(yaw);
             double z = position.z - offset * Math.sin(pitch);
-            if (!Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(z) || z <= 0) {
+            if (!Double.isFinite(x) || !Double.isFinite(z) || z <= 0) {
                 continue;
             }
             double area = tag.getTargetArea();
             double weight = Double.isFinite(area) && area > 0 ? Math.min(area, 100) : 1;
             sumX += x * weight;
-            sumY += y * weight;
             sumZ += z * weight;
             totalWeight += weight;
             tagsUsed++;
@@ -67,24 +64,20 @@ final class HiveCenterEstimator {
 
         if (tagsUsed == 0) return Optional.empty();
         double x = sumX / totalWeight;
-        double y = sumY / totalWeight;
         double z = sumZ / totalWeight;
-        double distance = Math.hypot(Math.hypot(x, y), z);
         double tx = Math.toDegrees(Math.atan2(x, z));
-        if (!Double.isFinite(distance) || distance <= 0 || !Double.isFinite(tx)) {
+        if (!Double.isFinite(tx)) {
             return Optional.empty();
         }
-        return Optional.of(new Estimate(tx, distance, tagsUsed));
+        return Optional.of(new Estimate(tx, tagsUsed));
     }
 
     static final class Estimate {
         final double txDegrees;
-        final double distanceMeters;
         final int tagsUsed;
 
-        Estimate(double txDegrees, double distanceMeters, int tagsUsed) {
+        Estimate(double txDegrees, int tagsUsed) {
             this.txDegrees = txDegrees;
-            this.distanceMeters = distanceMeters;
             this.tagsUsed = tagsUsed;
         }
     }

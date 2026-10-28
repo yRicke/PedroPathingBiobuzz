@@ -17,7 +17,7 @@ por `sendTelemetry()`. O TeleOp coordena entradas e chamadas dos subsistemas.
 
 ## TeleOp principal
 
-`TeleOpMainTransferTest` usa o `Follower` criado por `pedro.Constants` com
+`TeleOpMain` usa o `Follower` criado por `pedro.Constants` com
 Pinpoint e mecanum. A orientação ao apertar Play define a frente do campo.
 O stick esquerdo controla a translação field-centric, o direito controla o giro,
 e o gatilho esquerdo aplica modo precisão. Ao parar e soltar os sticks, o

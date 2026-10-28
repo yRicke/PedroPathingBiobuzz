@@ -16,22 +16,22 @@ public class FlywheelRpmCalculatorTest {
     }
 
     @Test
-    public void halfReferenceDistanceProducesHalfBaseRpm() {
-        assertEquals(1350, FlywheelRpmCalculator.calculate(
+    public void onePointDoesNotInventHalfRpmAtHalfTheDistance() {
+        assertEquals(2700, FlywheelRpmCalculator.calculate(
                 OptionalDouble.of(1.54), 2700, 308), EPSILON);
     }
 
     @Test
-    public void fartherDistanceIncreasesRpmProportionally() {
-        assertEquals(4050, FlywheelRpmCalculator.calculate(
+    public void onePointKeepsRpmConstantFartherAway() {
+        assertEquals(2700, FlywheelRpmCalculator.calculate(
                 OptionalDouble.of(4.62), 2700, 308), EPSILON);
     }
 
     @Test
-    public void changingBaseRpmChangesTheReferenceAndScaledTarget() {
+    public void changingBaseRpmChangesTheConstantTargetWithOnePoint() {
         assertEquals(3000, FlywheelRpmCalculator.calculate(
                 OptionalDouble.of(3.08), 3000, 308), EPSILON);
-        assertEquals(1500, FlywheelRpmCalculator.calculate(
+        assertEquals(3000, FlywheelRpmCalculator.calculate(
                 OptionalDouble.of(1.54), 3000, 308), EPSILON);
     }
 
@@ -39,13 +39,13 @@ public class FlywheelRpmCalculatorTest {
     public void referenceDistanceIsConfigurableInCentimeters() {
         assertEquals(2700, FlywheelRpmCalculator.calculate(
                 OptionalDouble.of(4), 2700, 400), EPSILON);
-        assertEquals(1350, FlywheelRpmCalculator.calculate(
+        assertEquals(2700, FlywheelRpmCalculator.calculate(
                 OptionalDouble.of(2), 2700, 400), EPSILON);
     }
 
     @Test
     public void missingDistanceReturnsToBaseRatherThanKeepingPreviousTarget() {
-        assertEquals(4050, FlywheelRpmCalculator.calculate(
+        assertEquals(2700, FlywheelRpmCalculator.calculate(
                 OptionalDouble.of(4.62), 2700, 308), EPSILON);
         assertEquals(2700, FlywheelRpmCalculator.calculate(
                 OptionalDouble.empty(), 2700, 308), EPSILON);
@@ -83,5 +83,42 @@ public class FlywheelRpmCalculatorTest {
             assertEquals("Base RPM " + baseRpm, 0, FlywheelRpmCalculator.calculate(
                     OptionalDouble.empty(), baseRpm, 308), EPSILON);
         }
+    }
+
+    @Test
+    public void interpolatesBetweenThreeUnsortedMeasuredPairsInCentimeters() {
+        double[][] pairs = {{200, 3200}, {100, 2720}, {150, 2900}};
+        assertEquals(2720, FlywheelRpmCalculator.calculate(OptionalDouble.of(1), 2720, pairs), EPSILON);
+        assertEquals(2810, FlywheelRpmCalculator.calculate(OptionalDouble.of(1.25), 2720, pairs), EPSILON);
+        assertEquals(3050, FlywheelRpmCalculator.calculate(OptionalDouble.of(1.75), 2720, pairs), EPSILON);
+        assertEquals(3200, FlywheelRpmCalculator.calculate(OptionalDouble.of(2), 2720, pairs), EPSILON);
+    }
+
+    @Test
+    public void clampsToEndpointsInsteadOfExtrapolatingAnUncalibratedShot() {
+        double[][] pairs = {{100, 2720}, {200, 3200}};
+        assertEquals(2720, FlywheelRpmCalculator.calculate(OptionalDouble.of(0.5), 2720, pairs), EPSILON);
+        assertEquals(3200, FlywheelRpmCalculator.calculate(OptionalDouble.of(5), 2720, pairs), EPSILON);
+        org.junit.Assert.assertFalse(FlywheelRpmCalculator.isInCalibratedRange(OptionalDouble.of(5), pairs));
+    }
+
+    @Test
+    public void zeroDistanceDisablesAnUnmeasuredPairAndMissingVisionUsesBase() {
+        double[][] pairs = {{0, 2720}, {150, 2900}, {0, 0}};
+        assertEquals(1, FlywheelRpmCalculator.pointCount(pairs));
+        assertEquals(2900, FlywheelRpmCalculator.calculate(OptionalDouble.of(2), 2720, pairs), EPSILON);
+        assertEquals(2720, FlywheelRpmCalculator.calculate(OptionalDouble.empty(), 2720, pairs), EPSILON);
+        assertEquals(2720, FlywheelRpmCalculator.calculate(OptionalDouble.of(2), 2720,
+                new double[][] {{0, 2720}, {0, 0}}), EPSILON);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void rejectsDuplicateDistancesRatherThanSilentlyPickingOneRpm() {
+        FlywheelRpmCalculator.pointCount(new double[][] {{150, 2900}, {150, 3200}});
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void rejectsNonFiniteRpmInAnEnabledPair() {
+        FlywheelRpmCalculator.pointCount(new double[][] {{150, Double.NaN}});
     }
 }

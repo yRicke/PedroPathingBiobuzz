@@ -101,16 +101,30 @@ com o controlador de heading calibrado em `pedro.Constants`, limita a correção
 a 8 graus por imagem nova e mantém o alvo em imagens repetidas. O modo precisão
 também reduz a translação e o giro durante a mira para 30%.
 
-## RPM pela distância ao hive
+## Calibração e RPM pelo tdist
 
-No `TeleOpMainTransferTest`, as variáveis públicas `RPM_BASE = 2700` e
-`DISTANCIA_BASE_CM = 308` definem a referência de lançamento. Ajuste esses valores
-no início da classe para alterar a calibração. A cada ciclo, o TeleOp passa a
-distância filtrada da Limelight ao `FlywheelRpmCalculator` e atualiza o alvo do flywheel:
+Execute `Flywheel Calibration - tdist` para ajustar manualmente a RPM e medir
+o `tdist`. O procedimento completo e os controles estão em
+[docs/flywheel-tdist-calibration.md](../../../../../../../../../docs/flywheel-tdist-calibration.md).
 
-`RPM alvo = RPM_BASE × (distância em cm / DISTANCIA_BASE_CM)`
+O `TeleOpMainTransferTest` agora usa `limelight.getTdistMeters()`, separado de
+`getDistanceMeters()` e da pose usada na mira. O SDK 12.0.0 conserva os campos
+novos no JSON retornado por `LLResult.toString()`; `TdistReader` lê `tdist` desse
+JSON, sem requisições HTTP adicionais. Não há fallback para a distância antiga.
 
-O getter da Limelight retorna metros; o calculador converte para centímetros.
+Preencha `DISTANCIA_BASE_CM`/`RPM_BASE`, `DISTANCIA_BASE_2_CM`/`RPM_BASE_2` e
+`DISTANCIA_BASE_3_CM`/`RPM_BASE_3` no início do TeleOp com pares experimentais.
+Distância zero desativa o par. Inicialmente as distâncias são zero, pois os
+antigos 308 cm não foram medidos com `tdist`. `RPM_BASE` começa em 2720.
+
+Com zero pares, usa RPM_BASE; com um, mantém a RPM do único par. Com dois ou
+mais, interpola linearmente entre os pares. Fora da faixa, limita a RPM ao
+extremo mais próximo e sinaliza na telemetria. Isso não valida o disparo fora
+da faixa. Distâncias duplicadas ou pares ativos inválidos são rejeitados antes
+de iniciar o hardware.
+
+Os getters retornam metros; o calculador converte para centímetros.
+O filtro de `tdist` tem histórico separado da distância antiga.
 O `Limelight/CenterDistanceFilter` mantém uma janela móvel de **1 segundo**, com
 **até 40 amostras** válidas e novas, separadas por pelo menos **25 ms**. Frames
 repetidos não aumentam a contagem. Ordena as distâncias, descarta os **25% menores
@@ -124,13 +138,10 @@ parar a Limelight. A mira usa o ângulo instantâneo, sem o atraso do filtro de 
 Para ajustar a janela e a quantidade de amostras, altere `WINDOW_NANOS` e
 `MAX_SAMPLES` em `CenterDistanceFilter`.
 
-Com os valores iniciais, 154 cm produzem 1350 RPM, 308 cm produzem 2700 RPM e
-462 cm produzem 4050 RPM. Esse é um modelo proporcional inicial para testar;
-é necessário conferir os lançamentos em outras distâncias no robô.
-
-Sem distância válida, o alvo volta imediatamente a `RPM_BASE`. Uma referência de
-distância inválida também usa o RPM base; um RPM base zero, negativo ou não finito
-desliga os motores. A telemetria existente `Flywheel RPM alvo` mostra o valor
-calculado, junto de `Flywheel RPM medido` e da distância ao centro do hive.
+Sem `tdist` válido, o pedido volta a `RPM_BASE`; um RPM base zero, negativo ou não
+finito desliga os motores. Alterações do setpoint são aplicadas no máximo a cada
+100 ms e somente com diferença de pelo menos 10 RPM. O controlador da flywheel
+continua rodando em todos os ciclos. `Flywheel RPM alvo` mostra o alvo aplicado;
+`RPM calculada antes da banda morta` mostra o pedido antes dessa estabilização.
 O ajuste independe do right bumper: ele controla a mira, enquanto o right trigger
 continua acionando o disparo.

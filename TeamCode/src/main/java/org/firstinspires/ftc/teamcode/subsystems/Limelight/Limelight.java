@@ -23,10 +23,18 @@ public class Limelight {
     private final int pipelineIndex;
     private final LongSupplier nanoClock;
     private final CenterDistanceFilter distanceFilter = new CenterDistanceFilter();
+    private final CenterDistanceFilter tdistFilter = new CenterDistanceFilter();
 
     private int selectedFirstTagId = 42;
     private AprilTagObservation observation = AprilTagObservation.unavailable(selectedFirstTagId);
     private OptionalDouble filteredDistanceMeters = OptionalDouble.empty();
+    private AprilTagObservation tdistObservation = AprilTagObservation.unavailable(42);
+    private OptionalDouble rawTdistMeters = OptionalDouble.empty();
+    private OptionalDouble filteredTdistMeters = OptionalDouble.empty();
+    private String tdistStatus = "Sem leitura";
+    private LLResult lastTdistResult;
+    private int lastTdistHive;
+    private TdistReader.Reading cachedTdist;
     private double lastFrameTimestamp = Double.NaN;
     private long lastNewFrameNanos;
     private String status = "Sem imagem";
@@ -60,6 +68,7 @@ public class Limelight {
         long now = nanoClock.getAsLong();
         readObservation(dpadLeft, dpadRight, now);
         filteredDistanceMeters = distanceFilter.update(observation, now);
+        filteredTdistMeters = tdistFilter.update(tdistObservation, now);
     }
 
     private void readObservation(boolean dpadLeft, boolean dpadRight, long now) {
@@ -67,6 +76,9 @@ public class Limelight {
             selectedFirstTagId = dpadLeft ? 38 : 42;
         }
         observation = AprilTagObservation.unavailable(selectedFirstTagId);
+        tdistObservation = AprilTagObservation.unavailable(selectedFirstTagId);
+        rawTdistMeters = OptionalDouble.empty();
+        tdistStatus = "Sem frame valido do hive selecionado";
 
         if (camera == null || !camera.isRunning() || !camera.isConnected()) {
             status = "Desconectada";
@@ -106,6 +118,18 @@ public class Limelight {
         if (tags == null) {
             return;
         }
+        // O SDK cria um LLResult por polling; o filtro rejeita frames repetidos.
+        if (result != lastTdistResult || lastTdistHive != selectedFirstTagId) {
+            cachedTdist = TdistReader.read(result, tags, selectedFirstTagId);
+            lastTdistResult = result;
+            lastTdistHive = selectedFirstTagId;
+        }
+        rawTdistMeters = cachedTdist.distanceMeters;
+        tdistStatus = cachedTdist.status;
+        if (rawTdistMeters.isPresent()) {
+            tdistObservation = AprilTagObservation.detected(selectedFirstTagId, 0,
+                    rawTdistMeters.getAsDouble(), tags.size(), timestamp);
+        }
         Optional<HiveCenterEstimator.Estimate> estimate =
                 HiveCenterEstimator.estimate(tags, selectedFirstTagId);
         if (estimate.isPresent()) {
@@ -135,6 +159,15 @@ public class Limelight {
         return filteredDistanceMeters;
     }
 
+    /** Distancia 3D camera-alvo/POI, filtrada. Nunca usa a pose antiga como fallback. */
+    public OptionalDouble getTdistMeters() {
+        return filteredTdistMeters;
+    }
+
+    public OptionalDouble getRawTdistMeters() { return rawTdistMeters; }
+    public int getTdistSampleCount() { return tdistFilter.sampleCount(); }
+    public String getTdistStatus() { return tdistStatus; }
+
     public void sendTelemetry() {
         telemetry.addData("Limelight", status);
         telemetry.addData("Limelight Mount", upsideDown ? "Invertida" : "Normal");
@@ -143,6 +176,14 @@ public class Limelight {
                 ? "Esquerdo (38-41)" : "Direito (42-45)");
         telemetry.addData("Tags usadas no centro", observation.getTagsUsed());
         telemetry.addData("Amostras distancia flywheel", distanceFilter.sampleCount());
+        telemetry.addData("tdist status", tdistStatus);
+        telemetry.addData("tdist amostras", tdistFilter.sampleCount());
+        telemetry.addData("tdist instantaneo (cm)", rawTdistMeters.isPresent()
+                ? String.format(java.util.Locale.US, "%.2f", rawTdistMeters.getAsDouble() * 100)
+                : "Indisponivel");
+        telemetry.addData("tdist filtrado (cm)", filteredTdistMeters.isPresent()
+                ? String.format(java.util.Locale.US, "%.2f", filteredTdistMeters.getAsDouble() * 100)
+                : "Indisponivel");
         if (observation.hasTarget()) {
             telemetry.addData("Centro hive erro horizontal (deg)", observation.getTxDegrees());
             telemetry.addData("Distancia instantanea centro hive (cm)",
@@ -163,6 +204,13 @@ public class Limelight {
         observation = AprilTagObservation.unavailable(selectedFirstTagId);
         distanceFilter.clear();
         filteredDistanceMeters = OptionalDouble.empty();
+        tdistFilter.clear();
+        tdistObservation = AprilTagObservation.unavailable(selectedFirstTagId);
+        rawTdistMeters = OptionalDouble.empty();
+        filteredTdistMeters = OptionalDouble.empty();
+        cachedTdist = null;
+        lastTdistResult = null;
+        tdistStatus = "Parada";
         status = "Parada";
         if (camera != null) {
             camera.stop();

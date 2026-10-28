@@ -14,9 +14,9 @@ import org.firstinspires.ftc.teamcode.subsystems.Limelight.Limelight;
 import org.firstinspires.ftc.teamcode.subsystems.Transfer.Transfer;
 import org.firstinspires.ftc.teamcode.subsystems.Trigger.Trigger;
 
-@TeleOp(name="TeleOpMainTransferTest", group="TeleOpMode")
+@TeleOp(name="TeleOpMain", group="TeleOpMode")
 
-public class TeleOpMainTransferTest extends LinearOpMode {
+public class TeleOpMain extends LinearOpMode {
 
     private PedroDrive drive;
     private Limelight limelight;

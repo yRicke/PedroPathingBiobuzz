@@ -35,8 +35,8 @@ o par capturado fica congelado. Se uma captura falhar, o último par permanece.
 | X | Congela o par distância/RPM para anotação |
 
 O passo inicial é 10 RPM. Segurar D-pad/A/Y/X não repete o comando a cada loop.
-A RPM fica entre zero e `FlywheelConfig.MAX_RPM` (6000 inicialmente; configure conforme o launcher). `BASE_RPM` e `MAX_RPM` ficam em `FlywheelConfig`; `PIPELINE_INDEX` e
-`UPSIDE_DOWN` ficam em `LimelightConfig`. Ao parar o OpMode, a flywheel, o
+A RPM fica entre zero e `Flywheel.MAX_RPM` (6000 inicialmente; configure conforme o launcher). `BASE_RPM` e `MAX_RPM` ficam em `Flywheel`; `PIPELINE_INDEX` e
+`UPSIDE_DOWN` ficam em `Limelight`. Ao parar o OpMode, a flywheel, o
 transfer e o intake são desligados, os servos são fechados e a câmera é parada.
 
 ## Configuração da Limelight
@@ -78,7 +78,7 @@ O acesso por `LLResult.toString()` foi conferido no código-fonte do artefato
 
 ## Aplicar os pares
 
-Edite `subsystems/FlywheelAdvanced/FlywheelConfig.java`:
+Edite `subsystems/FlywheelAdvanced/Flywheel.java`:
 
 | Par | tdist filtrado anotado (cm) | RPM desejada anotada |
 | --- | --- | --- |
@@ -89,7 +89,7 @@ Edite `subsystems/FlywheelAdvanced/FlywheelConfig.java`:
 Distância zero desativa o par até a medição. Preencha distância e RPM de cada
 par validado, sem duplicar distâncias. A tabela aceita qualquer ordem e copia
 os valores na inicialização. Para mais pontos, adicione pares em
-`FlywheelConfig.createRpmTable()` e gere o programa novamente.
+`Flywheel.createRpmTable()` e gere o programa novamente.
 
 - Sem pares: usa `BASE_RPM` (2720 inicialmente).
 - Um par: mantém a RPM desse par; não existe curva medida ainda.
@@ -99,7 +99,7 @@ os valores na inicialização. Para mais pontos, adicione pares em
 - `BASE_RPM` zero: desliga a RPM automática.
 
 O controlador automático aplica banda morta de 10 RPM e intervalo mínimo de
-100 ms, configurados em `FlywheelConfig`. A malha dos motores continua sendo
+100 ms, configurados em `Flywheel`. A malha dos motores continua sendo
 executada a cada ciclo. A calibração manual aplica diretamente os passos,
 inclusive 0,1 RPM. O controle limita a potência ao sentido de lançamento;
 quando acima da RPM desejada, pode reduzir a potência até zero.

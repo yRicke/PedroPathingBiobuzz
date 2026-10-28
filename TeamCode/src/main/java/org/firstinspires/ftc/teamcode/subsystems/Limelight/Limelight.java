@@ -6,22 +6,52 @@ import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
+import org.firstinspires.ftc.robotcore.external.navigation.Position;
+import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.Arrays;
 import java.util.OptionalDouble;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 
 /** Publica heading do centro do hive e distancia tdist, com validacao de frames. */
 public class Limelight {
+    public static final String DEVICE_NAME = "limelight";
+    public static final int PIPELINE_INDEX = 8;
+    public static final boolean UPSIDE_DOWN = true;
+    public static final int POLL_RATE_HZ = 100;
+    public static final long MAX_FRAME_AGE_MS = 150;
+    public static final long DISTANCE_WINDOW_MS = 1000;
+    public static final int DISTANCE_MAX_SAMPLES = 40;
+    public static final int LEFT_HIVE_FIRST_TAG = 38;
+    public static final int RIGHT_HIVE_FIRST_TAG = 42;
+    public static final int TAGS_PER_HIVE = 4;
+
+    // Deslocamento local de cada tag ate o centro do HIVE, em metros.
+    private static final double[] TAG_TO_CENTER_METERS = {0.1651, 0.06985, -0.06985, -0.1651};
+    private static final long WINDOW_NANOS = TimeUnit.MILLISECONDS.toNanos(DISTANCE_WINDOW_MS);
+    private static final long SAMPLE_INTERVAL_NANOS = WINDOW_NANOS / DISTANCE_MAX_SAMPLES;
+
     private final Limelight3A camera;
     private final Telemetry telemetry;
     private final boolean upsideDown;
     private final int pipelineIndex;
     private final LongSupplier nanoClock;
-    private final DistanceFilter distanceFilter = new DistanceFilter();
-    private int selectedFirstTagId = LimelightConfig.RIGHT_HIVE_FIRST_TAG;
+    // Janela circular do tdist; so e reordenada quando suas amostras mudam.
+    private final double[] distanceSamples;
+    private final long[] distanceSampleTimes;
+    private int distanceHead;
+    private int distanceCount;
+    private int distanceHive;
+    private double lastDistanceTimestamp = Double.NaN;
+    private long lastDistanceSampleNanos;
+    private int selectedFirstTagId = RIGHT_HIVE_FIRST_TAG;
     private AprilTagObservation observation = AprilTagObservation.unavailable(selectedFirstTagId);
     private OptionalDouble rawDistanceMeters = OptionalDouble.empty();
     private OptionalDouble distanceMeters = OptionalDouble.empty();
@@ -33,19 +63,24 @@ public class Limelight {
     private int decodedHive;
 
     public Limelight(HardwareMap hardwareMap, Telemetry telemetry) {
-        this(hardwareMap.tryGet(Limelight3A.class, LimelightConfig.DEVICE_NAME), telemetry,
-                LimelightConfig.UPSIDE_DOWN, LimelightConfig.PIPELINE_INDEX, System::nanoTime);
+        this(hardwareMap.tryGet(Limelight3A.class, DEVICE_NAME), telemetry,
+                UPSIDE_DOWN, PIPELINE_INDEX, System::nanoTime);
     }
 
     Limelight(Limelight3A camera, Telemetry telemetry, boolean upsideDown,
               int pipelineIndex, LongSupplier nanoClock) {
+        if (DISTANCE_MAX_SAMPLES <= 0 || WINDOW_NANOS < DISTANCE_MAX_SAMPLES) {
+            throw new IllegalArgumentException("Janela de distancia invalida");
+        }
+        distanceSamples = new double[DISTANCE_MAX_SAMPLES];
+        distanceSampleTimes = new long[DISTANCE_MAX_SAMPLES];
         this.camera = camera;
         this.telemetry = telemetry;
         this.upsideDown = upsideDown;
         this.pipelineIndex = pipelineIndex;
         this.nanoClock = nanoClock;
         if (camera != null) {
-            camera.setPollRateHz(LimelightConfig.POLL_RATE_HZ);
+            camera.setPollRateHz(POLL_RATE_HZ);
             camera.pipelineSwitch(pipelineIndex);
             camera.start();
         }
@@ -53,11 +88,10 @@ public class Limelight {
 
     public void run(boolean dpadLeft, boolean dpadRight) {
         if (dpadLeft != dpadRight) selectedFirstTagId = dpadLeft
-                ? LimelightConfig.LEFT_HIVE_FIRST_TAG : LimelightConfig.RIGHT_HIVE_FIRST_TAG;
+                ? LEFT_HIVE_FIRST_TAG : RIGHT_HIVE_FIRST_TAG;
         long now = nanoClock.getAsLong();
         readFrame(now);
-        distanceMeters = distanceFilter.update(rawDistanceMeters, lastFrameTimestamp,
-                selectedFirstTagId, now);
+        filterDistance(now);
     }
 
     private void readFrame(long now) {
@@ -77,7 +111,7 @@ public class Limelight {
         double timestamp = result.getTimestamp();
         long age = result.getStaleness();
         if (!Double.isFinite(timestamp) || timestamp < 0 || age < 0
-                || age > LimelightConfig.MAX_FRAME_AGE_MS) {
+                || age > MAX_FRAME_AGE_MS) {
             clearFrame("Imagem antiga ou invalida");
             return;
         }
@@ -85,7 +119,7 @@ public class Limelight {
             lastFrameTimestamp = timestamp;
             lastNewFrameNanos = now;
         }
-        if (now - lastNewFrameNanos > TimeUnit.MILLISECONDS.toNanos(LimelightConfig.MAX_FRAME_AGE_MS)) {
+        if (now - lastNewFrameNanos > TimeUnit.MILLISECONDS.toNanos(MAX_FRAME_AGE_MS)) {
             clearFrame("Imagem congelada");
             return;
         }
@@ -103,25 +137,162 @@ public class Limelight {
         distanceStatus = "Sem alvo valido";
         if (!result.isValid()) return;
         List<FiducialResult> tags = result.getFiducialResults();
-        TdistReader.Reading reading = TdistReader.read(result, tags, selectedFirstTagId);
-        rawDistanceMeters = reading.distanceMeters;
-        distanceStatus = reading.status;
-        Optional<HiveCenterEstimator.Estimate> estimate =
-                HiveCenterEstimator.estimate(tags, selectedFirstTagId);
-        if (estimate.isPresent()) {
-            HiveCenterEstimator.Estimate center = estimate.get();
-            observation = AprilTagObservation.detected(selectedFirstTagId,
-                    upsideDown ? -center.txDegrees : center.txDegrees, center.tagsUsed, timestamp);
+        readDistance(result, tags);
+        observation = estimateCenter(tags, timestamp);
+        if (observation.hasTarget()) {
             status = "Centro do hive estimado";
         } else if (tags != null) {
             for (FiducialResult tag : tags) {
-                if (tag != null && LimelightConfig.containsTag(selectedFirstTagId, tag.getFiducialId())) {
+                if (tag != null && containsTag(selectedFirstTagId, tag.getFiducialId())) {
                     observation = AprilTagObservation.unavailable(selectedFirstTagId);
                     status = "Tag sem pose 3D valida: confira Full3D";
                     break;
                 }
             }
         }
+    }
+
+    private AprilTagObservation estimateCenter(List<FiducialResult> tags, double timestamp) {
+        int firstTagId = selectedFirstTagId;
+        if (tags == null || !isHive(firstTagId)) {
+            return AprilTagObservation.searching(firstTagId, timestamp);
+        }
+        double sumX = 0;
+        double sumZ = 0;
+        double totalWeight = 0;
+        int tagsUsed = 0;
+
+        for (FiducialResult tag : tags) {
+            if (tag == null) continue;
+            int index = tag.getFiducialId() - firstTagId;
+            if (index < 0 || index >= TAG_TO_CENTER_METERS.length) continue;
+
+            Pose3D pose = tag.getTargetPoseCameraSpace();
+            if (pose == null || pose.getPosition() == null || pose.getOrientation() == null
+                    || pose.getPosition().unit == null) continue;
+            Position position = pose.getPosition().toUnit(DistanceUnit.METER);
+            YawPitchRollAngles orientation = pose.getOrientation();
+            double yaw = orientation.getYaw(AngleUnit.RADIANS);
+            double pitch = orientation.getPitch(AngleUnit.RADIANS);
+            double roll = orientation.getRoll(AngleUnit.RADIANS);
+            if (!Double.isFinite(position.x) || !Double.isFinite(position.y)
+                    || !Double.isFinite(position.z) || position.z <= 0
+                    || !Double.isFinite(yaw) || !Double.isFinite(pitch)
+                    || !Double.isFinite(roll)) continue;
+
+            // Limelight: X direita, Y baixo, Z frente. Rz(yaw)*Ry(pitch)*Rx(roll)
+            // transforma o deslocamento local (d, 0, 0) para o espaco da camera.
+            double offset = TAG_TO_CENTER_METERS[index];
+            double x = position.x + offset * Math.cos(pitch) * Math.cos(yaw);
+            double z = position.z - offset * Math.sin(pitch);
+            if (!Double.isFinite(x) || !Double.isFinite(z) || z <= 0) {
+                continue;
+            }
+            double area = tag.getTargetArea();
+            double weight = Double.isFinite(area) && area > 0 ? Math.min(area, 100) : 1;
+            sumX += x * weight;
+            sumZ += z * weight;
+            totalWeight += weight;
+            tagsUsed++;
+        }
+
+        if (tagsUsed == 0) return AprilTagObservation.searching(firstTagId, timestamp);
+        double x = sumX / totalWeight;
+        double z = sumZ / totalWeight;
+        double tx = Math.toDegrees(Math.atan2(x, z));
+        if (!Double.isFinite(tx)) {
+            return AprilTagObservation.searching(firstTagId, timestamp);
+        }
+        return AprilTagObservation.detected(firstTagId, upsideDown ? -tx : tx, tagsUsed, timestamp);
+    }
+
+    /** tdist pertence ao alvo principal da pipeline; rejeita mistura de hives. */
+    private void readDistance(LLResult result, List<FiducialResult> tags) {
+        if (tags == null || tags.isEmpty()) {
+            distanceStatus = "Sem AprilTags";
+            return;
+        }
+        for (FiducialResult tag : tags) {
+            if (tag == null || !containsTag(selectedFirstTagId, tag.getFiducialId())) {
+                distanceStatus = "Isole as tags do hive selecionado na pipeline";
+                return;
+            }
+        }
+        try {
+            // No SDK 12, toString() conserva o JSON do frame, incluindo tdist.
+            double distance = new JSONObject(result.toString()).optDouble("tdist", Double.NaN);
+            if (!Double.isFinite(distance) || distance <= 0) {
+                distanceStatus = "tdist ausente/invalido: confira OS 2026.1+ e Full3D";
+                return;
+            }
+            rawDistanceMeters = OptionalDouble.of(distance);
+            distanceStatus = "tdist (camera -> alvo/POI)";
+        } catch (JSONException e) {
+            distanceStatus = "JSON do LLResult sem tdist legivel";
+        }
+    }
+
+    private void filterDistance(long now) {
+        if (!rawDistanceMeters.isPresent() || !Double.isFinite(lastFrameTimestamp)
+                || lastFrameTimestamp < 0) {
+            clearDistanceFilter();
+            return;
+        }
+        if (distanceHive != selectedFirstTagId || lastFrameTimestamp < lastDistanceTimestamp) {
+            clearDistanceFilter();
+            distanceHive = selectedFirstTagId;
+        }
+        boolean changed = false;
+        while (distanceCount > 0 && now - distanceSampleTimes[distanceHead] >= WINDOW_NANOS) {
+            distanceHead = (distanceHead + 1) % DISTANCE_MAX_SAMPLES;
+            distanceCount--;
+            changed = true;
+        }
+        if (lastFrameTimestamp != lastDistanceTimestamp) {
+            lastDistanceTimestamp = lastFrameTimestamp;
+            if (distanceCount == 0 || now - lastDistanceSampleNanos >= SAMPLE_INTERVAL_NANOS) {
+                if (distanceCount == DISTANCE_MAX_SAMPLES) {
+                    distanceHead = (distanceHead + 1) % DISTANCE_MAX_SAMPLES;
+                    distanceCount--;
+                }
+                int tail = (distanceHead + distanceCount) % DISTANCE_MAX_SAMPLES;
+                distanceSamples[tail] = rawDistanceMeters.getAsDouble();
+                distanceSampleTimes[tail] = now;
+                distanceCount++;
+                lastDistanceSampleNanos = now;
+                changed = true;
+            }
+        }
+        if (changed) distanceMeters = trimmedMean();
+    }
+
+    private OptionalDouble trimmedMean() {
+        if (distanceCount == 0) return OptionalDouble.empty();
+        double[] sorted = new double[distanceCount];
+        for (int i = 0; i < distanceCount; i++) {
+            sorted[i] = distanceSamples[(distanceHead + i) % DISTANCE_MAX_SAMPLES];
+        }
+        Arrays.sort(sorted);
+        int trim = sorted.length / 4;
+        int count = sorted.length - 2 * trim;
+        double mean = 0;
+        for (int i = trim; i < sorted.length - trim; i++) mean += sorted[i] / count;
+        return OptionalDouble.of(mean);
+    }
+
+    private void clearDistanceFilter() {
+        distanceHead = distanceCount = 0;
+        distanceMeters = OptionalDouble.empty();
+        lastDistanceTimestamp = Double.NaN;
+        lastDistanceSampleNanos = 0;
+    }
+
+    private static boolean isHive(int firstTagId) {
+        return firstTagId == LEFT_HIVE_FIRST_TAG || firstTagId == RIGHT_HIVE_FIRST_TAG;
+    }
+
+    private static boolean containsTag(int firstTagId, int tagId) {
+        return isHive(firstTagId) && tagId >= firstTagId && tagId < firstTagId + TAGS_PER_HIVE;
     }
 
     private void clearFrame(String reason) {
@@ -136,7 +307,7 @@ public class Limelight {
     /** tdist filtrado: distancia 3D camera-alvo/POI em metros. */
     public OptionalDouble getDistanceMeters() { return distanceMeters; }
     public OptionalDouble getRawDistanceMeters() { return rawDistanceMeters; }
-    public int getDistanceSampleCount() { return distanceFilter.sampleCount(); }
+    public int getDistanceSampleCount() { return distanceCount; }
     public String getDistanceStatus() { return distanceStatus; }
 
     public void sendTelemetry() {
@@ -144,7 +315,7 @@ public class Limelight {
         telemetry.addData("Limelight", status);
         telemetry.addData("Limelight Pipeline", pipelineIndex);
         telemetry.addData("Hive selecionado", "%d-%d", selectedFirstTagId,
-                selectedFirstTagId + LimelightConfig.TAGS_PER_HIVE - 1);
+                selectedFirstTagId + TAGS_PER_HIVE - 1);
         telemetry.addData("Tags usadas no centro", observation.getTagsUsed());
         if (observation.hasTarget()) {
             telemetry.addData("Centro hive erro horizontal (deg)", observation.getTxDegrees());
@@ -152,7 +323,7 @@ public class Limelight {
             telemetry.addData("Centro hive erro horizontal (deg)", "Indisponivel");
         }
         telemetry.addData("tdist status", distanceStatus);
-        telemetry.addData("tdist amostras", distanceFilter.sampleCount());
+        telemetry.addData("tdist amostras", distanceCount);
         if (rawDistanceMeters.isPresent()) {
             telemetry.addData("tdist instantaneo (cm)", "%.3f", rawDistanceMeters.getAsDouble() * 100);
         } else {
@@ -167,7 +338,7 @@ public class Limelight {
 
     public void stop() {
         clearFrame("Parada");
-        distanceFilter.clear();
+        clearDistanceFilter();
         distanceMeters = OptionalDouble.empty();
         lastFrameTimestamp = Double.NaN;
         if (camera != null) camera.stop();

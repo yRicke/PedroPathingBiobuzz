@@ -4,13 +4,12 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Flywheel;
-import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.FlywheelConfig;
 
 @TeleOp(name = "kS Tuner", group = "Flywheel")
 public class kSTuner extends OpMode {
     private Flywheel flywheel;
 
-    public static double kS = FlywheelConfig.KS;
+    public static double kS = Flywheel.KS;
 
     double[] increments = {0.000001, 0.00001, 0.0001, 0.001, 0.01};
     int incrementIdx = 2;

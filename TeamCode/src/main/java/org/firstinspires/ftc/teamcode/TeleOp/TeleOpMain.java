@@ -9,7 +9,6 @@ import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DedinhoNervoso.DedinhoNervoso;
 import org.firstinspires.ftc.teamcode.subsystems.Drive.PedroDrive;
 import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Flywheel;
-import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.FlywheelRpmController;
 import org.firstinspires.ftc.teamcode.subsystems.Intake.Intake;
 import org.firstinspires.ftc.teamcode.subsystems.Limelight.Limelight;
 import org.firstinspires.ftc.teamcode.subsystems.Transfer.Transfer;
@@ -23,14 +22,12 @@ public class TeleOpMain extends LinearOpMode {
     private Limelight limelight;
     private Intake intake;
     private Flywheel flywheel;
-    private FlywheelRpmController rpmController;
     private Transfer transfer;
     private Trigger trigger;
     private DedinhoNervoso dedo;
 
     @Override
     public void runOpMode() {
-        rpmController = new FlywheelRpmController(telemetry);
         Follower follower = Constants.create(hardwareMap);
         drive = new PedroDrive(follower, telemetry,
                 Constants.foresightConfig.headingFeedback.get());
@@ -76,7 +73,7 @@ public class TeleOpMain extends LinearOpMode {
                             gamepad1.right_stick_x, gamepad1.left_trigger > 0);
                 }
                 intake.run(gamepad1.a, gamepad1.left_bumper);
-                flywheel.run(rpmController.run(limelight.getDistanceMeters()));
+                flywheel.runByDistance(limelight.getDistanceMeters());
                 transfer.run(shootRequested, gamepad1.left_bumper);
                 trigger.run(shootRequested);
                 dedo.run(gamepad1.b);
@@ -85,7 +82,6 @@ public class TeleOpMain extends LinearOpMode {
                 limelight.sendTelemetry();
                 intake.sendTelemetry();
                 flywheel.sendTelemetry();
-                rpmController.sendTelemetry();
                 transfer.sendTelemetry();
                 trigger.sendTelemetry();
                 dedo.sendTelemetry();
@@ -105,7 +101,6 @@ public class TeleOpMain extends LinearOpMode {
                         trigger.setTriggerClosed();
                     } finally {
                         flywheel.stopMotors();
-                        rpmController.reset();
                     }
                 }
             }

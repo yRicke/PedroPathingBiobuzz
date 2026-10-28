@@ -36,7 +36,7 @@ public class FlywheelTest {
     @Test public void atTargetUsesFeedforwardAndOverspeedNeverReverses() {
         measuredRpm(2720);
         flywheel.run(2720);
-        assertPower(FlywheelConfig.KS + FlywheelConfig.KV * 2720);
+        assertPower(Flywheel.KS + Flywheel.KV * 2720);
         clearInvocations(one, two);
         measuredRpm(3100);
         flywheel.run(2720);
@@ -56,9 +56,9 @@ public class FlywheelTest {
     }
 
     @Test public void targetIsBoundedToConfiguredRpmLimit() {
-        measuredRpm(FlywheelConfig.MAX_RPM);
-        flywheel.run(FlywheelConfig.MAX_RPM + 1000);
-        assertPower(FlywheelConfig.KS + FlywheelConfig.KV * FlywheelConfig.MAX_RPM);
+        measuredRpm(Flywheel.MAX_RPM);
+        flywheel.run(Flywheel.MAX_RPM + 1000);
+        assertPower(Flywheel.KS + Flywheel.KV * Flywheel.MAX_RPM);
     }
 
     @Test public void manualPowerAndTunerGainsUseTheSameLimits() {
@@ -75,13 +75,13 @@ public class FlywheelTest {
 
     @Test public void telemetryRpmsUseConsistentSignsAndUnitsForBothMotors() {
         measuredRpm(2720);
-        when(two.getVelocity()).thenReturn(-2720 * FlywheelConfig.TICKS_PER_REVOLUTION / 60);
+        when(two.getVelocity()).thenReturn(-2720 * Flywheel.TICKS_PER_REVOLUTION / 60);
         assertEquals(2720, flywheel.getRPM(), 1e-9);
         assertEquals(2720, flywheel.getSecondMotorRPM(), 1e-9);
     }
 
     private void measuredRpm(double rpm) {
-        when(one.getVelocity()).thenReturn(rpm * FlywheelConfig.TICKS_PER_REVOLUTION / 60);
+        when(one.getVelocity()).thenReturn(rpm * Flywheel.TICKS_PER_REVOLUTION / 60);
     }
     private void assertPower(double expected) {
         verify(one).setPower(org.mockito.ArgumentMatchers.doubleThat(p -> Math.abs(p - expected) < 1e-9));

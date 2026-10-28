@@ -4,15 +4,14 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Flywheel;
-import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.FlywheelConfig;
 
 @TeleOp(name = "kP Tuner", group = "Flywheel")
 public class kPTuner extends OpMode {
     private Flywheel flywheel;
 
-    public static double kV = FlywheelConfig.KV;
-    public double kS = FlywheelConfig.KS;
-    public double kP = FlywheelConfig.KP;
+    public static double kV = Flywheel.KV;
+    public double kS = Flywheel.KS;
+    public double kP = Flywheel.KP;
     public double goalRPM = 2800;
 
     double[] increments = {0.000001, 0.00001, 0.0001, 0.001, 0.01};

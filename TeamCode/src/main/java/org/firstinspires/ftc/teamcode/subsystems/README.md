@@ -48,9 +48,12 @@ Os ajustes de kS/kV/kP e os OpModes de teste ficam nas suas pastas.
 ## Limelight
 
 As constantes ficam no início de `Limelight.java`: dispositivo, pipeline,
-montagem, polling, idade máxima, janela e IDs. O D-pad seleciona hive esquerdo
-38–41 ou direito 42–45 (inicial). O método privado `estimateCenter()` projeta
-o centro físico pelas poses das tags, considerando rotação e deslocamentos
+montagem, polling, idade máxima, janela e IDs. No `TeleOpMain`, D-pad cima
+seleciona azul e baixo, vermelho. Esquerda seleciona a CELL da plateia (azul
+38–41 / vermelho 34–37); direita seleciona a oposta (azul 42–45 / vermelho
+30–33). Inicial: azul 42–45. A telemetria mostra aliança, CELL e IDs.
+O método privado `estimateCenter()` projeta o centro do cluster pelas poses
+das tags, considerando rotação e deslocamentos
 conhecidos. Combina as estimativas do centro ponderadas pela área das tags.
 A observação contém estado da mira, ângulo, quantidade de tags e timestamp.
 
@@ -65,8 +68,11 @@ A janela circular interna mantém até 40 frames distintos em um segundo,
 separados por pelo menos 25 ms. Descarta 25% dos menores e dos maiores e
 calcula a média restante (20 centrais com 40 amostras). Só recalcula quando a
 janela muda. Perda de leitura, troca de HIVE ou reinício do timestamp limpa
-o histórico. Imagens antigas, congeladas, pipeline incorreta e desconexão são
+o histórico, inclusive ao trocar de aliança. Imagens antigas, congeladas, pipeline incorreta e desconexão são
 rejeitadas. A decodificação e a estimativa do centro ocorrem uma vez por frame/HIVE.
+
+Veja o [guia do painel da Limelight e das AprilTags BIOBUZZ](Limelight/README.md),
+incluindo os ID Filters e os cuidados com as CELLS móveis.
 
 ## Flywheel
 

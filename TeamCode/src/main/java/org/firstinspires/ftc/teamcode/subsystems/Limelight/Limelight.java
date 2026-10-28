@@ -29,11 +29,17 @@ public class Limelight {
     public static final long MAX_FRAME_AGE_MS = 150;
     public static final long DISTANCE_WINDOW_MS = 1000;
     public static final int DISTANCE_MAX_SAMPLES = 40;
-    public static final int LEFT_HIVE_FIRST_TAG = 38;
-    public static final int RIGHT_HIVE_FIRST_TAG = 42;
+    // BIOBUZZ, manual secao 9.9 / figuras 9-15 a 9-17.
+    public static final int RED_AUDIENCE_FIRST_TAG = 34;
+    public static final int RED_OPPOSITE_FIRST_TAG = 30;
+    public static final int BLUE_AUDIENCE_FIRST_TAG = 38;
+    public static final int BLUE_OPPOSITE_FIRST_TAG = 42;
     public static final int TAGS_PER_HIVE = 4;
 
-    // Deslocamento local de cada tag ate o centro do HIVE, em metros.
+    // Deslocamento local ate o centro do cluster da CELL (nao a abertura).
+    // IDs crescentes da esquerda para a direita olhando de frente o adesivo:
+    // centros a -6.5, -2.75, +2.75, +6.5 pol. Nao espelhar por alianca;
+    // a pose 3D ja considera a orientacao da CELL, inclusive sua inclinacao.
     private static final double[] TAG_TO_CENTER_METERS = {0.1651, 0.06985, -0.06985, -0.1651};
     private static final long WINDOW_NANOS = TimeUnit.MILLISECONDS.toNanos(DISTANCE_WINDOW_MS);
     private static final long SAMPLE_INTERVAL_NANOS = WINDOW_NANOS / DISTANCE_MAX_SAMPLES;
@@ -51,7 +57,9 @@ public class Limelight {
     private int distanceHive;
     private double lastDistanceTimestamp = Double.NaN;
     private long lastDistanceSampleNanos;
-    private int selectedFirstTagId = RIGHT_HIVE_FIRST_TAG;
+    private boolean redAlliance;
+    private boolean audienceCell;
+    private int selectedFirstTagId = BLUE_OPPOSITE_FIRST_TAG;
     private AprilTagObservation observation = AprilTagObservation.unavailable(selectedFirstTagId);
     private OptionalDouble rawDistanceMeters = OptionalDouble.empty();
     private OptionalDouble distanceMeters = OptionalDouble.empty();
@@ -86,9 +94,14 @@ public class Limelight {
         }
     }
 
-    public void run(boolean dpadLeft, boolean dpadRight) {
-        if (dpadLeft != dpadRight) selectedFirstTagId = dpadLeft
-                ? LEFT_HIVE_FIRST_TAG : RIGHT_HIVE_FIRST_TAG;
+    /** Esquerda/dir: CELL plateia/oposta; cima/baixo: azul/vermelho. */
+    public void run(boolean dpadLeft, boolean dpadRight, boolean selectBlue, boolean selectRed) {
+        // Comandos opostos simultaneos preservam a selecao daquele eixo.
+        if (selectBlue != selectRed) redAlliance = selectRed;
+        if (dpadLeft != dpadRight) audienceCell = dpadLeft;
+        selectedFirstTagId = redAlliance
+                ? (audienceCell ? RED_AUDIENCE_FIRST_TAG : RED_OPPOSITE_FIRST_TAG)
+                : (audienceCell ? BLUE_AUDIENCE_FIRST_TAG : BLUE_OPPOSITE_FIRST_TAG);
         long now = nanoClock.getAsLong();
         readFrame(now);
         filterDistance(now);
@@ -288,7 +301,8 @@ public class Limelight {
     }
 
     private static boolean isHive(int firstTagId) {
-        return firstTagId == LEFT_HIVE_FIRST_TAG || firstTagId == RIGHT_HIVE_FIRST_TAG;
+        return firstTagId == RED_AUDIENCE_FIRST_TAG || firstTagId == RED_OPPOSITE_FIRST_TAG
+                || firstTagId == BLUE_AUDIENCE_FIRST_TAG || firstTagId == BLUE_OPPOSITE_FIRST_TAG;
     }
 
     private static boolean containsTag(int firstTagId, int tagId) {
@@ -303,6 +317,7 @@ public class Limelight {
         distanceStatus = reason;
     }
 
+    public boolean isRedAlliance() { return redAlliance; }
     public AprilTagObservation getObservation() { return observation; }
     /** tdist filtrado: distancia 3D camera-alvo/POI em metros. */
     public OptionalDouble getDistanceMeters() { return distanceMeters; }
@@ -314,6 +329,8 @@ public class Limelight {
         if (telemetry == null) return;
         telemetry.addData("Limelight", status);
         telemetry.addData("Limelight Pipeline", pipelineIndex);
+        telemetry.addData("Alianca", redAlliance ? "VERMELHA" : "AZUL");
+        telemetry.addData("CELL selecionada", audienceCell ? "Lado da plateia" : "Oposta a plateia");
         telemetry.addData("Hive selecionado", "%d-%d", selectedFirstTagId,
                 selectedFirstTagId + TAGS_PER_HIVE - 1);
         telemetry.addData("Tags usadas no centro", observation.getTagsUsed());

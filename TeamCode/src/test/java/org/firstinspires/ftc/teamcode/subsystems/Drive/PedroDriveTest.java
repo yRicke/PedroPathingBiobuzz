@@ -253,6 +253,14 @@ public class PedroDriveTest {
     }
 
     @Test
+    public void allianceChangeProcessesNewCellEvenWithinSameImage() {
+        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 6, 1, 1));
+        localizer.setPose(new Pose(0, 0, Math.toRadians(-1)));
+        drive.aim(0, 0, 0, false, AprilTagObservation.detected(30, -3, 1, 1));
+        assertPowers(0, 0, Math.toRadians(3));
+    }
+
+    @Test
     public void aimTakesOverFromAnExistingPoseHold() {
         drive.run(0, 0, 0, false);
         assertTrue(follower.holding());

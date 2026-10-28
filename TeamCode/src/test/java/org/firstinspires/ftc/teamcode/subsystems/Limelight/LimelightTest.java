@@ -26,22 +26,85 @@ public class LimelightTest {
 
     @Test public void dpadSelectsHiveAndKeepsSelectionAfterRelease() throws Exception {
         frame(json(1, 2, 42, 38));
-        limelight.run(false, false);
+        limelight.run(false, false, false, false);
         assertEquals(42, limelight.getObservation().getFirstTagId());
-        limelight.run(true, false);
+        limelight.run(true, false, false, false);
         assertEquals(38, limelight.getObservation().getFirstTagId());
-        limelight.run(false, false);
-        limelight.run(true, true);
+        limelight.run(false, false, false, false);
+        limelight.run(true, true, false, false);
         assertEquals(38, limelight.getObservation().getFirstTagId());
-        limelight.run(false, true);
+        limelight.run(false, true, false, false);
         assertEquals(42, limelight.getObservation().getFirstTagId());
+    }
+
+    @Test public void allianceKeepsCellChoiceAndOppositeInputsKeepEachAxis() throws Exception {
+        frame(json(1, 2, 42));
+        limelight.run(false, false, false, false);
+        assertFalse(limelight.isRedAlliance());
+        limelight.run(false, false, false, true);
+        assertTrue(limelight.isRedAlliance());
+        assertEquals(30, limelight.getObservation().getFirstTagId());
+        limelight.run(true, false, false, false);
+        assertEquals(34, limelight.getObservation().getFirstTagId());
+        limelight.run(false, false, true, false);
+        assertEquals(38, limelight.getObservation().getFirstTagId());
+        limelight.run(true, true, true, true);
+        assertEquals(38, limelight.getObservation().getFirstTagId());
+        limelight.run(false, true, false, true); // diagonal altera ambos os eixos
+        assertEquals(30, limelight.getObservation().getFirstTagId());
+        limelight.run(false, false, false, false);
+        assertEquals(30, limelight.getObservation().getFirstTagId());
+    }
+
+    @Test public void redCellsSupplyTdistAndAllianceChangeClearsBlueSamples() throws Exception {
+        frame(json(1, 2, 42));
+        limelight.run(false, false, false, false);
+        assertEquals(2, limelight.getDistanceMeters().getAsDouble(), 0);
+        // A mesma imagem azul nao pode continuar fornecendo mira ou distancia.
+        limelight.run(false, false, false, true);
+        assertFalse(limelight.getObservation().hasTarget());
+        assertFalse(limelight.getDistanceMeters().isPresent());
+        assertEquals(0, limelight.getDistanceSampleCount());
+        // Mesmo timestamp: mudanca de alvo exige nova decodificacao.
+        frame(json(1, 8, 30, 31, 32, 33));
+        limelight.run(false, false, true, false);
+        limelight.run(false, false, false, true);
+        assertEquals(8, limelight.getDistanceMeters().getAsDouble(), 0);
+        assertEquals(1, limelight.getDistanceSampleCount());
+        assertEquals(4, limelight.getObservation().getTagsUsed());
+        frame(json(2, 6, 34, 35, 36, 37));
+        limelight.run(true, false, false, false);
+        assertEquals(6, limelight.getDistanceMeters().getAsDouble(), 0);
+        assertEquals(1, limelight.getDistanceSampleCount());
+    }
+
+    @Test public void mixedAlliancesAndWrongRedCellRejectDistanceButKeepSelectedHeading() throws Exception {
+        for (int otherId : new int[] {34, 38, 42, 29, 46}) {
+            frame(json(1, 3, 30, otherId));
+            limelight.run(false, true, false, true);
+            assertEquals(30, limelight.getObservation().getFirstTagId());
+            assertEquals(1, limelight.getObservation().getTagsUsed());
+            assertFalse(limelight.getDistanceMeters().isPresent());
+            limelight.run(false, false, true, false); // invalida o cache por alvo
+        }
+    }
+
+    @Test public void redTelemetryShowsAllianceCellAndIds() throws Exception {
+        Telemetry telemetry = mock(Telemetry.class);
+        limelight = new Limelight(camera, telemetry, false, 8, clock::get);
+        frame(json(1, 2, 34));
+        limelight.run(true, false, false, true);
+        limelight.sendTelemetry();
+        verify(telemetry).addData("Alianca", "VERMELHA");
+        verify(telemetry).addData("CELL selecionada", "Lado da plateia");
+        verify(telemetry).addData("Hive selecionado", "%d-%d", 34, 37);
     }
 
     @Test public void tdistIsTheOnlyDistanceAndDoesNotRequireCenterPose() throws Exception {
         JSONObject json = json(1, 1.75, 42);
         json.getJSONArray("Fiducial").getJSONObject(0).remove("t6t_cs");
         frame(json);
-        limelight.run(false, false);
+        limelight.run(false, false, false, false);
         assertEquals(1.75, limelight.getDistanceMeters().getAsDouble(), 0);
         assertFalse(limelight.getObservation().hasTarget());
     }
@@ -49,20 +112,20 @@ public class LimelightTest {
     @Test public void readsHeadingFromCenterRatherThanCrosshairAndInvertsMount() throws Exception {
         JSONObject json = json(1, 3, 42).put("tx", 25);
         frame(json);
-        limelight.run(false, false);
+        limelight.run(false, false, false, false);
         assertTrue(limelight.getObservation().hasTarget());
         assertEquals(0, limelight.getObservation().getTxDegrees(), 1e-9);
         json = json(2, 3, 43);
         json.getJSONArray("Fiducial").getJSONObject(0).put("t6t_cs", new JSONArray(new double[] {0.3 - 0.06985, 0, 2, 0, 0, 0}));
         frame(json);
         Limelight inverted = new Limelight(camera, null, true, 8, clock::get);
-        inverted.run(false, false);
+        inverted.run(false, false, false, false);
         assertEquals(-Math.toDegrees(Math.atan2(0.3, 2)), inverted.getObservation().getTxDegrees(), 1e-9);
     }
 
     @Test public void mixedHivesRejectTdistButStillAllowSelectedHiveHeading() throws Exception {
         frame(json(1, 2, 42, 38));
-        limelight.run(false, true);
+        limelight.run(false, true, false, false);
         assertTrue(limelight.getObservation().hasTarget());
         assertFalse(limelight.getDistanceMeters().isPresent());
     }
@@ -71,7 +134,7 @@ public class LimelightTest {
         for (Object value : new Object[] {JSONObject.NULL, 0, -1, "invalido"}) {
             JSONObject json = json(1 + clock.get(), 2, 42).put("tdist", value);
             frame(json);
-            limelight.run(false, false);
+            limelight.run(false, false, false, false);
             assertTrue(limelight.getObservation().hasTarget());
             assertFalse(limelight.getDistanceMeters().isPresent());
             clock.addAndGet(25_000_000);
@@ -81,53 +144,53 @@ public class LimelightTest {
     @Test public void staleWrongPipelineAndInvalidTimestampCannotSteerOrSupplyDistance() throws Exception {
         Frame frame = frame(json(1, 2, 42));
         frame.age = 150;
-        limelight.run(false, false);
+        limelight.run(false, false, false, false);
         assertTrue(limelight.getDistanceMeters().isPresent());
         frame.age = 151;
-        limelight.run(false, false);
+        limelight.run(false, false, false, false);
         assertUnavailable();
         frame(json(2, 2, 42).put("pID", 7));
-        limelight.run(false, false);
+        limelight.run(false, false, false, false);
         assertUnavailable();
         frame(json(-1, 2, 42));
-        limelight.run(false, false);
+        limelight.run(false, false, false, false);
         assertUnavailable();
     }
 
     @Test public void repeatedTimestampIsDecodedOnlyOnceAndFreezesAfter150Ms() throws Exception {
         Frame first = frame(json(1, 2, 42));
-        limelight.run(false, false);
+        limelight.run(false, false, false, false);
         for (int i = 1; i <= 100; i++) {
             clock.set(i * 1_000_000L);
-            limelight.run(false, false);
+            limelight.run(false, false, false, false);
         }
         assertEquals(1, first.jsonReads);
         assertEquals(1, limelight.getDistanceSampleCount());
         clock.set(151_000_000);
-        limelight.run(false, false);
+        limelight.run(false, false, false, false);
         assertUnavailable();
         frame(json(2, 4, 42));
-        limelight.run(false, false);
+        limelight.run(false, false, false, false);
         assertEquals(4, limelight.getDistanceMeters().getAsDouble(), 0);
     }
 
     @Test public void selectingAnotherHiveAndDisconnectClearsDistanceHistory() throws Exception {
         frame(json(1, 2, 42));
-        limelight.run(false, true);
+        limelight.run(false, true, false, false);
         assertEquals(2, limelight.getDistanceMeters().getAsDouble(), 0);
-        limelight.run(true, false);
+        limelight.run(true, false, false, false);
         assertFalse(limelight.getDistanceMeters().isPresent());
         frame(json(2, 8, 38));
-        limelight.run(false, false);
+        limelight.run(false, false, false, false);
         assertEquals(8, limelight.getDistanceMeters().getAsDouble(), 0);
         when(camera.isConnected()).thenReturn(false);
-        limelight.run(false, false);
+        limelight.run(false, false, false, false);
         assertUnavailable();
     }
 
     @Test public void freshImageWithoutTargetReturnsManualVisionState() throws Exception {
         frame(json(1, 2).put("v", 0));
-        limelight.run(false, false);
+        limelight.run(false, false, false, false);
         assertTrue(limelight.getObservation().isVisionReady());
         assertFalse(limelight.getObservation().hasTarget());
         assertFalse(limelight.getDistanceMeters().isPresent());
@@ -137,7 +200,7 @@ public class LimelightTest {
         Telemetry telemetry = mock(Telemetry.class);
         limelight = new Limelight(camera, telemetry, false, 8, clock::get);
         frame(json(1, 2, 42));
-        limelight.run(false, false);
+        limelight.run(false, false, false, false);
         limelight.sendTelemetry();
         verify(telemetry).addData("tdist filtrado (cm)", "%.3f", 200.0);
         limelight.stop();
@@ -148,10 +211,10 @@ public class LimelightTest {
 
     @Test public void missingCameraAndNullResultAreUnavailable() {
         Limelight missing = new Limelight(null, null, false, 8, clock::get);
-        missing.run(false, false);
+        missing.run(false, false, false, false);
         assertFalse(missing.getObservation().isVisionReady());
         when(camera.getLatestResult()).thenReturn(null);
-        limelight.run(false, false);
+        limelight.run(false, false, false, false);
         assertUnavailable();
     }
 
@@ -169,7 +232,7 @@ public class LimelightTest {
         JSONArray tags = new JSONArray();
         double[] offsets = {0.1651, 0.06985, -0.06985, -0.1651};
         for (int id : ids) tags.put(new JSONObject().put("fID", id).put("ta", 1)
-                .put("t6t_cs", new JSONArray(new double[] {-offsets[(id - 38) % 4], 0, 2, 0, 0, 0})));
+                .put("t6t_cs", new JSONArray(new double[] {-offsets[Math.floorMod(id - 30, 4)], 0, 2, 0, 0, 0})));
         return new JSONObject().put("v", 1).put("pID", 8).put("ts", timestamp)
                 .put("tdist", distance).put("Fiducial", tags);
     }

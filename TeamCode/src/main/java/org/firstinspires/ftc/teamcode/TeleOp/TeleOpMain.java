@@ -43,7 +43,9 @@ public class TeleOpMain extends LinearOpMode {
         telemetry.addLine("Status: Inicializado");
         telemetry.addLine("Drive: Pedro field-centric com hold automatico");
         telemetry.addLine("Frente do campo: orientacao do robo ao apertar Play");
-        telemetry.addLine("D-pad: hive esquerdo 38-41 / direito 42-45");
+        telemetry.addLine("D-pad cima: AZUL / baixo: VERMELHA (inicial: AZUL)");
+        telemetry.addLine("D-pad esquerda: CELL plateia / direita: CELL oposta (inicial)");
+        limelight.sendTelemetry();
         telemetry.addLine("Right bumper: mirar no hive visivel com translacao livre");
         telemetry.addLine("Sem alvo: giro manual, mesmo segurando right bumper");
         telemetry.addLine("Right trigger: disparar");
@@ -61,7 +63,8 @@ public class TeleOpMain extends LinearOpMode {
             while (opModeIsActive()) {
 
                 //Subsistemas
-                limelight.run(gamepad1.dpad_left, gamepad1.dpad_right);
+                limelight.run(gamepad1.dpad_left, gamepad1.dpad_right,
+                        gamepad1.dpad_up, gamepad1.dpad_down);
                 boolean aimRequested = gamepad1.right_bumper;
                 boolean shootRequested = gamepad1.right_trigger > 0;
                 if (aimRequested) {

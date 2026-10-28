@@ -97,7 +97,7 @@ public class LimelightDistanceTest {
         when(frame.toString()).thenReturn(value.isPresent()
                 ? "{\"tdist\":" + value.getAsDouble() + "}" : "{}");
         when(camera.getLatestResult()).thenReturn(frame);
-        limelight.run(target == 38, target == 42);
+        limelight.run(target == 38, target == 42, false, false);
         return limelight.getDistanceMeters();
     }
 }

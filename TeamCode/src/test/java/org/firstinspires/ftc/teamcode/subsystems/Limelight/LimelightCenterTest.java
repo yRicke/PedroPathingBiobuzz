@@ -24,14 +24,14 @@ public class LimelightCenterTest {
     private static final double EPSILON = 1e-9;
 
     @Test
-    public void eachOfEightTagsAloneFindsSameCenterForItsHive() {
-        int[] ids = {38, 39, 40, 41, 42, 43, 44, 45};
-        double[] tagX = {0.1349, 0.23015, 0.36985, 0.4651,
-                0.1349, 0.23015, 0.36985, 0.4651};
+    public void eachOfSixteenTagsAloneFindsSameCenterForItsCell() {
+        int[] ids = {30, 31, 32, 33, 34, 35, 36, 37,
+                38, 39, 40, 41, 42, 43, 44, 45};
+        double[] tagX = {0.1349, 0.23015, 0.36985, 0.4651};
 
         for (int i = 0; i < ids.length; i++) {
-            FiducialResult tag = tag(ids[i], tagX[i], -0.4, 2, 0, 0, 0, 1);
-            int firstTag = ids[i] <= 41 ? 38 : 42;
+            FiducialResult tag = tag(ids[i], tagX[i % 4], -0.4, 2, 0, 0, 0, 1);
+            int firstTag = 30 + (ids[i] - 30) / 4 * 4;
 
             AprilTagObservation result =
                     estimate(Arrays.asList(tag), firstTag);
@@ -89,6 +89,21 @@ public class LimelightCenterTest {
     }
 
     @Test
+    public void redTiltedAndRotatedCellUsesLocalOffsetsWithoutAllianceSignFlip() {
+        for (int first : new int[] {30, 34}) {
+            // A mesma CELL vista girada 180 graus no plano da imagem.
+            AprilTagObservation rotated = estimate(Arrays.asList(
+                    tag(first, -0.1349, 0.4, 2, 0, 0, 180, 1)), first);
+            assertEquals(-8.530765609948133, rotated.getTxDegrees(), EPSILON);
+            // A inclinacao do HIVE e resolvida pela pose, nao por altura fixa.
+            AprilTagObservation tilted = estimate(Arrays.asList(
+                    tag(first, 0.2285096029175946, -0.441275,
+                            2.142980794164811, 17, 60, 30, 1)), first);
+            assertEquals(8.530765609948133, tilted.getTxDegrees(), EPSILON);
+        }
+    }
+
+    @Test
     public void distanceUnitIsConvertedBeforeApplyingMetricGeometry() {
         FiducialResult inches = mock(FiducialResult.class);
         when(inches.getFiducialId()).thenReturn(42);
@@ -142,7 +157,8 @@ public class LimelightCenterTest {
         when(frame.isValid()).thenReturn(true);
         when(frame.getFiducialResults()).thenReturn(tags);
         Limelight limelight = new Limelight(camera, null, false, 8, System::nanoTime);
-        limelight.run(firstTagId == 38, firstTagId == 42);
+        limelight.run(firstTagId == 34 || firstTagId == 38,
+                firstTagId == 30 || firstTagId == 42, firstTagId >= 38, firstTagId < 38);
         return limelight.getObservation();
     }
 

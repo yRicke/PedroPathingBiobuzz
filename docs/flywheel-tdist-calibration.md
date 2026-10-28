@@ -4,8 +4,9 @@
 
 1. Abra o TeleOp **Flywheel Calibration - tdist**, grupo **Flywheel**. Ele não
    aciona o drivetrain; coloque o robô na posição de teste.
-2. Confira a pipeline 8 e o hive mostrado (42–45 inicialmente; Y troca para
-   38–41). Aguarde uma leitura válida de `tdist filtrado (cm)`.
+2. Confira a pipeline 8, aliança e CELL mostradas (azul 42–45 inicialmente).
+   Clique no stick esquerdo para azul ou direito para vermelho; Y alterna
+   CELL plateia/oposta. Aguarde `tdist filtrado (cm)` válido.
 3. A RPM desejada começa em **2720**, com a flywheel desligada. A liga/desliga;
    B desliga sem perder o ajuste. Ajuste a RPM e o passo pelo D-pad.
 4. Aguarde a `Flywheel RPM medido` se aproximar da RPM desejada e a distância estabilizar
@@ -14,7 +15,7 @@
    pressionado. Verifique a repetibilidade com POLLEN.
 6. Quando encontrar um bom ajuste, pressione X. `PAR ANOTADO` congela a
    distância **tdist filtrada em centímetros** e a **RPM desejada**. Também
-   mostra RPM medida, hive e quantidade de amostras na captura.
+   mostra RPM medida, aliança, IDs da CELL e quantidade de amostras na captura.
 7. Anote o par antes de sair. A captura fica apenas nesta execução; X não
    grava arquivo nem modifica o código. Repita em outras posições.
 
@@ -31,7 +32,8 @@ o par capturado fica congelado. Se uma captura falhar, o último par permanece.
 | RT | Aciona transfer e trigger enquanto pressionado, com flywheel ligada |
 | LB | Alterna intake |
 | RB | Abre dedinho enquanto pressionado |
-| Y | Alterna hive 38–41 / 42–45 |
+| Clique stick esquerdo / direito | Seleciona aliança azul / vermelha |
+| Y | Alterna CELL da plateia / oposta dentro da aliança |
 | X | Congela o par distância/RPM para anotação |
 
 O passo inicial é 10 RPM. Segurar D-pad/A/Y/X não repete o comando a cada loop.
@@ -41,38 +43,16 @@ transfer e o intake são desligados, os servos são fechados e a câmera é para
 
 ## Configuração da Limelight
 
-- Use Limelight OS **2026.1 ou posterior**, que fornece `tdist` no JSON.
-- Na **pipeline 8**, selecione o tipo AprilTag/Fiducial Markers e habilite o
-  rastreamento 3D/Full3D. Confira a família e o **Marker Size em mm** para as
-  tags realmente usadas no teste; não copie medidas de FRC.
-- Defina um **mesmo ponto físico de referência** do HIVE. Se usar as quatro
-  tags, configure os POIs de cada uma para esse mesmo ponto. No mapa, a opção
-  `Use Map POI Offsets` usa os POIs por tag; confira também offsets globais de
-  UI, que têm prioridade. Não presuma que o mapa padrão de outro jogo possui
-  o centro correto do HIVE.
-- Sem POI, `tdist` mede até a tag selecionada pela câmera. A troca de tag
-  principal pode alterar essa referência, mesmo sem o robô se mover. Como
-  alternativa inicial, teste sempre a mesma tag via **ID Filters**, mantendo
-  a mesma configuração na calibração e no uso.
-- O SDK não identifica no getter o alvo principal associado a `tdist`.
-  Por isso, esta implementação aceita o valor somente quando **todas** as
-  AprilTags do frame pertencem ao hive selecionado. Um frame com tags de
-  ambos os hives é rejeitado para a RPM; a mira existente continua independente.
-  Use ID Filters/câmera apontada para isolar o hive durante a calibração.
+Siga o [guia do painel e das AprilTags BIOBUZZ](../TeamCode/src/main/java/org/firstinspires/ftc/teamcode/subsystems/Limelight/README.md),
+com pipeline 8, família 36h11, tamanho nominal 82,55 mm, filtros dos 16 IDs,
+Full3D e referência/POIs. Esse guia explica a rejeição de distância quando
+outra CELL aparece no frame e o movimento do HIVE.
 
-Não existe neste código um botão separado que “ative o tdist”. Com OS e 3D
-compatíveis, ele é produzido pela câmera. O status da telemetria indica campo
-ausente/inválido, falta de frame válido ou outro alvo no frame. A implementação
-não substitui campo ausente por zero nem pela estimativa antiga.
+`tdist` é distância **3D da câmera ao alvo/POI**, em metros no JSON; a
+telemetria converte para centímetros. A tabela usa diretamente essa leitura.
+Mantenha a mesma referência durante a calibração e o uso; mudar de tag
+principal sem POIs comuns pode mudar a distância sem mover o robô.
 
-`tdist` é distância **3D da câmera ao alvo/POI**, em metros no SDK; a telemetria
-converte para centímetros. Não é a distância horizontal da saída da flywheel.
-Esta tabela é experimental e usa diretamente `tdist`; ela não aplica a
-equação balística à distância inclinada.
-
-Referências: [tDist e POIs no OS 2026.1](https://docs.limelightvision.io/docs/docs-limelight/software-change-log),
-[configuração de AprilTags](https://docs.limelightvision.io/docs/docs-limelight/pipeline-apriltag/apriltags)
-e [rastreamento 3D](https://docs.limelightvision.io/docs/docs-limelight/pipeline-apriltag/apriltag-3d).
 O acesso por `LLResult.toString()` foi conferido no código-fonte do artefato
 `org.firstinspires.ftc:Hardware:12.0.0` e em testes com a classe real.
 
@@ -106,3 +86,6 @@ quando acima da RPM desejada, pode reduzir a potência até zero.
 
 Registre novos pares ao alterar ângulo, câmera/POI, compressão, flywheel ou
 elemento lançado. Esta calibração é de POLLEN; não foi medida para NECTAR.
+
+Valide os pares nas duas alianças e com a CELL estabilizada. Os IDs do alvo
+e a aliança ficam registrados na captura para conferir a referência usada.

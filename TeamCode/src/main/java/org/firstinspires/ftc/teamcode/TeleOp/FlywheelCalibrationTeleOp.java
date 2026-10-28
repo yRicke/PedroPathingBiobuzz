@@ -78,7 +78,7 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
         trigger.setTriggerClosed();
         dedo.setDedinhoNervosoClosed();
         Limelight limelight = new Limelight(hardwareMap, telemetry);
-        boolean leftHive = false;
+        boolean audienceCell = false;
         boolean previousX = false, previousY = false;
         String capturedPair = "Nenhum: X captura; anote antes de sair";
         String capturedDetails = "Captura fica apenas nesta execucao";
@@ -88,7 +88,9 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
             telemetry.addLine("Robo parado. A liga/desliga flywheel; B desliga.");
             telemetry.addLine("D-pad cima/baixo: RPM; esquerda/direita: passo.");
             telemetry.addLine("RT dispara; LB alterna intake; RB abre dedinho.");
-            telemetry.addLine("Y troca hive; X congela par para anotar.");
+            telemetry.addLine("Y troca CELL; X congela par para anotar.");
+            telemetry.addLine("Clique stick esquerdo: AZUL / direito: VERMELHA.");
+            limelight.sendTelemetry();
             telemetry.update();
             waitForStart();
             if (isStopRequested()) return;
@@ -96,9 +98,10 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
             while (opModeIsActive()) {
                 updateCalibrationControls(gamepad1.dpad_up, gamepad1.dpad_down,
                         gamepad1.dpad_left, gamepad1.dpad_right, gamepad1.a, gamepad1.b);
-                if (gamepad1.y && !previousY) leftHive = !leftHive;
+                if (gamepad1.y && !previousY) audienceCell = !audienceCell;
                 previousY = gamepad1.y;
-                limelight.run(leftHive, !leftHive);
+                limelight.run(audienceCell, !audienceCell,
+                        gamepad1.left_stick_button, gamepad1.right_stick_button);
                 int firstTagId = limelight.getObservation().getFirstTagId();
                 double currentRpm = flywheel.getRPM();
                 OptionalDouble distance = limelight.getDistanceMeters();
@@ -110,7 +113,8 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
                                 "{%.3f, %.1f}, // tdist cm, RPM desejada",
                                 distance.getAsDouble() * 100, getCalibrationRpm());
                         capturedDetails = String.format(Locale.US,
-                                "Hive %d-%d | RPM medida %.1f | %d amostras",
+                                "%s | CELL %d-%d | RPM medida %.1f | %d amostras",
+                                limelight.isRedAlliance() ? "VERMELHA" : "AZUL",
                                 firstTagId, firstTagId + Limelight.TAGS_PER_HIVE - 1,
                                 currentRpm, limelight.getDistanceSampleCount());
                     } else {
@@ -134,7 +138,8 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
                 telemetry.addData("PAR ANOTADO", capturedPair);
                 telemetry.addData("Captura", capturedDetails);
                 telemetry.addLine("Cima/baixo RPM | Esq/dir passo | A liga | B desliga");
-                telemetry.addLine("RT dispara | LB intake | RB dedinho | Y hive | X captura");
+                telemetry.addLine("RT dispara | LB intake | RB dedinho | Y CELL | X captura");
+                telemetry.addLine("Clique stick esq: AZUL | dir: VERMELHA");
                 telemetry.update();
                 idle();
             }

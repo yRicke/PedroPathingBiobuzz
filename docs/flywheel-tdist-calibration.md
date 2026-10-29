@@ -1,12 +1,12 @@
-# Calibrar a flywheel com POLLEN e tdist
+# Calibrar a flywheel com POLLEN e distância 3D ao centro da CELL
 
 ## Primeiro teste
 
-1. Abra o TeleOp **Flywheel Calibration - tdist**, grupo **Flywheel**. Ele não
+1. Abra o TeleOp **Flywheel Calibration - 3D**, grupo **Flywheel**. Ele não
    aciona o drivetrain; coloque o robô na posição de teste.
 2. Confira a pipeline 8, aliança e CELL mostradas (azul 42–45 inicialmente).
    Clique no stick esquerdo para azul ou direito para vermelho; Y alterna
-   CELL plateia/oposta. Aguarde `tdist filtrado (cm)` válido.
+   CELL plateia/oposta. Aguarde `Distancia centro filtrada (cm)` válida.
 3. A RPM desejada começa em **2720**, com a flywheel desligada. A liga/desliga;
    B desliga sem perder o ajuste. Ajuste a RPM e o passo pelo D-pad.
 4. Aguarde a `Flywheel RPM medido` se aproximar da RPM desejada e a distância estabilizar
@@ -14,7 +14,7 @@
 5. Faça lançamentos com RT. LB alterna o intake; RB abre o dedinho enquanto
    pressionado. Verifique a repetibilidade com POLLEN.
 6. Quando encontrar um bom ajuste, pressione X. `PAR ANOTADO` congela a
-   distância **tdist filtrada em centímetros** e a **RPM desejada**. Também
+   distância **3D ao centro da CELL, filtrada em centímetros**, e a **RPM desejada**. Também
    mostra RPM medida, aliança, IDs da CELL e quantidade de amostras na captura.
 7. Anote o par antes de sair. A captura fica apenas nesta execução; X não
    grava arquivo nem modifica o código. Repita em outras posições.
@@ -45,22 +45,25 @@ transfer e o intake são desligados, os servos são fechados e a câmera é para
 
 Siga o [guia do painel e das AprilTags BIOBUZZ](../TeamCode/src/main/java/org/firstinspires/ftc/teamcode/subsystems/Limelight/README.md),
 com pipeline 8, família 36h11, tamanho nominal 82,55 mm, filtros dos 16 IDs,
-Full3D e referência/POIs. Esse guia explica a rejeição de distância quando
-outra CELL aparece no frame e o movimento do HIVE.
+e Full3D. **Limelight OS 2026.0 é suficiente**; não é necessário atualizar
+para 2026.1, configurar POIs ou fornecer `tdist` no JSON.
 
-`tdist` é distância **3D da câmera ao alvo/POI**, em metros no JSON; a
-telemetria converte para centímetros. A tabela usa diretamente essa leitura.
-Mantenha a mesma referência durante a calibração e o uso; mudar de tag
-principal sem POIs comuns pode mudar a distância sem mover o robô.
+O Java calcula a distância **3D da câmera ao centro do cluster de tags da
+CELL selecionada** a partir de `getTargetPoseCameraSpace()`. Inclui os três
+eixos e os deslocamentos locais entre tags e centro; não é distância
+horizontal nem medida da saída do launcher. Tags de outras CELLS são
+ignoradas. A tabela usa a leitura filtrada convertida para centímetros.
 
-O acesso por `LLResult.toString()` foi conferido no código-fonte do artefato
-`org.firstinspires.ftc:Hardware:12.0.0` e em testes com a classe real.
+Refaça os pares antigos obtidos por `tdist`/POI, pois a referência física
+mudou. Calibração e modo automático agora usam o mesmo centro calculado em Java,
+sem depender de qual tag a pipeline escolhe como principal. O cálculo é
+exercitado com `LLResult` real do SDK FTC 12.0.0 e JSON sem `tdist`.
 
 ## Aplicar os pares
 
 Edite `subsystems/FlywheelAdvanced/Flywheel.java`:
 
-| Par | tdist filtrado anotado (cm) | RPM desejada anotada |
+| Par | Distância ao centro filtrada (cm) | RPM desejada anotada |
 | --- | --- | --- |
 | 1 | `BASE_DISTANCE_CM` | `BASE_RPM` |
 | 2 | `BASE_DISTANCE_2_CM` | `BASE_RPM_2` |
@@ -75,7 +78,7 @@ os valores na inicialização. Para mais pontos, adicione pares em
 - Um par: mantém a RPM desse par; não existe curva medida ainda.
 - Dois ou mais: interpola entre os pontos vizinhos.
 - Fora da faixa: limita ao extremo e sinaliza que a posição não foi calibrada.
-- Sem tdist válido: volta imediatamente ao pedido de `BASE_RPM`.
+- Sem distância 3D válida: volta imediatamente ao pedido de `BASE_RPM`.
 - `BASE_RPM` zero: desliga a RPM automática.
 
 O controlador automático aplica banda morta de 10 RPM e intervalo mínimo de
@@ -84,7 +87,7 @@ executada a cada ciclo. A calibração manual aplica diretamente os passos,
 inclusive 0,1 RPM. O controle limita a potência ao sentido de lançamento;
 quando acima da RPM desejada, pode reduzir a potência até zero.
 
-Registre novos pares ao alterar ângulo, câmera/POI, compressão, flywheel ou
+Registre novos pares ao alterar ângulo, câmera, geometria das tags, compressão, flywheel ou
 elemento lançado. Esta calibração é de POLLEN; não foi medida para NECTAR.
 
 Valide os pares nas duas alianças e com a CELL estabilizada. Os IDs do alvo

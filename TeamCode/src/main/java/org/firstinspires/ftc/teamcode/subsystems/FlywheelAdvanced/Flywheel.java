@@ -151,7 +151,7 @@ public class Flywheel {
         setMotorPower(power);
     }
 
-    /** Pares {tdist em cm, RPM}; distancia zero desativa o par. */
+    /** Pares {distancia 3D ao centro da CELL em cm, RPM}; zero desativa o par. */
     private static FlywheelRpmTable createRpmTable() {
         return new FlywheelRpmTable(BASE_RPM, MAX_RPM, new double[][] {
                 {BASE_DISTANCE_CM, BASE_RPM},

@@ -1,6 +1,6 @@
 # Limelight 3A — painel e AprilTags BIOBUZZ
 
-Configuração para `TeleOpMain` e `Flywheel Calibration - tdist`. Os valores
+Configuração para `TeleOpMain` e `Flywheel Calibration - 3D`. Os valores
 correspondentes do robô ficam no início de [Limelight.java](Limelight.java).
 
 ## 1. Abrir o painel
@@ -8,7 +8,9 @@ correspondentes do robô ficam no início de [Limelight.java](Limelight.java).
 1. Conecte a Limelight ao computador por USB e abra
    [http://limelight.local:5801](http://limelight.local:5801). Se o nome não
    resolver, localize a câmera pelo Limelight Hardware Manager.
-2. Use **Limelight OS 2026.1 ou posterior**, necessário para `tdist` no JSON.
+2. O projeto é compatível com **Limelight OS 2026.0** na 3A. A distância é
+   calculada em Java pelas poses 3D individuais; não depende de `tdist` nem
+   de recursos do OS 2026.1.
 3. Configure a **pipeline de índice 8**. O programa seleciona esse índice ao
    inicializar; trocar aliança/CELL no controle mantém a mesma pipeline.
 4. No Control Hub, configure o dispositivo como **`limelight`**. O polling de
@@ -55,7 +57,8 @@ soltar. Comandos opostos simultâneos mantêm aquele eixo. Inicial: **azul,
 CELL oposta, 42–45**. Esquerda/direita são atalhos para as CELLS, não lados
 relativos à orientação instantânea do robô.
 
-A telemetria mostra `Alianca`, `CELL selecionada`, IDs, tags usadas e `tdist`.
+A telemetria mostra `Alianca`, `CELL selecionada`, IDs, tags usadas e
+`Distancia centro filtrada (cm)`.
 Trocar aliança/CELL limpa as amostras do alvo anterior e atualiza a mira,
 inclusive se a câmera ainda estiver entregando o mesmo timestamp.
 
@@ -67,32 +70,28 @@ todas as seleções acima.
 
 ## 4. Referência de distância para calibrar RPM
 
-`tdist` mede em **metros** da câmera ao alvo principal ou POI ativo. A
-telemetria converte para **centímetros**. Não é distância horizontal nem
-medida a partir da saída da flywheel. Não existe um botão separado para ativar
-`tdist`: confira OS, 3D e a saída de dados ao vivo do painel.
+A distância agora usa `getTargetPoseCameraSpace()` de cada tag da CELL
+selecionada, disponível no SDK FTC 12 e no OS 2026.0 com **Full 3D** ligado.
+O código transforma o deslocamento local de cada tag até o centro do cluster,
+combina as posições desse centro com pesos pela área e calcula
+`sqrt(x² + y² + z²)`. A referência é sempre o mesmo centro, inclusive quando
+uma tag fica oculta. A telemetria mostra a leitura instantânea e a filtrada
+em **centímetros**. É distância 3D a partir da câmera, não distância horizontal
+nem medida a partir da saída da flywheel.
 
-Escolha uma referência física e mantenha-a na calibração e no jogo:
+Não é necessário configurar POIs ou mapa de campo. Os offsets de POI e o
+crosshair do painel não definem essa referência: o cálculo usa as poses das
+tags e os deslocamentos `TAG_TO_CENTER_METERS` em Java. Mantenha o tamanho
+das tags e a geometria do adesivo corretos.
 
-- **Sem POI:** a referência é o centro da tag principal. Para um primeiro
-  teste consistente, restrinja ID Filters a uma tag da CELL e registre qual
-  foi usada. Com várias tags, a referência pode mudar quando a câmera troca
-  de tag principal; a filtragem temporal não corrige essa diferença.
-- **Com POIs por tag:** no Map Builder, configure cada tag do cluster para o
-  mesmo ponto físico e habilite **Use Map POI Offsets**. Zere os offsets 3D
-  globais de UI e eventuais overrides por NetworkTables, que têm prioridade.
-  O formato `poi` do fmap é `[forward, left, down]`, em metros relativos à
-  tag. Valide no visualizador; não copie diretamente os sinais do vetor X
-  usado pelo cálculo Java. Verifique a referência cobrindo uma tag de cada
-  vez, com o robô imóvel. Isso configura a distância; a mira Java permanece.
+Tags de outras CELLS são ignoradas e podem aparecer na mesma imagem. A
+distância fica indisponível quando não há pose 3D válida de uma tag da CELL
+selecionada; nesse caso a flywheel solicita `BASE_RPM`. Confira a seleção e
+o status da distância antes de capturar pares.
 
-O SDK FTC 12 não fornece um getter que associe o `tdist` à ID principal. Por
-isso, qualquer tag fora da CELL selecionada **invalida a distância desse
-frame**, mesmo que uma tag correta também apareça. A mira ainda pode usar
-as poses corretas. A telemetria pede para isolar as tags; a flywheel solicita
-`BASE_RPM` enquanto não há distância válida. A lista completa no painel não
-garante que todo enquadramento terá distância disponível: aponte para isolar
-a CELL desejada e confirme o status antes de registrar pares.
+**Refaça pares antigos medidos com `tdist` ou POI:** aquela referência podia
+ser o centro da tag principal ou outro ponto físico. A nova tabela deve usar
+somente distância ao centro do cluster, tanto na calibração quanto no jogo.
 
 ## 5. Particularidades do BIOBUZZ
 
@@ -116,14 +115,14 @@ em 28/10/2026:
   durante a virada.
 - Como as tags se movem com a estrutura, não use suas coordenadas como
   marcos fixos para `botpose`/MegaTag. Este código usa poses relativas à câmera
-  e não exige localização global nem mapa de campo. Um fmap usado para POIs
-  locais não torna essas tags fixas.
+  e não exige localização global nem mapa de campo.
 
 ## 6. Conferência no robô
 
 1. Aponte para uma CELL e confira os IDs no painel e a seleção na telemetria.
-2. Confira uma pose 3D por tag e `tdist` positivo no Live Data/JSON. Se faltar
-   pose, confira Full3D; se faltar `tdist`, confira OS 2026.1+ e os offsets.
+2. Confira `t6t_cs` por tag no Live Data/JSON e
+   `Distancia centro filtrada (cm)` positiva na telemetria do robô. Se faltar
+   pose, confira Full3D, tamanho das tags e IDs. `tdist` não é necessário.
 3. Com flywheel desabilitada, teste as quatro seleções e cubra as tags aos
    poucos: o centro estimado deve continuar no mesmo ponto.
 4. Ao selecionar outra aliança/CELL sem mover a câmera, confirme que as
@@ -132,7 +131,7 @@ em 28/10/2026:
    Nesse TeleOp o D-pad ajusta RPM/passo: **clique no stick esquerdo para azul,
    direito para vermelho; Y alterna CELL**. A captura inclui aliança e IDs.
 6. Valide os pares nas duas alianças e nas posições estáveis usadas. Não
-   reutilize automaticamente os antigos 308 cm. Alterar câmera, referência/POI,
+   reutilize automaticamente os antigos 308 cm. Alterar câmera, geometria,
    launcher ou elemento exige conferir a calibração novamente.
 
 ## Fontes oficiais
@@ -143,4 +142,5 @@ em 28/10/2026:
 - [Painel e pipelines](https://docs.limelightvision.io/docs/docs-limelight/getting-started/pipelines)
 - [AprilTags — família, tamanho e ID Filters](https://docs.limelightvision.io/docs/docs-limelight/pipeline-apriltag/apriltags)
 - [Rastreamento 3D](https://docs.limelightvision.io/docs/docs-limelight/pipeline-apriltag/apriltag-3d)
-- [OS 2026.1 — tdist e POIs por tag](https://docs.limelightvision.io/docs/docs-limelight/software-change-log)
+- [SDK FTC — poses individuais das AprilTags](https://docs.limelightvision.io/docs/docs-limelight/apis/ftc-programming)
+- [Downloads por modelo de Limelight](https://docs.limelightvision.io/docs/resources/downloads)

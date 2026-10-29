@@ -11,8 +11,6 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.util.List;
 import java.util.Arrays;
@@ -20,7 +18,7 @@ import java.util.OptionalDouble;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 
-/** Publica heading do centro do hive e distancia tdist, com validacao de frames. */
+/** Publica heading e distancia 3D do centro da CELL, com validacao de frames. */
 public class Limelight {
     public static final String DEVICE_NAME = "limelight";
     public static final int PIPELINE_INDEX = 8;
@@ -49,7 +47,7 @@ public class Limelight {
     private final boolean upsideDown;
     private final int pipelineIndex;
     private final LongSupplier nanoClock;
-    // Janela circular do tdist; so e reordenada quando suas amostras mudam.
+    // Janela circular da distancia ao centro; so muda com novas amostras.
     private final double[] distanceSamples;
     private final long[] distanceSampleTimes;
     private int distanceHead;
@@ -150,27 +148,33 @@ public class Limelight {
         distanceStatus = "Sem alvo valido";
         if (!result.isValid()) return;
         List<FiducialResult> tags = result.getFiducialResults();
-        readDistance(result, tags);
-        observation = estimateCenter(tags, timestamp);
-        if (observation.hasTarget()) {
+        CellCenter center = estimateCenter(tags);
+        if (center != null) {
+            double tx = Math.toDegrees(Math.atan2(center.x, center.z));
+            observation = AprilTagObservation.detected(selectedFirstTagId,
+                    upsideDown ? -tx : tx, center.tagsUsed, timestamp);
+            rawDistanceMeters = OptionalDouble.of(center.distanceMeters);
             status = "Centro do hive estimado";
+            distanceStatus = "Pose 3D (camera -> centro da CELL)";
         } else if (tags != null) {
             for (FiducialResult tag : tags) {
                 if (tag != null && containsTag(selectedFirstTagId, tag.getFiducialId())) {
                     observation = AprilTagObservation.unavailable(selectedFirstTagId);
                     status = "Tag sem pose 3D valida: confira Full3D";
+                    distanceStatus = status;
                     break;
                 }
             }
         }
     }
 
-    private AprilTagObservation estimateCenter(List<FiducialResult> tags, double timestamp) {
+    private CellCenter estimateCenter(List<FiducialResult> tags) {
         int firstTagId = selectedFirstTagId;
         if (tags == null || !isHive(firstTagId)) {
-            return AprilTagObservation.searching(firstTagId, timestamp);
+            return null;
         }
         double sumX = 0;
+        double sumY = 0;
         double sumZ = 0;
         double totalWeight = 0;
         int tagsUsed = 0;
@@ -197,51 +201,40 @@ public class Limelight {
             // transforma o deslocamento local (d, 0, 0) para o espaco da camera.
             double offset = TAG_TO_CENTER_METERS[index];
             double x = position.x + offset * Math.cos(pitch) * Math.cos(yaw);
+            double y = position.y + offset * Math.cos(pitch) * Math.sin(yaw);
             double z = position.z - offset * Math.sin(pitch);
-            if (!Double.isFinite(x) || !Double.isFinite(z) || z <= 0) {
+            if (!Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(z) || z <= 0) {
                 continue;
             }
             double area = tag.getTargetArea();
             double weight = Double.isFinite(area) && area > 0 ? Math.min(area, 100) : 1;
             sumX += x * weight;
+            sumY += y * weight;
             sumZ += z * weight;
             totalWeight += weight;
             tagsUsed++;
         }
 
-        if (tagsUsed == 0) return AprilTagObservation.searching(firstTagId, timestamp);
+        if (tagsUsed == 0) return null;
         double x = sumX / totalWeight;
+        double y = sumY / totalWeight;
         double z = sumZ / totalWeight;
-        double tx = Math.toDegrees(Math.atan2(x, z));
-        if (!Double.isFinite(tx)) {
-            return AprilTagObservation.searching(firstTagId, timestamp);
-        }
-        return AprilTagObservation.detected(firstTagId, upsideDown ? -tx : tx, tagsUsed, timestamp);
+        double distance = Math.hypot(Math.hypot(x, y), z);
+        if (!Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(z)
+                || !Double.isFinite(distance) || distance <= 0) return null;
+        return new CellCenter(x, z, distance, tagsUsed);
     }
 
-    /** tdist pertence ao alvo principal da pipeline; rejeita mistura de hives. */
-    private void readDistance(LLResult result, List<FiducialResult> tags) {
-        if (tags == null || tags.isEmpty()) {
-            distanceStatus = "Sem AprilTags";
-            return;
-        }
-        for (FiducialResult tag : tags) {
-            if (tag == null || !containsTag(selectedFirstTagId, tag.getFiducialId())) {
-                distanceStatus = "Isole as tags do hive selecionado na pipeline";
-                return;
-            }
-        }
-        try {
-            // No SDK 12, toString() conserva o JSON do frame, incluindo tdist.
-            double distance = new JSONObject(result.toString()).optDouble("tdist", Double.NaN);
-            if (!Double.isFinite(distance) || distance <= 0) {
-                distanceStatus = "tdist ausente/invalido: confira OS 2026.1+ e Full3D";
-                return;
-            }
-            rawDistanceMeters = OptionalDouble.of(distance);
-            distanceStatus = "tdist (camera -> alvo/POI)";
-        } catch (JSONException e) {
-            distanceStatus = "JSON do LLResult sem tdist legivel";
+    /** A mira e a distancia usam a mesma estimativa do centro, inclusive sem tdist. */
+    private static final class CellCenter {
+        final double x, z, distanceMeters;
+        final int tagsUsed;
+
+        CellCenter(double x, double z, double distanceMeters, int tagsUsed) {
+            this.x = x;
+            this.z = z;
+            this.distanceMeters = distanceMeters;
+            this.tagsUsed = tagsUsed;
         }
     }
 
@@ -319,7 +312,7 @@ public class Limelight {
 
     public boolean isRedAlliance() { return redAlliance; }
     public AprilTagObservation getObservation() { return observation; }
-    /** tdist filtrado: distancia 3D camera-alvo/POI em metros. */
+    /** Distancia 3D filtrada da camera ao centro do cluster da CELL, em metros. */
     public OptionalDouble getDistanceMeters() { return distanceMeters; }
     public OptionalDouble getRawDistanceMeters() { return rawDistanceMeters; }
     public int getDistanceSampleCount() { return distanceCount; }
@@ -339,17 +332,17 @@ public class Limelight {
         } else {
             telemetry.addData("Centro hive erro horizontal (deg)", "Indisponivel");
         }
-        telemetry.addData("tdist status", distanceStatus);
-        telemetry.addData("tdist amostras", distanceCount);
+        telemetry.addData("Distancia centro status", distanceStatus);
+        telemetry.addData("Distancia centro amostras", distanceCount);
         if (rawDistanceMeters.isPresent()) {
-            telemetry.addData("tdist instantaneo (cm)", "%.3f", rawDistanceMeters.getAsDouble() * 100);
+            telemetry.addData("Distancia centro instantanea (cm)", "%.3f", rawDistanceMeters.getAsDouble() * 100);
         } else {
-            telemetry.addData("tdist instantaneo (cm)", "Indisponivel");
+            telemetry.addData("Distancia centro instantanea (cm)", "Indisponivel");
         }
         if (distanceMeters.isPresent()) {
-            telemetry.addData("tdist filtrado (cm)", "%.3f", distanceMeters.getAsDouble() * 100);
+            telemetry.addData("Distancia centro filtrada (cm)", "%.3f", distanceMeters.getAsDouble() * 100);
         } else {
-            telemetry.addData("tdist filtrado (cm)", "Indisponivel");
+            telemetry.addData("Distancia centro filtrada (cm)", "Indisponivel");
         }
     }
 

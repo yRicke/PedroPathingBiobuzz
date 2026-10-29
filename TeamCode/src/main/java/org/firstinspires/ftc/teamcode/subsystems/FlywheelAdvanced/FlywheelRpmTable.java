@@ -5,12 +5,12 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.OptionalDouble;
 
-/** Tabela imutavel: valida e ordena pares {tdist em cm, RPM} uma unica vez. */
+/** Tabela imutavel: valida e ordena pares {distancia ao centro em cm, RPM}. */
 public final class FlywheelRpmTable {
     public enum Mode {
-        STOPPED("Desligada"), NO_DISTANCE("Sem tdist: RPM base"),
+        STOPPED("Desligada"), NO_DISTANCE("Sem distancia 3D: RPM base"),
         NO_CALIBRATION("Sem pares: RPM base"), SINGLE_POINT("Um par: RPM fixa"),
-        CALIBRATED("Interpolacao tdist"), LIMITED("Fora da faixa: RPM limitada ao extremo");
+        CALIBRATED("Interpolacao distancia 3D"), LIMITED("Fora da faixa: RPM limitada ao extremo");
         private final String description;
         Mode(String description) { this.description = description; }
         public String getDescription() { return description; }

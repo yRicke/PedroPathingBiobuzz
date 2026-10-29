@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems.Limelight;
 
 import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.hardware.limelightvision.LLResultTypes.FiducialResult;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.json.JSONArray;
@@ -56,7 +57,7 @@ public class LimelightTest {
         assertEquals(30, limelight.getObservation().getFirstTagId());
     }
 
-    @Test public void redCellsSupplyTdistAndAllianceChangeClearsBlueSamples() throws Exception {
+    @Test public void redCellsSupplyPoseDistanceAndAllianceChangeClearsBlueSamples() throws Exception {
         frame(json(1, 2, 42));
         limelight.run(false, false, false, false);
         assertEquals(2, limelight.getDistanceMeters().getAsDouble(), 0);
@@ -78,13 +79,13 @@ public class LimelightTest {
         assertEquals(1, limelight.getDistanceSampleCount());
     }
 
-    @Test public void mixedAlliancesAndWrongRedCellRejectDistanceButKeepSelectedHeading() throws Exception {
+    @Test public void otherCellsDoNotContributeToSelectedRedCellDistance() throws Exception {
         for (int otherId : new int[] {34, 38, 42, 29, 46}) {
             frame(json(1, 3, 30, otherId));
             limelight.run(false, true, false, true);
             assertEquals(30, limelight.getObservation().getFirstTagId());
             assertEquals(1, limelight.getObservation().getTagsUsed());
-            assertFalse(limelight.getDistanceMeters().isPresent());
+            assertEquals(3, limelight.getDistanceMeters().getAsDouble(), 1e-9);
             limelight.run(false, false, true, false); // invalida o cache por alvo
         }
     }
@@ -100,12 +101,13 @@ public class LimelightTest {
         verify(telemetry).addData("Hive selecionado", "%d-%d", 34, 37);
     }
 
-    @Test public void tdistIsTheOnlyDistanceAndDoesNotRequireCenterPose() throws Exception {
+    @Test public void tdistCannotSupplyDistanceWithoutAValidSelectedCellPose() throws Exception {
         JSONObject json = json(1, 1.75, 42);
+        json.put("tdist", 1.75);
         json.getJSONArray("Fiducial").getJSONObject(0).remove("t6t_cs");
         frame(json);
         limelight.run(false, false, false, false);
-        assertEquals(1.75, limelight.getDistanceMeters().getAsDouble(), 0);
+        assertFalse(limelight.getDistanceMeters().isPresent());
         assertFalse(limelight.getObservation().hasTarget());
     }
 
@@ -123,20 +125,29 @@ public class LimelightTest {
         assertEquals(-Math.toDegrees(Math.atan2(0.3, 2)), inverted.getObservation().getTxDegrees(), 1e-9);
     }
 
-    @Test public void mixedHivesRejectTdistButStillAllowSelectedHiveHeading() throws Exception {
-        frame(json(1, 2, 42, 38));
+    @Test public void mixedCellsUseOnlySelectedCellPosesEvenWithMisleadingTdist() throws Exception {
+        JSONObject json = json(1, 2, 42, 38).put("tdist", 99);
+        json.getJSONArray("Fiducial").getJSONObject(1)
+                .put("t6t_cs", new JSONArray(new double[] {50, 0, 20, 0, 0, 0}));
+        frame(json);
         limelight.run(false, true, false, false);
         assertTrue(limelight.getObservation().hasTarget());
-        assertFalse(limelight.getDistanceMeters().isPresent());
+        assertEquals(2, limelight.getDistanceMeters().getAsDouble(), 1e-9);
     }
 
-    @Test public void missingOrInvalidTdistDoesNotCreateADistanceFromThePose() throws Exception {
+    @Test public void os2026FramesWithoutTdistSupplyDistanceFromTheCellCenter() throws Exception {
+        frame(json(1, 2, 42)); // JSON do OS 2026.0, sem tdist.
+        limelight.run(false, false, false, false);
+        assertEquals(2, limelight.getDistanceMeters().getAsDouble(), 1e-9);
+    }
+
+    @Test public void missingOrInvalidTdistDoesNotAffectPoseDistance() throws Exception {
         for (Object value : new Object[] {JSONObject.NULL, 0, -1, "invalido"}) {
             JSONObject json = json(1 + clock.get(), 2, 42).put("tdist", value);
             frame(json);
             limelight.run(false, false, false, false);
             assertTrue(limelight.getObservation().hasTarget());
-            assertFalse(limelight.getDistanceMeters().isPresent());
+            assertEquals(2, limelight.getDistanceMeters().getAsDouble(), 1e-9);
             clock.addAndGet(25_000_000);
         }
     }
@@ -164,7 +175,7 @@ public class LimelightTest {
             clock.set(i * 1_000_000L);
             limelight.run(false, false, false, false);
         }
-        assertEquals(1, first.jsonReads);
+        assertEquals(1, first.tagReads);
         assertEquals(1, limelight.getDistanceSampleCount());
         clock.set(151_000_000);
         limelight.run(false, false, false, false);
@@ -196,13 +207,13 @@ public class LimelightTest {
         assertFalse(limelight.getDistanceMeters().isPresent());
     }
 
-    @Test public void telemetryAndLifecycleExposeOnlyTdistDistance() throws Exception {
+    @Test public void telemetryAndLifecycleExposeCellCenterDistance() throws Exception {
         Telemetry telemetry = mock(Telemetry.class);
         limelight = new Limelight(camera, telemetry, false, 8, clock::get);
         frame(json(1, 2, 42));
         limelight.run(false, false, false, false);
         limelight.sendTelemetry();
-        verify(telemetry).addData("tdist filtrado (cm)", "%.3f", 200.0);
+        verify(telemetry).addData("Distancia centro filtrada (cm)", "%.3f", 200.0);
         limelight.stop();
         verify(camera).stop();
         assertUnavailable();
@@ -232,15 +243,18 @@ public class LimelightTest {
         JSONArray tags = new JSONArray();
         double[] offsets = {0.1651, 0.06985, -0.06985, -0.1651};
         for (int id : ids) tags.put(new JSONObject().put("fID", id).put("ta", 1)
-                .put("t6t_cs", new JSONArray(new double[] {-offsets[Math.floorMod(id - 30, 4)], 0, 2, 0, 0, 0})));
+                .put("t6t_cs", new JSONArray(new double[] {-offsets[Math.floorMod(id - 30, 4)], 0, distance, 0, 0, 0})));
         return new JSONObject().put("v", 1).put("pID", 8).put("ts", timestamp)
-                .put("tdist", distance).put("Fiducial", tags);
+                .put("Fiducial", tags);
     }
     private static final class Frame extends LLResult {
         long age;
-        int jsonReads;
+        int tagReads;
         Frame(JSONObject json) throws Exception { super(json); }
         @Override public long getStaleness() { return age; }
-        @Override public String toString() { jsonReads++; return super.toString(); }
+        @Override public java.util.List<FiducialResult> getFiducialResults() {
+            tagReads++;
+            return super.getFiducialResults();
+        }
     }
 }

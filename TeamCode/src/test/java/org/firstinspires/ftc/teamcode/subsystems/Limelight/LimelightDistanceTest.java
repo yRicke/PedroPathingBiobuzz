@@ -5,6 +5,11 @@ import org.junit.Before;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes.FiducialResult;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
+import org.firstinspires.ftc.robotcore.external.navigation.Position;
+import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicLong;
 import static org.mockito.Mockito.*;
@@ -94,8 +99,11 @@ public class LimelightDistanceTest {
         when(frame.getPipelineIndex()).thenReturn(8);
         when(frame.isValid()).thenReturn(true);
         when(frame.getFiducialResults()).thenReturn(Collections.singletonList(tag));
-        when(frame.toString()).thenReturn(value.isPresent()
-                ? "{\"tdist\":" + value.getAsDouble() + "}" : "{}");
+        if (value.isPresent()) {
+            when(tag.getTargetPoseCameraSpace()).thenReturn(new Pose3D(
+                    new Position(DistanceUnit.METER, -0.1651, 0, value.getAsDouble(), 0),
+                    new YawPitchRollAngles(AngleUnit.DEGREES, 0, 0, 0, 0)));
+        }
         when(camera.getLatestResult()).thenReturn(frame);
         limelight.run(target == 38, target == 42, false, false);
         return limelight.getDistanceMeters();

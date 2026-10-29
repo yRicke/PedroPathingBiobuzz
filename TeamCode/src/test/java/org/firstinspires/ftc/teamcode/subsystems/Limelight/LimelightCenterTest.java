@@ -146,7 +146,66 @@ public class LimelightCenterTest {
         assertEquals(1, result.getTagsUsed());
     }
 
+    @Test
+    public void eachTagUsesTheSameThreeDimensionalCenterDistance() {
+        double[] tagX = {2.8349, 2.93015, 3.06985, 3.1651};
+        for (int id = 30; id <= 45; id++) {
+            int firstTag = 30 + (id - 30) / 4 * 4;
+            Limelight result = read(Arrays.asList(
+                    tag(id, tagX[(id - 30) % 4], 4, 12, 0, 0, 0, 1)), firstTag);
+            // Centro (3, 4, 12): distancia 13 m, incluindo altura e offset local.
+            assertEquals("Tag " + id, 13, result.getDistanceMeters().getAsDouble(), EPSILON);
+        }
+    }
+
+    @Test
+    public void tiltedAndInvertedPosesKeepTheSameCenterDistance() {
+        for (int first : new int[] {30, 34, 38, 42}) {
+            Limelight tilted = read(Arrays.asList(tag(first,
+                    0.2285096029175946, -0.441275, 2.142980794164811,
+                    17, 60, 30, 1)), first);
+            Limelight inverted = read(Arrays.asList(tag(first,
+                    -0.1349, 0.4, 2, 0, 0, 180, 1)), first);
+            // Ambos representam o centro a (+/-0.3, +/-0.4, 2) m.
+            assertEquals(2.0615528128088303, tilted.getDistanceMeters().getAsDouble(), EPSILON);
+            assertEquals(2.0615528128088303, inverted.getDistanceMeters().getAsDouble(), EPSILON);
+        }
+    }
+
+    @Test
+    public void distanceUsesTheAreaWeightedCenterIncludingHeight() {
+        Limelight result = read(Arrays.asList(
+                tag(42, -0.1651, 0, 2, 0, 0, 0, 1),
+                tag(45, 0.5651, 0.8, 2, 0, 0, 0, 3)), 42);
+        // Centro ponderado (0.3, 0.6, 2), nao media das distancias individuais.
+        assertEquals(2.1095023109728985, result.getDistanceMeters().getAsDouble(), EPSILON);
+    }
+
+    @Test
+    public void hiddenTagsDoNotChangeTheDistanceReference() {
+        Limelight result = read(Arrays.asList(
+                tag(42, -0.1651, 0, 2, 0, 0, 0, 1),
+                tag(43, -0.06985, 0, 2, 0, 0, 0, 1),
+                tag(44, 0.06985, 0, 2, 0, 0, 0, 1)), 42);
+        assertEquals(2, result.getDistanceMeters().getAsDouble(), EPSILON);
+    }
+
+    @Test
+    public void nonFiniteHeightAndCenterBehindCameraCannotSupplyDistance() {
+        for (FiducialResult invalid : Arrays.asList(
+                tag(42, 0, Double.NaN, 2, 0, 0, 0, 1),
+                tag(42, 0, Double.POSITIVE_INFINITY, 2, 0, 0, 0, 1),
+                tag(42, 0, 0, 0.01, 0, 90, 0, 1))) {
+            Limelight result = read(Arrays.asList(invalid), 42);
+            assertFalse(result.getDistanceMeters().isPresent());
+        }
+    }
+
     private AprilTagObservation estimate(List<FiducialResult> tags, int firstTagId) {
+        return read(tags, firstTagId).getObservation();
+    }
+
+    private Limelight read(List<FiducialResult> tags, int firstTagId) {
         Limelight3A camera = mock(Limelight3A.class);
         LLResult frame = mock(LLResult.class);
         when(camera.isConnected()).thenReturn(true);
@@ -159,7 +218,7 @@ public class LimelightCenterTest {
         Limelight limelight = new Limelight(camera, null, false, 8, System::nanoTime);
         limelight.run(firstTagId == 34 || firstTagId == 38,
                 firstTagId == 30 || firstTagId == 42, firstTagId >= 38, firstTagId < 38);
-        return limelight.getObservation();
+        return limelight;
     }
 
     private FiducialResult tag(int id, double x, double y, double z,

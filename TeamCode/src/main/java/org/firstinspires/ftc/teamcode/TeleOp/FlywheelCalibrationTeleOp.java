@@ -13,8 +13,8 @@ import org.firstinspires.ftc.teamcode.subsystems.Trigger.Trigger;
 import java.util.Locale;
 import java.util.OptionalDouble;
 
-/** Calibracao com robo parado: RPM manual, leitura tdist e captura para anotacao. */
-@TeleOp(name = "Flywheel Calibration - tdist", group = "Flywheel")
+/** Calibracao parada: RPM manual, distancia 3D ao centro da CELL e captura. */
+@TeleOp(name = "Flywheel Calibration - 3D", group = "Flywheel")
 public class FlywheelCalibrationTeleOp extends LinearOpMode {
     private static final int[] STEPS_TENTHS = {1, 10, 100, 1000, 10000};
     private int maxTenths;
@@ -110,7 +110,7 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
                     if (isFlywheelEnabled() && getCalibrationRpm() > 0
                             && distance.isPresent() && Double.isFinite(currentRpm)) {
                         capturedPair = String.format(Locale.US,
-                                "{%.3f, %.1f}, // tdist cm, RPM desejada",
+                                "{%.3f, %.1f}, // centro CELL cm, RPM desejada",
                                 distance.getAsDouble() * 100, getCalibrationRpm());
                         capturedDetails = String.format(Locale.US,
                                 "%s | CELL %d-%d | RPM medida %.1f | %d amostras",
@@ -118,7 +118,7 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
                                 firstTagId, firstTagId + Limelight.TAGS_PER_HIVE - 1,
                                 currentRpm, limelight.getDistanceSampleCount());
                     } else {
-                        capturedDetails = "Captura recusada: ligue flywheel e confira tdist valido";
+                        capturedDetails = "Captura recusada: ligue flywheel e confira distancia 3D valida";
                     }
                 }
                 previousX = gamepad1.x;

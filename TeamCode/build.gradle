@@ -28,4 +28,6 @@ dependencies {
     implementation project(':FtcRobotController')
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.mockito:mockito-core:4.11.0'
+    // Os testes de LLResult precisam do parser real, nao dos stubs Android.
+    testImplementation 'org.json:json:20240303'
 }

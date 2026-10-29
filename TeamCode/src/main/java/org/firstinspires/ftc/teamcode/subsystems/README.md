@@ -8,7 +8,7 @@ O TeleOp coordena entradas e chamadas dos subsistemas.
 | Pasta | Responsabilidade |
 | --- | --- |
 | `Drive/` | Drive manual, field-centric, hold e heading pelo centro do HIVE |
-| `Limelight/` | Câmera, validação de frames, centro das AprilTags e distância tdist |
+| `Limelight/` | Câmera, validação de frames, mira e distância 3D ao centro das AprilTags |
 | `FlywheelAdvanced/` | Motores, consulta da tabela e estabilização da RPM |
 | `Intake/` | Coleta e ejeção |
 | `Transfer/` | Alimentação dos elementos |
@@ -37,7 +37,7 @@ recebe uma RPM diretamente por `flywheel.run(rpm)`.
 
 | Classe | Papel |
 | --- | --- |
-| `Limelight` | Câmera, configurações, cálculo do centro, leitura do tdist e filtragem |
+| `Limelight` | Câmera, configurações, centro 3D, distância ao centro e filtragem |
 | `AprilTagObservation` | Dados imutáveis de heading publicados para o drive |
 | `Flywheel` | Configurações, motores, RPM manual/automática, banda morta e telemetria |
 | `FlywheelRpmTable` | Tabela imutável de pares medidos, validação e interpolação |
@@ -57,12 +57,13 @@ das tags, considerando rotação e deslocamentos
 conhecidos. Combina as estimativas do centro ponderadas pela área das tags.
 A observação contém estado da mira, ângulo, quantidade de tags e timestamp.
 
-`readDistance()` lê `tdist` do JSON conservado por `LLResult.toString()` no
-SDK FTC 12.0.0. Esta é a única fonte de distância: 3D da câmera ao alvo/POI.
-`getRawDistanceMeters()` expõe a leitura bruta e `getDistanceMeters()` a
-filtrada, ambas em metros. A telemetria mostra `tdist` em centímetros.
-Frames com tags fora do HIVE selecionado não fornecem distância porque o
-SDK não identifica o alvo principal associado ao campo.
+`estimateCenter()` também combina a coordenada Y e calcula a norma 3D do
+centro da CELL para obter a distância. Usa as poses individuais do SDK FTC
+12.0.0, disponíveis no OS 2026.0 com Full3D, sem depender de `tdist`, POI ou
+tag principal. `getRawDistanceMeters()` expõe a leitura bruta e
+`getDistanceMeters()` a filtrada, em metros. A telemetria mostra
+`Distancia centro filtrada (cm)`. Tags fora da CELL selecionada são ignoradas.
+Pares antigos medidos por `tdist`/POI precisam ser recalibrados nessa referência.
 
 A janela circular interna mantém até 40 frames distintos em um segundo,
 separados por pelo menos 25 ms. Descarta 25% dos menores e dos maiores e

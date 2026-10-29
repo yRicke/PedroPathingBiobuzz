@@ -48,6 +48,11 @@ public class Intake {
         intakeMotor.setPower(intakeMaxPower);
     }
 
+    public void run(boolean on){
+        intakeMotor.setPower(intakeMaxPower);
+
+    }
+
 
     // Telemetria
     public void sendTelemetry() {

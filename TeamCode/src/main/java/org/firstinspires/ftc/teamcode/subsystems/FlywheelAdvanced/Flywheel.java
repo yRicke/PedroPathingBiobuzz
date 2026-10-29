@@ -21,12 +21,12 @@ public class Flywheel {
     public static final double KV = 0.0001476;
     public static final double KP = 0.00159;
     public static final double MAX_RPM = 6000;
-    public static final double BASE_RPM = 2720;
-    public static final double BASE_DISTANCE_CM = 0;
-    public static final double BASE_RPM_2 = 0;
-    public static final double BASE_DISTANCE_2_CM = 0;
-    public static final double BASE_RPM_3 = 0;
-    public static final double BASE_DISTANCE_3_CM = 0;
+    public static final double BASE_RPM = 2725;
+    public static final double BASE_DISTANCE_CM = 173;
+    public static final double BASE_RPM_2 = 2730;
+    public static final double BASE_DISTANCE_2_CM = 193;
+    public static final double BASE_RPM_3 = 2718;
+    public static final double BASE_DISTANCE_3_CM = 158;
     public static final long SETPOINT_UPDATE_MS = 100;
     public static final double SETPOINT_DEADBAND_RPM = 10;
 

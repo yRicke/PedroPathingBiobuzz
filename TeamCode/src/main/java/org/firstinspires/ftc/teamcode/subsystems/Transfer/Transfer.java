@@ -18,7 +18,7 @@ public class Transfer {
     public Transfer(HardwareMap hardwareMap, Telemetry telemetry) {
         this.telemetry = telemetry;
         transferMotor = hardwareMap.get(DcMotorEx.class, "transfer_motor");
-        transferMotor.setDirection(DcMotor.Direction.FORWARD    );
+        transferMotor.setDirection(DcMotor.Direction.FORWARD);
         offMotor();
     }
 

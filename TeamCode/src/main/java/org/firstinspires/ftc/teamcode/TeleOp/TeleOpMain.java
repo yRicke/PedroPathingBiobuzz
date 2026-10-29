@@ -6,7 +6,6 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.pedro.Constants;
-import org.firstinspires.ftc.teamcode.subsystems.DedinhoNervoso.DedinhoNervoso;
 import org.firstinspires.ftc.teamcode.subsystems.Drive.PedroDrive;
 import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Flywheel;
 import org.firstinspires.ftc.teamcode.subsystems.Intake.Intake;
@@ -24,7 +23,6 @@ public class TeleOpMain extends LinearOpMode {
     private Flywheel flywheel;
     private Transfer transfer;
     private Trigger trigger;
-    private DedinhoNervoso dedo;
 
     @Override
     public void runOpMode() {
@@ -35,8 +33,6 @@ public class TeleOpMain extends LinearOpMode {
         flywheel = new Flywheel(hardwareMap, telemetry);
         transfer = new Transfer(hardwareMap, telemetry);
         trigger = new Trigger(hardwareMap, telemetry);
-        dedo = new DedinhoNervoso(hardwareMap, telemetry);
-        dedo.setDedinhoNervosoClosed();
         trigger.setTriggerClosed();
         limelight = new Limelight(hardwareMap, telemetry);
 
@@ -79,7 +75,6 @@ public class TeleOpMain extends LinearOpMode {
                 flywheel.runByDistance(limelight.getDistanceMeters());
                 transfer.run(shootRequested, gamepad1.left_bumper);
                 trigger.run(shootRequested);
-                dedo.run(gamepad1.b);
                 // Telemetry Organizado
                 drive.sendTelemetry();
                 limelight.sendTelemetry();
@@ -87,7 +82,6 @@ public class TeleOpMain extends LinearOpMode {
                 flywheel.sendTelemetry();
                 transfer.sendTelemetry();
                 trigger.sendTelemetry();
-                dedo.sendTelemetry();
                 telemetry.update();
             }
         } finally {
@@ -100,7 +94,6 @@ public class TeleOpMain extends LinearOpMode {
                     try {
                         transfer.offMotor();
                         intake.offMotor();
-                        dedo.setDedinhoNervosoClosed();
                         trigger.setTriggerClosed();
                     } finally {
                         flywheel.stopMotors();

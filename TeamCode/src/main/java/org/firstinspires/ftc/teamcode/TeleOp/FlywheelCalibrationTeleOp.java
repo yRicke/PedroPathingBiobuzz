@@ -3,7 +3,6 @@ package org.firstinspires.ftc.teamcode.TeleOp;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-import org.firstinspires.ftc.teamcode.subsystems.DedinhoNervoso.DedinhoNervoso;
 import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Flywheel;
 import org.firstinspires.ftc.teamcode.subsystems.Intake.Intake;
 import org.firstinspires.ftc.teamcode.subsystems.Limelight.Limelight;
@@ -74,9 +73,7 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
         Transfer transfer = new Transfer(hardwareMap, telemetry);
         Trigger trigger = new Trigger(hardwareMap, telemetry);
         Intake intake = new Intake(hardwareMap, telemetry);
-        DedinhoNervoso dedo = new DedinhoNervoso(hardwareMap, telemetry);
         trigger.setTriggerClosed();
-        dedo.setDedinhoNervosoClosed();
         Limelight limelight = new Limelight(hardwareMap, telemetry);
         boolean audienceCell = false;
         boolean previousX = false, previousY = false;
@@ -128,7 +125,6 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
                 transfer.run(shoot);
                 trigger.run(shoot);
                 intake.run(gamepad1.left_bumper, false);
-                dedo.run(gamepad1.right_bumper);
 
                 telemetry.addData("Flywheel", isFlywheelEnabled() ? "LIGADA" : "DESLIGADA (A liga)");
                 telemetry.addData("RPM desejada", "%.1f", getCalibrationRpm());
@@ -151,7 +147,6 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
                     transfer.offMotor();
                     intake.offMotor();
                     trigger.setTriggerClosed();
-                    dedo.setDedinhoNervosoClosed();
                 } finally {
                     limelight.stop();
                 }

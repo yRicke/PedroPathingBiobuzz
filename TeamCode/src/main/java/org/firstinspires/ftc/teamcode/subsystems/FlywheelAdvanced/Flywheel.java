@@ -17,16 +17,16 @@ public class Flywheel {
     public static final String MOTOR_TWO_NAME = "launcher_motor_two";
     public static final double TICKS_PER_REVOLUTION = 28;
     public static final double GEAR_RATIO = 1;
-    public static final double KS = 0.098;
-    public static final double KV = 0.0001476;
+    public static final double KS = 0.078;
+    public static final double KV = 0.00015849;
     public static final double KP = 0.00169;
     public static final double MAX_RPM = 6000;
-    public static final double BASE_RPM = 2705;
-    public static final double BASE_DISTANCE_CM = 173;
-    public static final double BASE_RPM_2 = 2710;
-    public static final double BASE_DISTANCE_2_CM = 193;
-    public static final double BASE_RPM_3 = 2700;
-    public static final double BASE_DISTANCE_3_CM = 158;
+    public static final double BASE_RPM = 2670;
+    public static final double BASE_DISTANCE_CM = 177;
+    public static final double BASE_RPM_2 = 2670;
+    public static final double BASE_DISTANCE_2_CM = 165.5;
+    public static final double BASE_RPM_3 = 2685;
+    public static final double BASE_DISTANCE_3_CM = 190;
     public static final long SETPOINT_UPDATE_MS = 100;
     public static final double SETPOINT_DEADBAND_RPM = 10;
 

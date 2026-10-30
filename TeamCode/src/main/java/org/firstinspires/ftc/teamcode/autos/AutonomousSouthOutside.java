@@ -25,9 +25,9 @@ import org.firstinspires.ftc.teamcode.subsystems.Trigger.Trigger;
 
 @Autonomous(name = "AutonomousSouthOutside", group = "Autonomous")
 public class AutonomousSouthOutside extends LinearOpMode {
-    private static final double FLYWHEEL_RPM = 2700;
+    private static final double FLYWHEEL_RPM = 2650;
     private static final double SPIN_UP_MS = 1500;
-    private static final double SHOOT_TIME_MS = 5000;
+    private static final double SHOOT_TIME_MS = 3000;
 
     private Follower follower;
     private Intake intake;
@@ -41,8 +41,8 @@ public class AutonomousSouthOutside extends LinearOpMode {
     private final Pose start = poseFactory.of(56, 9, 90);
     private final Pose foward = poseFactory.of(56, 15, 90);
     private final Pose path1 = poseFactory.of(31, 15, 180);
-    private final Pose point2 = poseFactory.of(5, 15, 180);
-    private final Pose point3 = poseFactory.of(63, 133, -83.2459);
+    private final Pose point2 = poseFactory.of(12, 15, 180);
+    private final Pose point3 = poseFactory.of(56, 133, -90);
     private final Pose point3Control1 = poseFactory.of(79, 1, 0);
     private final Pose point4 = poseFactory.of(4, 116, 0.0923);
     private final Pose point4Control1 = poseFactory.of(57, 116, 0);

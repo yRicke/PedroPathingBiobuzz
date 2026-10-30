@@ -25,7 +25,7 @@ import org.firstinspires.ftc.teamcode.subsystems.Trigger.Trigger;
 
 @Autonomous(name = "AutonomousSouthOutside", group = "Autonomous")
 public class AutonomousSouthOutside extends LinearOpMode {
-    private static final double FLYWHEEL_RPM = 2650;
+    private static final double FLYWHEEL_RPM = 2670;
     private static final double SPIN_UP_MS = 1500;
     private static final double SHOOT_TIME_MS = 3000;
 

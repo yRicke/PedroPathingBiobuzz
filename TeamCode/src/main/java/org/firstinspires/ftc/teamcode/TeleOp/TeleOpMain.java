@@ -59,8 +59,8 @@ public class TeleOpMain extends LinearOpMode {
             while (opModeIsActive()) {
 
                 //Subsistemas
-                limelight.run(gamepad1.dpad_left, gamepad1.dpad_right,
-                        gamepad1.dpad_up, gamepad1.dpad_down);
+                limelight.run(gamepad2.dpad_left, gamepad2.dpad_right,
+                        gamepad2.dpad_up, gamepad2.dpad_down);
                 boolean aimRequested = gamepad1.right_bumper;
                 boolean shootRequested = gamepad1.right_trigger > 0;
                 if (aimRequested) {

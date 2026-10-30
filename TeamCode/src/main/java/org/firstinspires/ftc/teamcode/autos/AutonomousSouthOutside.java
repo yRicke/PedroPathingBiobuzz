@@ -23,6 +23,9 @@ import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Flywheel;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.Intake.Intake;
 import static com.pedropathing.ivy.Scheduler.schedule;
+import org.firstinspires.ftc.teamcode.subsystems.Transfer.Transfer;
+import org.firstinspires.ftc.teamcode.subsystems.Trigger.Trigger;
+import org.firstinspires.ftc.teamcode.subsystems.Limelight.Limelight;
 
 @Autonomous(name = "AutonomousSouthOutside", group = "Autonomous")
 public class AutonomousSouthOutside extends LinearOpMode {
@@ -30,6 +33,11 @@ public class AutonomousSouthOutside extends LinearOpMode {
     private Follower follower;
     private DcMotor intakeMotor;
     private Flywheel flywheel;
+    private Transfer transfer;
+    private Trigger trigger;
+    private Limelight lime;
+
+
 
     private final PoseFactory poseFactory = PoseFactory.degrees();
 
@@ -50,40 +58,67 @@ public class AutonomousSouthOutside extends LinearOpMode {
     @Override
     public void runOpMode() {
 
+
         Scheduler.reset();
 
         // Inicialização dos componentes
         follower = Constants.create(hardwareMap);
         intakeMotor = hardwareMap.get(DcMotor.class, "intake_motor");
         flywheel = new Flywheel(hardwareMap,telemetry);
+        trigger = new Trigger(hardwareMap,telemetry);
+        transfer = new Transfer(hardwareMap,telemetry);
+        lime = new Limelight(hardwareMap,telemetry);
+
 
         follower.setPose(start);
         follower.update();
 
+
         // Comandos do Intake
-        Command LigaIntake = instant(() -> intakeMotor.setPower(1));
+        Command LigaIntake = instant(() ->{
+            lime.getObservation().getFirstTagId();
+            intakeMotor.setPower(1);
+            flywheel.runByDistance(lime.getDistanceMeters());
 
-        Command DesligaIntake = instant(() -> intakeMotor.setPower(0));
+        }
+        );
 
-        Command LigaLaucher = instant(() -> flywheel.run(2720));
+        Command DesligaIntake = instant(() -> {
+                    intakeMotor.setPower(0);
 
-        Command DesligaLaucher = instant(() -> flywheel.setMotorPower(0));
+
+                }
+        );
+        Command Lança = instant(() -> {
+            trigger.setTriggerOpen();
+            transfer.run(true);
+                }
+        );
+        Command aquieta = instant(() ->{
+            trigger.setTriggerClosed();
+            transfer.run(false);
+
+        });
+
+
 
         // Sequência do autônomo
         Command autoRoutine = sequential(
                 LigaIntake,
-                LigaLaucher,
+                waitMs(1500),
+                Lança,
+                waitMs(5000),
+                aquieta,
                 follow(follower, foward()),
                 follow(follower, path1()),
                 follow(follower, path2()),
                 follow(follower, path3()),
                 follow(follower, path4()),
-                DesligaIntake,
-                DesligaLaucher
+                DesligaIntake
         );
 
         waitForStart();
-
+        trigger.setTriggerClosed();
         if (isStopRequested()) return;
 
         schedule(autoRoutine);
@@ -96,6 +131,8 @@ public class AutonomousSouthOutside extends LinearOpMode {
             telemetry.addData("x", follower.pose().x());
             telemetry.addData("y", follower.pose().y());
             telemetry.addData("heading", follower.pose().heading());
+            flywheel.sendTelemetry();
+            lime.sendTelemetry();
 
             if (follower.currentPath() != null) {
                 telemetry.addData("Current path distance remaining",

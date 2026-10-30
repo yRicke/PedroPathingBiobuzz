@@ -1,48 +1,45 @@
 package org.firstinspires.ftc.teamcode.autos;
 
-
-import static com.pedropathing.api.Paths.*;
-import com.pedropathing.api.Paths;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.pedropathing.api.PoseFactory;
-import com.pedropathing.follower.Follower;
-import com.pedropathing.math.Pose;
-import com.pedropathing.paths.Path;
-import com.pedropathing.ivy.Command;
-import com.pedropathing.ivy.Scheduler;
 import static com.pedropathing.ivy.Scheduler.schedule;
-import static com.pedropathing.ivy.commands.Commands.*;
+import static com.pedropathing.ivy.commands.Commands.instant;
+import static com.pedropathing.ivy.commands.Commands.waitMs;
 import static com.pedropathing.ivy.groups.Groups.sequential;
 import static com.pedropathing.ivy.pedro.PedroCommands.follow;
+import static com.pedropathing.ivy.pedro.PedroCommands.hold;
+
+import com.pedropathing.api.Paths;
+import com.pedropathing.api.PoseFactory;
+import com.pedropathing.follower.Follower;
+import com.pedropathing.ivy.Command;
+import com.pedropathing.ivy.Scheduler;
+import com.pedropathing.math.Pose;
+import com.pedropathing.paths.Path;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.HardwareMap;
-import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Flywheel;
+
 import org.firstinspires.ftc.teamcode.pedro.Constants;
+import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Flywheel;
 import org.firstinspires.ftc.teamcode.subsystems.Intake.Intake;
-import static com.pedropathing.ivy.Scheduler.schedule;
 import org.firstinspires.ftc.teamcode.subsystems.Transfer.Transfer;
 import org.firstinspires.ftc.teamcode.subsystems.Trigger.Trigger;
-import org.firstinspires.ftc.teamcode.subsystems.Limelight.Limelight;
 
 @Autonomous(name = "AutonomousSouthOutside", group = "Autonomous")
 public class AutonomousSouthOutside extends LinearOpMode {
+    private static final double FLYWHEEL_RPM = 2700;
+    private static final double SPIN_UP_MS = 1500;
+    private static final double SHOOT_TIME_MS = 5000;
 
     private Follower follower;
-    private DcMotor intakeMotor;
+    private Intake intake;
     private Flywheel flywheel;
     private Transfer transfer;
     private Trigger trigger;
-    private Limelight lime;
-
-
+    private String stage = "Inicializado";
 
     private final PoseFactory poseFactory = PoseFactory.degrees();
 
     private final Pose start = poseFactory.of(56, 9, 90);
-    private final Pose foward = poseFactory.of(56,15,90);
+    private final Pose foward = poseFactory.of(56, 15, 90);
     private final Pose path1 = poseFactory.of(31, 15, 180);
     private final Pose point2 = poseFactory.of(5, 15, 180);
     private final Pose point3 = poseFactory.of(63, 133, -83.2459);
@@ -50,106 +47,113 @@ public class AutonomousSouthOutside extends LinearOpMode {
     private final Pose point4 = poseFactory.of(4, 116, 0.0923);
     private final Pose point4Control1 = poseFactory.of(57, 116, 0);
 
-
-
-
-
-
     @Override
     public void runOpMode() {
-
-
         Scheduler.reset();
-
-        // Inicialização dos componentes
         follower = Constants.create(hardwareMap);
-        intakeMotor = hardwareMap.get(DcMotor.class, "intake_motor");
-        flywheel = new Flywheel(hardwareMap,telemetry);
-        trigger = new Trigger(hardwareMap,telemetry);
-        transfer = new Transfer(hardwareMap,telemetry);
-        lime = new Limelight(hardwareMap,telemetry);
+        intake = new Intake(hardwareMap, telemetry);
+        flywheel = new Flywheel(hardwareMap, telemetry);
+        transfer = new Transfer(hardwareMap, telemetry);
+        trigger = new Trigger(hardwareMap, telemetry);
 
-
-        follower.setPose(start);
-        follower.update();
-
-
-        // Comandos do Intake
-        Command LigaIntake = instant(() ->{
-            lime.getObservation().getFirstTagId();
-            intakeMotor.setPower(1);
-            flywheel.runByDistance(lime.getDistanceMeters());
-
-        }
-        );
-
-        Command DesligaIntake = instant(() -> {
-                    intakeMotor.setPower(0);
-
-
-                }
-        );
-        Command Lança = instant(() -> {
-            trigger.setTriggerOpen();
-            transfer.run(true);
-                }
-        );
-        Command aquieta = instant(() ->{
-            trigger.setTriggerClosed();
-            transfer.run(false);
-
-        });
-
-
-
-        // Sequência do autônomo
-        Command autoRoutine = sequential(
-                LigaIntake,
-                waitMs(1500),
-                Lança,
-                waitMs(5000),
-                aquieta,
-                follow(follower, foward()),
-                follow(follower, path1()),
-                follow(follower, path2()),
-                follow(follower, path3()),
-                follow(follower, path4()),
-                DesligaIntake
-        );
-
-        waitForStart();
-        trigger.setTriggerClosed();
-        if (isStopRequested()) return;
-
-        schedule(autoRoutine);
-
-        while (opModeIsActive()) {
-
+        try {
+            intake.offMotor();
+            setShooting(false);
+            follower.holdEnd.set(true);
+            follower.setPose(start);
             follower.update();
-            Scheduler.execute();
+            Command routine = autoRoutine();
 
-            telemetry.addData("x", follower.pose().x());
-            telemetry.addData("y", follower.pose().y());
-            telemetry.addData("heading", follower.pose().heading());
-            flywheel.sendTelemetry();
-            lime.sendTelemetry();
+            telemetry.addLine("Pronto: flywheel 2700 RPM e intake continuo apos o Play");
+            telemetry.addLine("Disparos de 5 s em hold: antes de foward e apos path3");
+            telemetry.update();
 
-            if (follower.currentPath() != null) {
-                telemetry.addData("Current path distance remaining",
-                        follower.distanceToEndpoint());
-                telemetry.addData("Path number", follower.pathIndex());
+            waitForStart();
+            if (isStopRequested()) {
+                return;
             }
 
-            telemetry.update();
+            schedule(routine);
+
+            while (opModeIsActive()) {
+                // O controle de RPM precisa ser recalculado em todos os ciclos,
+                // inclusive durante as esperas, os disparos e o hold final.
+                flywheel.run(FLYWHEEL_RPM);
+                intake.onMotor();
+                follower.update();
+                Scheduler.execute();
+
+                telemetry.addData("Etapa", stage);
+                telemetry.addData("Follower", follower.mode());
+                telemetry.addData("X (in)", follower.pose().x());
+                telemetry.addData("Y (in)", follower.pose().y());
+                telemetry.addData("Heading (graus)", Math.toDegrees(follower.pose().heading()));
+                flywheel.sendTelemetry();
+                telemetry.update();
+                idle();
+            }
+        } finally {
+            // Stop tambem pode ocorrer durante uma espera ou um disparo.
+            try {
+                Scheduler.reset();
+                follower.stop();
+                follower.drivetrain.stop();
+            } finally {
+                try {
+                    setShooting(false);
+                    intake.offMotor();
+                } finally {
+                    flywheel.stopMotors();
+                }
+            }
         }
     }
 
+    Command autoRoutine() {
+        return sequential(
+                instant(() -> stage = "Aquecendo flywheel em hold"),
+                hold(follower, start),
+                waitMs(SPIN_UP_MS),
+                shoot("Disparo inicial em hold"),
+                followPath("foward", foward()),
+                followPath("path1", path1()),
+                followPath("path2", path2()),
+                followPath("path3", path3()),
+                // holdEnd conserva a pose final real, incluindo o reverseTangent.
+                shoot("Disparo apos path3 em hold"),
+                followPath("path4", path4()),
+                instant(() -> stage = "Concluido em hold")
+        );
+    }
 
+    private Command followPath(String name, Path path) {
+        return sequential(
+                instant(() -> stage = name),
+                // Ivy 1.1.1 usa atParametricEnd por padrao. Aguarda tambem a parada.
+                follow(follower, path).setDone(() -> !follower.following() && !follower.isBusy())
+        );
+    }
+
+    private Command shoot(String name) {
+        return sequential(
+                instant(() -> {
+                    stage = name;
+                    setShooting(true);
+                }),
+                waitMs(SHOOT_TIME_MS),
+                instant(() -> setShooting(false))
+        );
+    }
+
+    private void setShooting(boolean enabled) {
+        trigger.run(enabled);
+        transfer.run(enabled);
+    }
 
     public Path foward() {
         return Paths.line(start, foward).linear(start, foward);
-
     }
+
     public Path path1() {
         return Paths.line(foward, path1).linear(foward, path1);
     }

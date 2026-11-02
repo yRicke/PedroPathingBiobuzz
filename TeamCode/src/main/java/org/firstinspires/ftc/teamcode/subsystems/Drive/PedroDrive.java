@@ -21,6 +21,7 @@ public class PedroDrive {
     private final Follower follower;
     private final Telemetry telemetry;
     private final Controller aimHeadingController;
+    private double fieldForwardHeading;
     private boolean aiming;
     private double aimHeading;
     private int aimFirstTagId;
@@ -43,7 +44,7 @@ public class PedroDrive {
                 axial * multiplier,
                 -lateral * multiplier,
                 -yaw * multiplier,
-                follower.pose().heading());
+                fieldCentricHeading());
 
         // Ajusta o limiar junto com a potencia para preservar os comandos no modo precisao.
         ManualDrive.driveOrHold(follower, powers,
@@ -82,7 +83,7 @@ public class PedroDrive {
 
         double multiplier = precisionMode ? PRECISION_MULTIPLIER : 1.0;
         DrivePowers translation = ManualDrive.fieldCentric(
-                axial * multiplier, -lateral * multiplier, 0, current.heading());
+                axial * multiplier, -lateral * multiplier, 0, fieldCentricHeading());
         DrivePowers powers = ManualDrive.headingLock(
                 follower, aimHeadingController, translation, aimHeading);
         // Nao usa driveOrHold aqui: o hold de pose prenderia X/Y e poderia ignorar giros pequenos.
@@ -99,12 +100,30 @@ public class PedroDrive {
         lastAimFrameTimestamp = Double.NaN;
     }
 
+    /** Muda somente a referencia dos sticks; preserva X/Y e heading globais do Pedro. */
+    public void resetFieldCentric() {
+        fieldForwardHeading = follower.pose().heading();
+    }
+
+    public double fieldCentricHeading() {
+        return Angle.normalizeSigned(follower.pose().heading() - fieldForwardHeading);
+    }
+
+    /** Relocaliza em uma pose conhecida e restaura a frente global do campo. */
+    public void resetPose(Pose pose) {
+        // setPose sozinho manteria o hold antigo e tentaria voltar a outra coordenada.
+        stop();
+        follower.setPose(pose);
+        fieldForwardHeading = 0;
+    }
+
     public void sendTelemetry() {
         telemetry.addData("Drive Mode", follower.mode());
         telemetry.addData("Mira", aimStatus);
         telemetry.addData("Robot X (in)", follower.pose().x());
         telemetry.addData("Robot Y (in)", follower.pose().y());
         telemetry.addData("Field Heading (deg)", Math.toDegrees(follower.pose().heading()));
+        telemetry.addData("Heading dos controles (deg)", Math.toDegrees(fieldCentricHeading()));
     }
 
     public void stop() {

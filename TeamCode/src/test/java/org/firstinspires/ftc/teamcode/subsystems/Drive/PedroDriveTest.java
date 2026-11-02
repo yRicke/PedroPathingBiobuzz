@@ -291,6 +291,62 @@ public class PedroDriveTest {
         assertPowers(0, 0, Math.toRadians(3));
     }
 
+    @Test
+    public void fieldResetChangesControlsWithoutChangingGlobalPose() {
+        Pose globalPose = new Pose(8.4, 35.2, Math.PI / 2);
+        localizer.setPose(globalPose);
+
+        drive.resetFieldCentric();
+        drive.run(1, 0, 0, false);
+
+        assertSame(globalPose, follower.pose());
+        assertPowers(1, 0, 0);
+
+        localizer.setPose(new Pose(8.4, 35.2, Math.PI));
+        drive.run(1, 0, 0, false);
+        assertPowers(0, -1, 0);
+    }
+
+    @Test
+    public void fieldResetAlsoAppliesToTranslationDuringVisionAim() {
+        localizer.setPose(new Pose(8.4, 35.2, Math.PI / 2));
+        drive.resetFieldCentric();
+
+        drive.aim(0.6, 0.4, 0.8, false,
+                AprilTagObservation.detected(42, 6, 1, 1));
+
+        assertPowers(0.6, -0.4, Math.toRadians(-6));
+        assertEquals(Math.PI / 2, follower.pose().heading(), EPSILON);
+    }
+
+    @Test
+    public void relocalizationCancelsOldHoldAndRestoresGlobalFieldReference() {
+        localizer.setPose(new Pose(50, 60, Math.PI / 2));
+        drive.resetFieldCentric();
+        drive.run(0, 0, 0, false);
+        assertTrue(follower.holding());
+
+        drive.resetPose(new Pose(8.4, 35.2, Math.PI / 2));
+
+        assertTrue(follower.idle());
+        assertPowers(0, 0, 0);
+        drive.run(0, 0, 0, false);
+        assertHoldAt(8.4, 35.2, Math.PI / 2);
+
+        drive.run(1, 0, 0, false);
+        assertPowers(0, -1, 0);
+    }
+
+    @Test
+    public void relocalizationClearsPreviousAimEvenWhenFrameTimestampRepeats() {
+        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 6, 1, 1));
+
+        drive.resetPose(new Pose(8.4, 35.2, Math.PI / 2));
+        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 3, 1, 1));
+
+        assertPowers(0, 0, Math.toRadians(-3));
+    }
+
     private void assertHoldAt(double x, double y, double heading) {
         assertTrue(follower.holding());
         Pose target = follower.poseAt(0);

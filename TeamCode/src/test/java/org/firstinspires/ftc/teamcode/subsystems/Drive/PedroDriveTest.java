@@ -347,6 +347,101 @@ public class PedroDriveTest {
         assertPowers(0, 0, Math.toRadians(-3));
     }
 
+    @Test
+    public void coordinateAimPreservesTranslationOverridesYawAndDoesNotHoldXY() {
+        localizer.setPose(new Pose(57.8, 35.2, Math.PI / 2 - Math.toRadians(3)));
+
+        drive.aimAt(0.6, 0.4, -0.8, false, 57.8, 50);
+
+        double heading = follower.pose().heading();
+        assertTrue(follower.manual());
+        assertPowers(0.6 * Math.cos(heading) - 0.4 * Math.sin(heading),
+                -0.6 * Math.sin(heading) - 0.4 * Math.cos(heading), Math.toRadians(3));
+    }
+
+    @Test
+    public void coordinateAimUpdatesBearingAsRobotMovesAndHiveChanges() {
+        localizer.setPose(new Pose(50, 50, 0));
+        drive.aimAt(0, 0, 0.5, false, 57.8, 50);
+        assertPowers(0, 0, 0);
+        assertTrue(follower.manual());
+
+        localizer.setPose(new Pose(50, 51, 0));
+        drive.aimAt(0, 0, 0.5, false, 57.8, 50);
+        assertPowers(0, 0, Math.atan2(-1, 7.8));
+
+        drive.aimAt(0, 0, -0.5, false, 57.8, 90);
+        assertPowers(0, 0, Math.toRadians(8));
+    }
+
+    @Test
+    public void coordinateAimUsesShortestTurnAcrossAngleWraparound() {
+        localizer.setPose(new Pose(0, 0, Math.toRadians(179)));
+
+        drive.aimAt(0, 0, 0, false, -10, -10 * Math.tan(Math.toRadians(2)));
+
+        assertPowers(0, 0, Math.toRadians(3));
+    }
+
+    @Test
+    public void fieldResetDoesNotRotateGlobalHiveCoordinates() {
+        localizer.setPose(new Pose(50, 70, Math.PI / 2));
+        drive.resetFieldCentric();
+
+        drive.aimAt(0.6, 0.4, 0, false, 57.8, 50);
+
+        assertPowers(0.6, -0.4, Math.toRadians(-8));
+        assertEquals(Math.PI / 2, follower.pose().heading(), EPSILON);
+    }
+
+    @Test
+    public void coordinateAimPrecisionScalesTranslationAndCorrection() {
+        drive.aimAt(0.6, 0.4, 1, true, 10, 10 * Math.tan(Math.toRadians(-6)));
+
+        assertPowers(0.18, -0.12, Math.toRadians(-1.8));
+    }
+
+    @Test
+    public void coordinateAimInsideToleranceIgnoresManualYawUntilReleased() {
+        drive.aimAt(0, 0, 0.8, false, 10, 10 * Math.tan(Math.toRadians(0.5)));
+
+        assertTrue(follower.manual());
+        assertPowers(0, 0, 0);
+
+        drive.run(0, 0, 0.5, false);
+        assertPowers(0, 0, -0.5);
+        drive.run(0, 0, 0, false);
+        assertHoldAt(0, 0, 0);
+    }
+
+    @Test
+    public void coincidentOrInvalidTargetReturnsYawToDriver() {
+        drive.aimAt(0, 0, 0, false, 10, 10);
+        localizer.setPose(new Pose(10, 10, 0));
+
+        drive.aimAt(0.6, 0.4, 0.5, false, 10, 10);
+        assertPowers(0.6, -0.4, -0.5);
+
+        drive.aimAt(0.6, 0.4, 0.5, false, Double.NaN, 10);
+        assertPowers(0.6, -0.4, -0.5);
+
+        drive.aimAt(0, 0, 0, false, 10, 10);
+        assertHoldAt(10, 10, 0);
+        assertPowers(0, 0, 0);
+    }
+
+    @Test
+    public void switchingAimSourcesReacquiresVisionEvenForRepeatedFrame() {
+        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 6, 1, 1));
+        drive.aimAt(0, 0, 0, false, 10, 10);
+        assertPowers(0, 0, Math.toRadians(8));
+        localizer.setPose(new Pose(1, 2, Math.PI / 2));
+
+        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 3, 1, 1));
+
+        assertPowers(0, 0, Math.toRadians(-3));
+    }
+
     private void assertHoldAt(double x, double y, double heading) {
         assertTrue(follower.holding());
         Pose target = follower.poseAt(0);

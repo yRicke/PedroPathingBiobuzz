@@ -17,13 +17,18 @@ public class PedroDrive {
     private static final double HOLD_VELOCITY_THRESHOLD = 0.2;
     private static final double AIM_TOLERANCE_DEGREES = 1.0;
     private static final double MAX_AIM_CORRECTION_DEGREES = 8.0;
+    private static final double MIN_AIM_DISTANCE_INCHES = 1e-3;
+
+    private enum AimSource { NONE, LIMELIGHT, POSITION }
 
     private final Follower follower;
     private final Telemetry telemetry;
     private final Controller aimHeadingController;
     private double fieldForwardHeading;
-    private boolean aiming;
+    private AimSource aimSource = AimSource.NONE;
     private double aimHeading;
+    private double aimTargetX;
+    private double aimTargetY;
     private int aimFirstTagId;
     private double lastAimFrameTimestamp = Double.NaN;
     private String aimStatus = "Manual";
@@ -63,11 +68,11 @@ public class PedroDrive {
         }
 
         Pose current = follower.pose();
-        if (!aiming || aimFirstTagId != observation.getFirstTagId()) {
+        if (aimSource != AimSource.LIMELIGHT || aimFirstTagId != observation.getFirstTagId()) {
             aimHeadingController.reset();
             lastAimFrameTimestamp = Double.NaN;
         }
-        aiming = true;
+        aimSource = AimSource.LIMELIGHT;
         aimFirstTagId = observation.getFirstTagId();
         double error = observation.getTxDegrees();
         boolean aligned = Math.abs(error) <= AIM_TOLERANCE_DEGREES;
@@ -81,6 +86,40 @@ public class PedroDrive {
         aimStatus = aligned ? "Alinhado"
                 : "Centralizando hive " + aimFirstTagId + "-" + (aimFirstTagId + 3);
 
+        runAim(axial, lateral, precisionMode);
+    }
+
+    /** Mira em X/Y globais sem visao; recalcula o rumo enquanto o robo se desloca. */
+    public void aimAt(double axial, double lateral, double yaw, boolean precisionMode,
+                      double targetX, double targetY) {
+        Pose current = follower.pose();
+        double dx = targetX - current.x();
+        double dy = targetY - current.y();
+        if (!Double.isFinite(dx) || !Double.isFinite(dy)
+                || Math.hypot(dx, dy) < MIN_AIM_DISTANCE_INCHES) {
+            run(axial, lateral, yaw, precisionMode);
+            aimStatus = "Coordenada sem direcao valida: giro manual";
+            return;
+        }
+
+        if (aimSource != AimSource.POSITION || aimTargetX != targetX || aimTargetY != targetY) {
+            aimHeadingController.reset();
+        }
+        aimSource = AimSource.POSITION;
+        aimTargetX = targetX;
+        aimTargetY = targetY;
+        // atan2 usa os mesmos eixos globais do Pedro, independente do reset dos sticks.
+        double error = Angle.normalizeSigned(Math.atan2(dy, dx) - current.heading());
+        boolean aligned = Math.abs(error) <= Math.toRadians(AIM_TOLERANCE_DEGREES);
+        double maxCorrection = Math.toRadians(MAX_AIM_CORRECTION_DEGREES);
+        double correction = aligned ? 0 : Math.max(-maxCorrection, Math.min(maxCorrection, error));
+        aimHeading = Angle.normalizeSigned(current.heading() + correction);
+        aimStatus = aligned ? "Alinhado por coordenadas" : "Centralizando hive por coordenadas";
+
+        runAim(axial, lateral, precisionMode);
+    }
+
+    private void runAim(double axial, double lateral, boolean precisionMode) {
         double multiplier = precisionMode ? PRECISION_MULTIPLIER : 1.0;
         DrivePowers translation = ManualDrive.fieldCentric(
                 axial * multiplier, -lateral * multiplier, 0, fieldCentricHeading());
@@ -93,10 +132,10 @@ public class PedroDrive {
     }
 
     private void clearAim() {
-        if (aiming) {
+        if (aimSource != AimSource.NONE) {
             aimHeadingController.reset();
         }
-        aiming = false;
+        aimSource = AimSource.NONE;
         lastAimFrameTimestamp = Double.NaN;
     }
 

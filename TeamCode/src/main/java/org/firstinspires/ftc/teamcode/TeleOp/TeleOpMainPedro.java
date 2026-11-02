@@ -19,6 +19,8 @@ public class TeleOpMainPedro extends LinearOpMode {
     // Coordenadas em polegadas; heading em radianos. Ajustar para a montagem no campo.
     private static final Pose INITIAL_POSE = new Pose(8.4, 35.2, Math.toRadians(0));
     private static final Pose RESET_POSE = new Pose(8.4, 35.2, Math.toRadians(0));
+    private static final Pose RIGHT_HIVE = new Pose(57.8, 50);
+    private static final Pose LEFT_HIVE = new Pose(57.8, 90);
 
     private PedroDrive drive;
     private Limelight limelight;
@@ -45,8 +47,9 @@ public class TeleOpMainPedro extends LinearOpMode {
         telemetry.addLine("Gamepad 1 X: relocalizar na RESET_POSE conhecida e restaurar frente global");
         telemetry.addData("Pose inicial (in, in, rad)", INITIAL_POSE);
         telemetry.addData("Pose de reset (in, in, rad)", RESET_POSE);
-        telemetry.addLine("Gamepad 2 cima/baixo: AZUL/VERMELHA; esquerda/direita: CELL plateia/oposta");
-        telemetry.addLine("Right bumper: mirar com Limelight; right trigger: disparar");
+        telemetry.addLine("Gamepad 2 esquerda/direita: hive esquerdo/direito (inicial: direito)");
+        telemetry.addLine("Gamepad 2 cima/baixo: AZUL/VERMELHA para distancia da Limelight");
+        telemetry.addLine("Right bumper: mirar por coordenadas Pedro; right trigger: disparar");
         telemetry.addLine("Left trigger: precisao; A: intake; left bumper: inverter intake/transfer");
         limelight.sendTelemetry();
         telemetry.update();
@@ -60,6 +63,7 @@ public class TeleOpMainPedro extends LinearOpMode {
             drive.resetPose(INITIAL_POSE);
             boolean previousFieldReset = gamepad1.y;
             boolean previousPoseReset = gamepad1.x;
+            boolean rightHiveSelected = true;
 
             while (opModeIsActive()) {
                 // Bordas: manter o botao pressionado nao recalibra a cada ciclo.
@@ -75,11 +79,15 @@ public class TeleOpMainPedro extends LinearOpMode {
 
                 limelight.run(gamepad2.dpad_left, gamepad2.dpad_right,
                         gamepad2.dpad_up, gamepad2.dpad_down);
+                if (gamepad2.dpad_left != gamepad2.dpad_right) {
+                    rightHiveSelected = gamepad2.dpad_right;
+                }
+                Pose target = rightHiveSelected ? RIGHT_HIVE : LEFT_HIVE;
                 boolean shootRequested = gamepad1.right_trigger > 0;
                 if (gamepad1.right_bumper) {
-                    drive.aim(-gamepad1.left_stick_y, gamepad1.left_stick_x,
+                    drive.aimAt(-gamepad1.left_stick_y, gamepad1.left_stick_x,
                             gamepad1.right_stick_x, gamepad1.left_trigger > 0,
-                            limelight.getObservation());
+                            target.x(), target.y());
                 } else {
                     drive.run(-gamepad1.left_stick_y, gamepad1.left_stick_x,
                             gamepad1.right_stick_x, gamepad1.left_trigger > 0);
@@ -90,6 +98,9 @@ public class TeleOpMainPedro extends LinearOpMode {
                 trigger.run(shootRequested);
 
                 drive.sendTelemetry();
+                telemetry.addData("Hive mira Pedro", rightHiveSelected ? "Direito" : "Esquerdo");
+                telemetry.addData("Hive X (in)", target.x());
+                telemetry.addData("Hive Y (in)", target.y());
                 limelight.sendTelemetry();
                 intake.sendTelemetry();
                 flywheel.sendTelemetry();

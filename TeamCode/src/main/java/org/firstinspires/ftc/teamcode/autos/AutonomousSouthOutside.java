@@ -17,6 +17,7 @@ import com.pedropathing.paths.Path;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
+import org.firstinspires.ftc.teamcode.OpModeStorage;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Flywheel;
 import org.firstinspires.ftc.teamcode.subsystems.Intake.Intake;
@@ -49,6 +50,7 @@ public class AutonomousSouthOutside extends LinearOpMode {
 
     @Override
     public void runOpMode() {
+        OpModeStorage.clearAutonomousPose();
         Scheduler.reset();
         follower = Constants.create(hardwareMap);
         intake = new Intake(hardwareMap, telemetry);
@@ -56,6 +58,7 @@ public class AutonomousSouthOutside extends LinearOpMode {
         transfer = new Transfer(hardwareMap, telemetry);
         trigger = new Trigger(hardwareMap, telemetry);
 
+        boolean autonomousStarted = false;
         try {
             intake.offMotor();
             setShooting(false);
@@ -73,6 +76,7 @@ public class AutonomousSouthOutside extends LinearOpMode {
                 return;
             }
 
+            autonomousStarted = true;
             schedule(routine);
 
             while (opModeIsActive()) {
@@ -93,17 +97,25 @@ public class AutonomousSouthOutside extends LinearOpMode {
                 idle();
             }
         } finally {
-            // Stop tambem pode ocorrer durante uma espera ou um disparo.
             try {
-                Scheduler.reset();
-                follower.stop();
-                follower.drivetrain.stop();
+                if (autonomousStarted) {
+                    // Le apenas sensores: captura a pose medida mesmo com Stop no meio do path.
+                    follower.localizer.update();
+                    OpModeStorage.saveAutonomousPose(follower.pose());
+                }
             } finally {
+                // Stop tambem pode ocorrer durante uma espera ou um disparo.
                 try {
-                    setShooting(false);
-                    intake.offMotor();
+                    Scheduler.reset();
+                    follower.stop();
+                    follower.drivetrain.stop();
                 } finally {
-                    flywheel.stopMotors();
+                    try {
+                        setShooting(false);
+                        intake.offMotor();
+                    } finally {
+                        flywheel.stopMotors();
+                    }
                 }
             }
         }

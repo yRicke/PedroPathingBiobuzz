@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.autos;
 
 import static com.pedropathing.api.Paths.*;
 import com.pedropathing.api.Paths;
+import org.firstinspires.ftc.teamcode.OpModeStorage;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 import com.pedropathing.api.PoseFactory;
 import com.pedropathing.follower.Follower;
@@ -43,28 +44,51 @@ public class AutoPath extends LinearOpMode {
 
     @Override
     public void runOpMode() {
+        OpModeStorage.clearAutonomousPose();
         Scheduler.reset();
         follower = Constants.create(hardwareMap);
-        follower.setPose(start);
-        follower.update();
-
-        waitForStart();
-        schedule(autoRoutine());
-
-        while (opModeIsActive()) {
+        boolean autonomousStarted = false;
+        try {
+            follower.setPose(start);
             follower.update();
-            Scheduler.execute();
 
-            telemetry.addData("x", follower.pose().x());
-            telemetry.addData("y", follower.pose().y());
-            telemetry.addData("heading", follower.pose().heading());
-
-            if (follower.currentPath() != null) {
-                telemetry.addData("Current path distance remaining", follower.distanceToEndpoint());
-                telemetry.addData("Path number", follower.pathIndex());
+            waitForStart();
+            if (isStopRequested()) {
+                return;
             }
+            autonomousStarted = true;
+            schedule(autoRoutine());
 
-            telemetry.update();
+            while (opModeIsActive()) {
+                follower.update();
+                Scheduler.execute();
+
+                telemetry.addData("x", follower.pose().x());
+                telemetry.addData("y", follower.pose().y());
+                telemetry.addData("heading", follower.pose().heading());
+
+                if (follower.currentPath() != null) {
+                    telemetry.addData("Current path distance remaining", follower.distanceToEndpoint());
+                    telemetry.addData("Path number", follower.pathIndex());
+                }
+
+                telemetry.update();
+                idle();
+            }
+        } finally {
+            try {
+                if (autonomousStarted) {
+                    follower.localizer.update();
+                    OpModeStorage.saveAutonomousPose(follower.pose());
+                }
+            } finally {
+                try {
+                    Scheduler.reset();
+                } finally {
+                    follower.stop();
+                    follower.drivetrain.stop();
+                }
+            }
         }
     }
 

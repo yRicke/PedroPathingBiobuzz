@@ -5,6 +5,7 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 
 import com.pedropathing.follower.Follower;
+import org.firstinspires.ftc.teamcode.OpModeStorage;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 import com.pedropathing.api.PoseFactory;
@@ -17,6 +18,7 @@ import com.pedropathing.paths.Path;
 public class ExampleAuto extends OpMode {
 
     private Follower follower; // Add this
+    private boolean autonomousStarted;
     private final PoseFactory poseFactory = PoseFactory.degrees();
 
     private final Pose start = poseFactory.of(56, 8, 90);
@@ -29,18 +31,35 @@ public class ExampleAuto extends OpMode {
 
     @Override
     public void init() {
+        OpModeStorage.clearAutonomousPose();
+        autonomousStarted = false;
         follower = Constants.create(hardwareMap);
         follower.setPose(start);
     }
 
     @Override
     public void start() {
-
+        autonomousStarted = true;
     }
 
     @Override
     public void loop() {
+        follower.update();
+    }
 
+    @Override
+    public void stop() {
+        try {
+            if (autonomousStarted) {
+                follower.localizer.update();
+                OpModeStorage.saveAutonomousPose(follower.pose());
+            }
+        } finally {
+            if (follower != null) {
+                follower.stop();
+                follower.drivetrain.stop();
+            }
+        }
     }
 
     public Path path1() {

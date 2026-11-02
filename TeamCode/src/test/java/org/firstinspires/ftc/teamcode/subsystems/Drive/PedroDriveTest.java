@@ -13,6 +13,7 @@ import com.pedropathing.math.Velocity;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.firstinspires.ftc.teamcode.OpModeStorage;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.Limelight.AprilTagObservation;
 
@@ -440,6 +441,21 @@ public class PedroDriveTest {
         drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 3, 1, 1));
 
         assertPowers(0, 0, Math.toRadians(-3));
+    }
+
+    @Test
+    public void autonomousHeadingOf23DegreesDoesNotBecomeNewFieldForward() {
+        OpModeStorage.saveAutonomousPose(new Pose(11, 42, Math.toRadians(23)));
+        drive.resetPose(OpModeStorage.consumeAutonomousPose());
+
+        drive.run(1, 0, 0, false);
+
+        assertEquals(Math.toRadians(23), follower.pose().heading(), EPSILON);
+        assertEquals(Math.toRadians(23), drive.fieldCentricHeading(), EPSILON);
+        assertPowers(Math.cos(Math.toRadians(23)), -Math.sin(Math.toRadians(23)), 0);
+
+        drive.aimAt(0, 0, 0.5, false, 21, 42 + 10 * Math.tan(Math.toRadians(26)));
+        assertPowers(0, 0, Math.toRadians(3));
     }
 
     private void assertHoldAt(double x, double y, double heading) {

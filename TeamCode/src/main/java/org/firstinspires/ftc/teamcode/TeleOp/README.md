@@ -6,7 +6,7 @@ drive field-centric, precisao e hold automatico ao soltar os controles.
 
 As constantes no inicio de `TeleOpMainPedro.java` usam o referencial global
 do Pedro: X/Y em polegadas, heading em radianos (positivo anti-horario).
-`INITIAL_POSE` define a pose ao iniciar; `RESET_POSE` e a pose conhecida usada
+`INITIAL_POSE` define a pose sem autonomo anterior; `RESET_POSE` e a pose conhecida usada
 para corrigir a localizacao. Ambas comecam em `(8.4, 35.2, 0 graus)`.
 O heading tambem precisa corresponder a orientacao fisica do robo.
 `RIGHT_HIVE` comeca em `(57.8, 50)` e `LEFT_HIVE` em `(57.8, 90)`.
@@ -44,5 +44,23 @@ A mira funciona sem a Limelight; o calculo de RPM por distancia ainda usa
 a camera, como no `TeleOpMain`. Os seletores de alianca e CELL da camera
 continuam afetando essa distancia. Confira a correspondencia entre a CELL
 selecionada e o hive fisico ao testar os disparos.
+
+`AutonomousSouthOutside`, `AutoPath` e `ExampleAuto` salvam a ultima pose medida
+em `OpModeStorage` no Stop, inclusive quando interrompidos antes do fim de um
+path. Um autonomo cancelado antes do Play nao publica pose. Ao inicializar,
+`TeleOpMainPedro` consome essa pose uma unica vez; sem ela, usa `INITIAL_POSE`.
+No INIT, a telemetria informa a origem e atualiza a localizacao continuamente,
+sem mover o robo. O Play preserva a pose, inclusive deslocamentos durante o INIT.
+
+O heading recebido permanece global: terminar o autonomo a 23 graus faz o
+TeleOp compensar esses 23 graus nos sticks. Nao se redefine o campo no Play.
+Y ainda permite uma referencia manual dos controles e X restaura a pose e a
+referencia global conhecidas. O `TeleOpMain` original mantem seu comportamento.
+
+O armazenamento e em memoria: reiniciar o Robot Controller perde a pose.
+Evite mover o robo entre o Stop do autonomo e o INIT do TeleOp; nesse intervalo
+o localizador nao esta sendo atualizado. Se o robo for reposicionado, use X
+na pose conhecida. Outros autonomos devem limpar o armazenamento no init e
+salvar a pose medida no encerramento somente se chegaram ao Play.
 
 Referencia: [uso do Pedro no TeleOp](https://pedropathing.com/docs/pathing/guide/teleop-usage).

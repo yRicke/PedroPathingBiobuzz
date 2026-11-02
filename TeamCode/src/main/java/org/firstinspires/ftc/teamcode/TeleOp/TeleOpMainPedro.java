@@ -5,6 +5,7 @@ import com.pedropathing.math.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
+import org.firstinspires.ftc.teamcode.OpModeStorage;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.Drive.PedroDrive;
 import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Flywheel;
@@ -41,26 +42,23 @@ public class TeleOpMainPedro extends LinearOpMode {
         trigger.setTriggerClosed();
         limelight = new Limelight(hardwareMap, telemetry);
 
-        telemetry.addLine("Status: Inicializado - teste de localizacao Pedro");
-        telemetry.addLine("Drive: field-centric com hold automatico; heading global do campo");
-        telemetry.addLine("Gamepad 1 Y: frente atual vira referencia dos controles");
-        telemetry.addLine("Gamepad 1 X: relocalizar na RESET_POSE conhecida e restaurar frente global");
-        telemetry.addData("Pose inicial (in, in, rad)", INITIAL_POSE);
-        telemetry.addData("Pose de reset (in, in, rad)", RESET_POSE);
-        telemetry.addLine("Gamepad 2 esquerda/direita: hive esquerdo/direito (inicial: direito)");
-        telemetry.addLine("Gamepad 2 cima/baixo: AZUL/VERMELHA para distancia da Limelight");
-        telemetry.addLine("Right bumper: mirar por coordenadas Pedro; right trigger: disparar");
-        telemetry.addLine("Left trigger: precisao; A: intake; left bumper: inverter intake/transfer");
-        limelight.sendTelemetry();
-        telemetry.update();
-
         try {
+            Pose autonomousPose = OpModeStorage.consumeAutonomousPose();
+            boolean restoredFromAuto = autonomousPose != null;
+            // A referencia dos sticks permanece no zero global, inclusive com heading de 23 graus.
+            drive.resetPose(restoredFromAuto ? autonomousPose : INITIAL_POSE);
+            do {
+                // Acompanha tambem deslocamentos feitos entre INIT e Play, sem comandar movimento.
+                follower.update();
+                sendInitTelemetry(restoredFromAuto);
+                idle();
+            } while (opModeInInit());
+
             waitForStart();
             if (isStopRequested()) {
                 return;
             }
 
-            drive.resetPose(INITIAL_POSE);
             boolean previousFieldReset = gamepad1.y;
             boolean previousPoseReset = gamepad1.x;
             boolean rightHiveSelected = true;
@@ -107,6 +105,7 @@ public class TeleOpMainPedro extends LinearOpMode {
                 transfer.sendTelemetry();
                 trigger.sendTelemetry();
                 telemetry.update();
+                idle();
             }
         } finally {
             try {
@@ -125,5 +124,22 @@ public class TeleOpMainPedro extends LinearOpMode {
                 }
             }
         }
+    }
+
+    private void sendInitTelemetry(boolean restoredFromAuto) {
+        telemetry.addLine("Status: Inicializado - teste de localizacao Pedro");
+        telemetry.addData("Origem da pose", restoredFromAuto ? "Final do autonomo" : "INITIAL_POSE");
+        telemetry.addLine("Drive: field-centric com hold automatico; heading global do campo");
+        telemetry.addLine("Gamepad 1 Y: frente atual vira referencia dos controles");
+        telemetry.addLine("Gamepad 1 X: relocalizar na RESET_POSE conhecida e restaurar frente global");
+        telemetry.addData("Pose inicial sem autonomo (in, in, rad)", INITIAL_POSE);
+        telemetry.addData("Pose de reset (in, in, rad)", RESET_POSE);
+        telemetry.addLine("Gamepad 2 esquerda/direita: hive esquerdo/direito (inicial: direito)");
+        telemetry.addLine("Gamepad 2 cima/baixo: AZUL/VERMELHA para distancia da Limelight");
+        telemetry.addLine("Right bumper: mirar por coordenadas Pedro; right trigger: disparar");
+        telemetry.addLine("Left trigger: precisao; A: intake; left bumper: inverter intake/transfer");
+        drive.sendTelemetry();
+        limelight.sendTelemetry();
+        telemetry.update();
     }
 }

@@ -8,13 +8,14 @@
    No gamepad 2, D-pad cima/baixo seleciona azul/vermelha e esquerda/direita
    seleciona CELL plateia/oposta. Aguarde `Distancia abertura (cm)` válida.
 3. A RPM desejada começa em `Flywheel.BASE_RPM` (**2670** atualmente), com
-   todos os mecanismos desligados. No gamepad 1, A alterna flywheel, B intake,
-   X transfer e Y abre/fecha o trigger. Ajuste a RPM e o passo pelo D-pad.
+   todos os mecanismos desligados. No gamepad 1, B alterna a flywheel.
+   A alterna o intake, LB inverte intake/transfer e RT dispara, como no
+   TeleOpMain. Ajuste a RPM e o passo pelo D-pad.
 4. Aguarde a RPM medida se aproximar da desejada e a distância estabilizar
    depois de mover o robô (a janela do filtro é de um segundo).
-5. Com a flywheel na RPM desejada, ligue transfer com X e abra o trigger com Y
-   para lançar; outro clique desliga/fecha cada um. B liga/desliga o intake.
-   Os quatro mecanismos têm controles independentes.
+5. Com a flywheel na RPM desejada, segure RT para acionar transfer e trigger.
+   Soltar RT desliga a alimentação e fecha o trigger. A liga/desliga o intake;
+   LB inverte intake e transfer enquanto pressionado e tem prioridade no transfer.
 6. Quando encontrar um bom ajuste, anote à mão a distância e a RPM desejada.
    Repita em outras posições. A tela permanece ao vivo, sem captura de pares.
 
@@ -22,10 +23,10 @@
 | --- | --- |
 | D-pad cima / baixo | Aumenta / diminui RPM desejada, um passo por clique |
 | D-pad esquerda / direita | Diminui / aumenta o passo: 0,1; 1; 10; 100; 1000 RPM |
-| A | Liga / desliga flywheel mantendo o ajuste |
-| B | Liga / desliga intake |
-| X | Liga / desliga transfer |
-| Y | Abre / fecha trigger |
+| A | Liga / desliga intake, como no TeleOpMain |
+| LB | Inverte intake e transfer enquanto pressionado |
+| RT | Aciona transfer e abre trigger enquanto pressionado |
+| B | Liga / desliga flywheel mantendo o ajuste de RPM |
 
 No gamepad 2, D-pad cima/baixo seleciona aliança azul/vermelha e
 esquerda/direita seleciona CELL plateia/oposta, como no TeleOp principal.
@@ -34,7 +35,8 @@ A tela mostra somente distância, RPM desejada/medida, passo, estado dos
 quatro mecanismos e alvo selecionado. A distância exibida já é filtrada e
 usa a referência 3D da saída das bolas até a abertura da CELL.
 
-O passo inicial é 10 RPM. Segurar D-pad/A/B/X/Y não repete o comando a cada loop.
+O passo inicial é 10 RPM. Segurar D-pad/A/B não repete o comando a cada loop.
+RT e LB são momentâneos, como no TeleOpMain.
 A RPM fica entre zero e `Flywheel.MAX_RPM` (6000 inicialmente; configure conforme o launcher). `BASE_RPM` e `MAX_RPM` ficam em `Flywheel`; `PIPELINE_INDEX` e
 `UPSIDE_DOWN` ficam em `Limelight`. Ao parar o OpMode, a flywheel, o
 transfer e o intake são desligados, o trigger é fechado e a câmera é parada.

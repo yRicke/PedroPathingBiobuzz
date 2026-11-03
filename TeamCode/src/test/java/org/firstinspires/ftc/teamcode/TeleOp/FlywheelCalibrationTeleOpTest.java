@@ -15,7 +15,7 @@ public class FlywheelCalibrationTeleOpTest {
     }
 
     @Test
-    public void startsOffAndHoldingAOrDpadDoesNotRepeat() {
+    public void startsOffAndHoldingBOrDpadDoesNotRepeat() {
         assertEquals(0, controls.getCommandedRpm(), 0);
         assertFalse(controls.isIntakeEnabled());
         assertFalse(controls.isTransferEnabled());
@@ -63,27 +63,46 @@ public class FlywheelCalibrationTeleOpTest {
     }
 
     @Test
-    public void mechanismsToggleIndependentlyAndHeldButtonsDoNotRepeat() {
+    public void intakeTogglesWhileTransferAndTriggerFollowRightTrigger() {
         for (int i = 0; i < 100; i++) {
-            controls.updateCalibrationControls(false, false, false, false, false, true, true, true);
+            controls.updateCalibrationControls(false, false, false, false, false, true, false, false);
         }
         assertFalse(controls.isFlywheelEnabled());
         assertTrue(controls.isIntakeEnabled());
-        assertTrue(controls.isTransferEnabled());
-        assertTrue(controls.isTriggerEnabled());
-
-        controls.updateCalibrationControls(false, false, false, false, false, false, false, false);
-        controls.updateCalibrationControls(false, false, false, false, false, true, false, false);
-        assertFalse(controls.isIntakeEnabled());
-        assertTrue(controls.isTransferEnabled());
-        assertTrue(controls.isTriggerEnabled());
-
-        controls.updateCalibrationControls(false, false, false, false, false, false, false, false);
-        controls.updateCalibrationControls(false, false, false, false, true, false, true, true);
-        assertTrue(controls.isFlywheelEnabled());
         assertFalse(controls.isTransferEnabled());
         assertFalse(controls.isTriggerEnabled());
-        assertEquals(2720, controls.getCommandedRpm(), 0);
+
+        controls.updateCalibrationControls(false, false, false, false, false, false, true, false);
+        controls.updateCalibrationControls(false, false, false, false, false, false, true, false);
+        assertTrue(controls.isTransferEnabled());
+        assertTrue(controls.isTriggerEnabled());
+
+        controls.updateCalibrationControls(false, false, false, false, false, false, false, false);
+        assertFalse(controls.isTransferEnabled());
+        assertFalse(controls.isTriggerEnabled());
+        assertTrue(controls.isIntakeEnabled());
+        controls.updateCalibrationControls(false, false, false, false, false, true, false, false);
+        assertFalse(controls.isIntakeEnabled());
+    }
+
+    @Test
+    public void leftBumperReversesMomentarilyAndPreservesIntakeToggle() {
+        controls.updateCalibrationControls(false, false, false, false, false, true, false, false);
+        controls.updateCalibrationControls(false, false, false, false, false, false, false, true);
+
+        assertTrue(controls.isReversing());
+        assertTrue(controls.isIntakeEnabled());
+        assertFalse(controls.isTriggerEnabled());
+
+        controls.updateCalibrationControls(false, false, false, false, false, false, true, true);
+        assertTrue(controls.isReversing());
+        assertTrue(controls.isTriggerEnabled());
+
+        controls.updateCalibrationControls(false, false, false, false, false, false, false, false);
+        assertFalse(controls.isReversing());
+        assertTrue(controls.isIntakeEnabled());
+        assertFalse(controls.isTransferEnabled());
+        assertFalse(controls.isTriggerEnabled());
     }
 
     private void click(boolean up, boolean down, boolean left, boolean right) {

@@ -139,8 +139,9 @@ em 28/10/2026:
 4. Ao selecionar outra aliança/CELL sem mover a câmera, confirme que as
    leituras do alvo antigo desaparecem. Depois enquadre o novo alvo.
 5. Faça o [procedimento de calibração](../../../../../../../../../../docs/flywheel-tdist-calibration.md).
-   Nesse TeleOp o D-pad do gamepad 1 ajusta RPM/passo e A/B/X/Y alternam
-   flywheel/intake/transfer/trigger. A seleção de aliança/CELL fica no D-pad
+   Nesse TeleOp o D-pad do gamepad 1 ajusta RPM/passo e B alterna a flywheel.
+   A alterna intake, LB inverte intake/transfer e RT dispara, como no TeleOpMain.
+   A seleção de aliança/CELL fica no D-pad
    do gamepad 2, como no TeleOp principal. Anote os pares distância/RPM à mão.
 6. Valide os pares nas duas alianças e nas posições estáveis usadas. Não
    reutilize distâncias de referências antigas. Alterar câmera, geometria,

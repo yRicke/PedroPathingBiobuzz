@@ -19,8 +19,9 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
     private int targetTenths;
     private int stepIndex = 2;
     private boolean flywheelEnabled, intakeEnabled, transferEnabled, triggerEnabled;
+    private boolean reversing;
     private boolean previousUp, previousDown, previousLeft, previousRight;
-    private boolean previousFlywheel, previousIntake, previousTransfer, previousTrigger;
+    private boolean previousFlywheel, previousIntake;
 
     void resetCalibrationControls(double initialRpm, double maxRpm) {
         if (!Double.isFinite(initialRpm) || !Double.isFinite(maxRpm)
@@ -32,12 +33,13 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
         targetTenths = (int) Math.round(initialRpm * 10);
         stepIndex = 2;
         flywheelEnabled = intakeEnabled = transferEnabled = triggerEnabled = false;
+        reversing = false;
         previousUp = previousDown = previousLeft = previousRight = false;
-        previousFlywheel = previousIntake = previousTransfer = previousTrigger = false;
+        previousFlywheel = previousIntake = false;
     }
 
     void updateCalibrationControls(boolean up, boolean down, boolean left, boolean right,
-                                   boolean flywheel, boolean intake, boolean transfer, boolean trigger) {
+                                   boolean flywheel, boolean intake, boolean shoot, boolean eject) {
         if (left != right) {
             if (left && !previousLeft) stepIndex = Math.max(0, stepIndex - 1);
             if (right && !previousRight) {
@@ -55,16 +57,16 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
         }
         if (flywheel && !previousFlywheel) flywheelEnabled = !flywheelEnabled;
         if (intake && !previousIntake) intakeEnabled = !intakeEnabled;
-        if (transfer && !previousTransfer) transferEnabled = !transferEnabled;
-        if (trigger && !previousTrigger) triggerEnabled = !triggerEnabled;
+        // Mesma alimentacao do TeleOpMain: RT momentaneo e LB com prioridade na reversao.
+        transferEnabled = shoot;
+        triggerEnabled = shoot;
+        reversing = eject;
         previousUp = up;
         previousDown = down;
         previousLeft = left;
         previousRight = right;
         previousFlywheel = flywheel;
         previousIntake = intake;
-        previousTransfer = transfer;
-        previousTrigger = trigger;
     }
 
     double getCalibrationRpm() { return targetTenths / 10.0; }
@@ -73,6 +75,7 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
     boolean isIntakeEnabled() { return intakeEnabled; }
     boolean isTransferEnabled() { return transferEnabled; }
     boolean isTriggerEnabled() { return triggerEnabled; }
+    boolean isReversing() { return reversing; }
     double getCommandedRpm() { return flywheelEnabled ? getCalibrationRpm() : 0; }
 
     @Override
@@ -102,14 +105,15 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
             while (opModeIsActive()) {
                 updateCalibrationControls(gamepad1.dpad_up, gamepad1.dpad_down,
                         gamepad1.dpad_left, gamepad1.dpad_right,
-                        gamepad1.a, gamepad1.b, gamepad1.x, gamepad1.y);
+                        gamepad1.b, gamepad1.a, gamepad1.right_trigger > 0, gamepad1.left_bumper);
                 limelight.run(gamepad2.dpad_left, gamepad2.dpad_right,
                         gamepad2.dpad_up, gamepad2.dpad_down);
 
                 flywheel.run(getCommandedRpm());
-                if (intakeEnabled) intake.onMotor();
+                if (reversing) intake.eject();
+                else if (intakeEnabled) intake.onMotor();
                 else intake.offMotor();
-                transfer.run(transferEnabled);
+                transfer.run(transferEnabled, reversing);
                 trigger.run(triggerEnabled);
 
                 sendCalibrationTelemetry(flywheel, limelight);
@@ -139,17 +143,17 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
         }
         telemetry.addData("RPM desejada / medida", "%.1f / %.1f", getCalibrationRpm(), flywheel.getRPM());
         telemetry.addData("Passo RPM", "%.1f", getCalibrationStep());
-        telemetry.addData("A Flywheel | B Intake", "%s | %s",
-                flywheelEnabled ? "ON" : "OFF", intakeEnabled ? "ON" : "OFF");
-        telemetry.addData("X Transfer | Y Trigger", "%s | %s",
-                transferEnabled ? "ON" : "OFF", triggerEnabled ? "ABERTO" : "FECHADO");
+        telemetry.addData("Intake (A/LB) | Flywheel (B)", "%s | %s",
+                reversing ? "REV" : intakeEnabled ? "ON" : "OFF", flywheelEnabled ? "ON" : "OFF");
+        telemetry.addData("RT Transfer / Trigger", "%s / %s",
+                reversing ? "REV" : transferEnabled ? "ON" : "OFF", triggerEnabled ? "ABERTO" : "FECHADO");
         int firstTagId = limelight.getObservation().getFirstTagId();
         boolean audience = firstTagId == Limelight.RED_AUDIENCE_FIRST_TAG
                 || firstTagId == Limelight.BLUE_AUDIENCE_FIRST_TAG;
         telemetry.addData("Alvo (G2)", "%s | %s | %d-%d",
                 limelight.isRedAlliance() ? "VERMELHA" : "AZUL",
                 audience ? "plateia" : "oposta", firstTagId, firstTagId + Limelight.TAGS_PER_HIVE - 1);
-        telemetry.addLine("D-pad: cima/baixo RPM | esquerda/direita passo");
+        telemetry.addLine("D-pad: cima/baixo RPM | esquerda/direita passo | LB inverte intake/transfer");
         telemetry.update();
     }
 }

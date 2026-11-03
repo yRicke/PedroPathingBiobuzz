@@ -57,9 +57,15 @@ o angulo do lancador exige conferir novamente a geometria e a calibracao.
 
 Montagem informada por CAD e confirmada em **02/11/2026**, aplicada nas
 constantes `CAMERA_*` de `Limelight.java`: direita **0 cm**, acima **12,9 cm**,
-a frente **-10,691 cm** (atras), pitch **+50 graus**, yaw **0 graus** e
-roll **180 graus** (`UPSIDE_DOWN = true`). O pitch foi informado como
-aproximado; confira o valor fisico para obter repetibilidade em diferentes posicoes.
+a frente **-10,691 cm** (atras), pitch **+49,265 graus**, yaw **0 graus** e
+roll **180 graus** (`UPSIDE_DOWN = true`). As distancias permanecem as medidas
+confirmadas do CAD; o desenho posterior serve como ilustracao da montagem.
+
+O angulo de saida das bolas informado e **70 graus acima da horizontal**.
+Esse valor fica registrado como condicao mecanica da calibracao distancia/RPM.
+O referencial de mira continua horizontal, com origem na saida das bolas.
+Uma futura analise da trajetoria pode usar esse angulo junto com a velocidade
+real de saida e a altura do alvo. Atualmente a tabela vem dos disparos reais.
 
 ## Painel e calibracao
 

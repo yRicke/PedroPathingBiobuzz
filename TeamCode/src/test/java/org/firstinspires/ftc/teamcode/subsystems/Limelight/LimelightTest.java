@@ -139,11 +139,11 @@ public class LimelightTest {
 
     @Test public void realSdkJsonAndConfirmedCameraMountAimAndMeasureFromTheBallExit() throws Exception {
         // Abertura no referencial da saida: (0.3, -0.6, 2) m.
-        // Lente 12.9 cm acima, 10.691 cm atras; pitch +50 graus e roll 180.
+        // Lente 12.9 cm acima, 10.691 cm atras; pitch +49.265 graus e roll 180.
         // Pose bruta da tag 42, com a geometria oficial da abertura aplicada ao inverso.
         JSONObject json = json(1, 2, 42);
         json.getJSONArray("Fiducial").getJSONObject(0).put("t6t_cs", new JSONArray(new double[] {
-                -0.1349, -1.493793693489446, 1.5723037754337053, 0, 0, 180}));
+                -0.1349, -1.471684781406486, 1.5889829249681602, 0, 0, 180}));
         frame(json);
         HardwareMap hardwareMap = mock(HardwareMap.class);
         when(hardwareMap.tryGet(Limelight3A.class, Limelight.DEVICE_NAME)).thenReturn(camera);

@@ -55,10 +55,14 @@ deslocamento da lente; a mira usa essa mesma abertura. Tags de outras CELLS
 são ignoradas. A tabela recebe a leitura filtrada convertida para centímetros.
 
 A montagem configurada está centralizada, 12,9 cm acima e 10,691 cm atrás
-da saída das bolas, com pitch aproximado de +50 graus, yaw zero e roll 180.
-Confira o pitch real e o sentido de giro antes de capturar pares. Os valores
+da saída das bolas, com pitch de +49,265 graus, yaw zero e roll 180.
+Confira o sentido de giro antes de capturar pares. Os valores
 ficam nas constantes `CAMERA_*` e `UPSIDE_DOWN` de `Limelight.java`.
 Não é necessário configurar a montagem, POI ou crosshair no painel.
+
+O ângulo de saída das bolas informado é 70 graus acima da horizontal.
+Faça a calibração com esse ajuste mecânico; a tabela registra o comportamento
+dos disparos reais. Alterar esse ângulo exige revalidar os pares.
 
 **Os pares anteriores foram desativados com distância zero em `Flywheel`.**
 Refaça os pares obtidos por `tdist`/POI ou da câmera até o centro do adesivo.

@@ -23,12 +23,12 @@ public class Limelight {
     public static final String DEVICE_NAME = "limelight";
     public static final int PIPELINE_INDEX = 8;
     public static final boolean UPSIDE_DOWN = true;
-    // Medidas do CAD e montagem confirmadas em 02/11/2026; pitch aproximado.
+    // Medidas do CAD e montagem confirmadas em 02/11/2026.
     // Direita, acima e a frente positivos; pitch acima da horizontal e yaw a direita.
     public static final double CAMERA_RIGHT_CM = 0;
     public static final double CAMERA_ABOVE_CM = 12.9;
     public static final double CAMERA_FORWARD_CM = -10.691;
-    public static final double CAMERA_PITCH_UP_DEGREES = 50;
+    public static final double CAMERA_PITCH_UP_DEGREES = 49.265;
     public static final double CAMERA_YAW_RIGHT_DEGREES = 0;
     public static final int POLL_RATE_HZ = 100;
     public static final long MAX_FRAME_AGE_MS = 150;

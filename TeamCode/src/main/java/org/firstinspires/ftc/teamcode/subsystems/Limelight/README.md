@@ -44,9 +44,8 @@ em Java; calibrar o crosshair `tx` no painel não substitui esse cálculo.
 
 A montagem confirmada em 02/11/2026 fica nas constantes `CAMERA_*` de
 `Limelight.java`: lente centralizada, **12,9 cm acima** e **10,691 cm atrás**
-da saída das bolas, apontando **50 graus acima da horizontal**, sem desvio
-lateral de orientação e invertida. O pitch é aproximado: confira o ângulo
-real antes de calibrar. Não é preciso informar esses valores no painel;
+da saída das bolas, apontando **49,265 graus acima da horizontal**, sem desvio
+lateral de orientação e invertida. Não é preciso informar esses valores no painel;
 o código usa `getTargetPoseCameraSpace()` e aplica a montagem no Java.
 
 ## 3. IDs e seleção no TeleOpMain

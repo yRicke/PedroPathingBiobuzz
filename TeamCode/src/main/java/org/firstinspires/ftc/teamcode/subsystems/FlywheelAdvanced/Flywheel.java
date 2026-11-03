@@ -21,14 +21,14 @@ public class Flywheel {
     public static final double KV = 0.00015849;
     public static final double KP = 0.00169;
     public static final double MAX_RPM = 6000;
-    public static final double BASE_RPM = 2670;
+    public static final double BASE_RPM = 2570;
     // Nova referencia: saida das bolas -> abertura. Zero invalida os pares do adesivo.
     // Preencher com as leituras do Flywheel Calibration - 3D apos recalibrar.
-    public static final double BASE_DISTANCE_CM = 0;
-    public static final double BASE_RPM_2 = 2670;
-    public static final double BASE_DISTANCE_2_CM = 0;
-    public static final double BASE_RPM_3 = 2685;
-    public static final double BASE_DISTANCE_3_CM = 0;
+    public static final double BASE_DISTANCE_CM = 185;
+    public static final double BASE_RPM_2 = 2560;
+    public static final double BASE_DISTANCE_2_CM = 182;
+    public static final double BASE_RPM_3 = 2680;
+    public static final double BASE_DISTANCE_3_CM = 205;
     public static final long SETPOINT_UPDATE_MS = 100;
     public static final double SETPOINT_DEADBAND_RPM = 10;
 

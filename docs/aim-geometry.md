@@ -17,7 +17,12 @@ Os centros das quatro tags, em polegadas e relativos a origem do cluster, sao:
 | Primeiro ID + 2 | 2.75 | 7.1874 | -5.622 |
 | Primeiro ID + 3 | 6.5 | 7.1874 | -5.622 |
 
-A origem do cluster corresponde aproximadamente ao centro da abertura.
+A origem do cluster e o ponto nominal de mira da abertura definido pela FIRST.
+A documentacao oficial descreve esse ponto como aproximadamente o centro da
+abertura; nao garante erro fisico zero. A CELL aparece na figura 9-11 e as
+tags na figura 9-16 do [manual, secao 9](https://ftc-resources.firstinspires.org/ftc/game/manual-09).
+As coordenadas acima foram conferidas novamente no SDK 12.0.0 em 03/11/2026.
+O alvo nao e o centro do adesivo, nem a media das tags que estao visiveis.
 O vetor da tag ate essa origem e o negativo da linha correspondente,
 convertido para metros. `AimGeometry.openingFromTag()` gira esse vetor pela
 orientacao da tag e soma a posicao da tag no espaco da camera. Isso inclui
@@ -84,6 +89,50 @@ Antes de cadastrar os novos pares:
 
 Os pares antigos medidos da camera ate o adesivo precisam ser substituidos;
 nao devem ser interpretados como medidas da saida ate a abertura.
+
+## Consenso das poses e estabilidade do giro
+
+Cada ID fornece uma estimativa independente da mesma abertura. Antes de
+combinar essas posicoes, `Limelight` procura o maior grupo que concorda em
+ate **12 cm** (`MAX_OPENING_DISAGREEMENT_METERS`). Conta IDs distintos;
+somente depois aplica os pesos pela area dentro do grupo. Uma tag grande
+com pose 3D ruim nao pode arrastar tres estimativas consistentes. Sem maioria
+entre varias tags, a leitura fica indisponivel e a mira hibrida aplica sua
+regra de perda de visao. Uma unica tag valida continua utilizavel.
+
+O erro visual pertence ao instante da captura. `AprilTagObservation` agora
+informa a idade na primeira leitura: captura + processamento + parsing +
+staleness do resultado. Leituras com latencia total acima de **300 ms** sao
+descartadas. `PedroDrive` interpola o heading de captura em um historico local,
+inclusive ao atravessar +/-180 graus, antes de converter o erro em heading
+global. Sem historico suficiente, usa a velocidade angular atual para estimar
+esse heading passado. O timestamp da Limelight identifica frames; nao e
+subtraido diretamente do relogio do Control Hub. Frames repetidos conservam
+o mesmo alvo global. Esta compensacao trata o giro, nao o deslocamento lateral
+do robo durante a latencia.
+
+Na mira com translacao livre, o retorno do controlador de heading recebe
+amortecimento: `potencia = controlador - AIM_TURN_DAMPING * omega`, com `omega`
+medido pelo localizador em rad/s. Nao se deriva o `tx`, que contem ruido.
+Os valores iniciais ficam em `PedroDrive`:
+
+| Constante | Valor | Uso |
+| --- | --- | --- |
+| `AIM_TURN_DAMPING` | 0.18 | Freia o giro antes de cruzar o alvo |
+| `AIM_MAX_TURN_POWER` | 0.35 | Limita a potencia de giro automatico com translacao livre |
+| `AIM_SETTLED_SPEED_RAD_S` | 10 graus/s | Velocidade maxima para declarar alinhamento |
+
+A tolerancia angular continua em 1 grau; a correcao comandada continua limitada
+a 8 graus e a precisao escala tambem o giro. No autonomo em hold, X/Y e a
+frenagem continuam sob o Foresight do Pedro; a referencia visual recebe a
+mesma compensacao de latencia e verificacao de velocidade para alinhamento.
+
+A telemetria mostra a idade da imagem, poses rejeitadas, erro atual e giro
+medido. Os testes cobrem camera atrasada com inercia, frames repetidos,
+passagem por +/-180 graus, poses conflitantes e a montagem invertida em
+aproximacoes laterais perto/longe com tags ocultas. O modelo de teste nao
+substitui a validacao dos ganhos no robo. Confira a mira parado e transladando,
+com poucas e varias tags visiveis, antes de registrar a calibracao de RPM.
 
 Fontes: [clusters da FIRST](https://ftc-docs.firstinspires.org/en/latest/tech_tips/tech-tips/tech-tip-apriltag-clusters/tech-tip-apriltag-clusters.html),
 [poses da Limelight](https://docs.limelightvision.io/docs/docs-limelight/apis/ftc-programming),

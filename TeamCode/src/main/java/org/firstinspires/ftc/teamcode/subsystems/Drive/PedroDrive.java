@@ -21,6 +21,10 @@ public class PedroDrive {
     private static final double AIM_TOLERANCE_DEGREES = 1.0;
     private static final double MAX_AIM_CORRECTION_DEGREES = 8.0;
     private static final double MIN_AIM_DISTANCE_INCHES = 1e-3;
+    // Potencia por rad/s: freia pela velocidade medida, sem derivar o tx ruidoso.
+    public static final double AIM_TURN_DAMPING = 0.18;
+    public static final double AIM_MAX_TURN_POWER = 0.35;
+    public static final double AIM_SETTLED_SPEED_RAD_S = Math.toRadians(10);
     private static final int HYBRID_VISION_CONFIRMATION_FRAMES = 3;
     private static final long HYBRID_VISION_LOSS_GRACE_NANOS = TimeUnit.MILLISECONDS.toNanos(100);
 
@@ -30,6 +34,7 @@ public class PedroDrive {
     private final Telemetry telemetry;
     private final Controller aimHeadingController;
     private final LongSupplier nanoClock;
+    private final HeadingHistory headingHistory = new HeadingHistory();
     private double fieldForwardHeading;
     private AimSource aimSource = AimSource.NONE;
     private double aimHeading;
@@ -68,6 +73,7 @@ public class PedroDrive {
     }
 
     private void runManualDrive(double axial, double lateral, double yaw, boolean precisionMode) {
+        rememberHeading();
         if (aimHoldPosition != null) {
             holdAim(aimHoldPosition.heading());
             return;
@@ -98,22 +104,32 @@ public class PedroDrive {
         }
 
         Pose current = follower.pose();
+        rememberHeading();
         if (aimSource != AimSource.LIMELIGHT || aimFirstTagId != observation.getFirstTagId()) {
             aimHeadingController.reset();
             lastAimFrameTimestamp = Double.NaN;
         }
         aimSource = AimSource.LIMELIGHT;
         aimFirstTagId = observation.getFirstTagId();
-        double error = observation.getTxDegrees();
-        lastVisionErrorDegrees = error;
-        boolean aligned = Math.abs(error) <= AIM_TOLERANCE_DEGREES;
         if (observation.getFrameTimestamp() != lastAimFrameTimestamp) {
+            double capturedHeading = headingHistory.at(nanoClock.getAsLong()
+                    - (long) (observation.getImageAgeSeconds() * 1e9));
+            if (!Double.isFinite(capturedHeading)) {
+                // No inicio ainda pode nao haver historico suficiente para a imagem.
+                capturedHeading = current.heading() - angularSpeed() * observation.getImageAgeSeconds();
+            }
+            double targetHeading = capturedHeading - Math.toRadians(observation.getTxDegrees());
+            double error = -Math.toDegrees(Angle.normalizeSigned(targetHeading - current.heading()));
+            lastVisionErrorDegrees = error;
+            boolean aligned = Math.abs(error) <= AIM_TOLERANCE_DEGREES;
             double correction = aligned ? 0 : Math.max(-MAX_AIM_CORRECTION_DEGREES,
                     Math.min(MAX_AIM_CORRECTION_DEGREES, error));
             // tx positivo significa alvo a direita; heading positivo e anti-horario.
             aimHeading = Angle.normalizeSigned(current.heading() - Math.toRadians(correction));
             lastAimFrameTimestamp = observation.getFrameTimestamp();
         }
+        boolean aligned = Math.abs(lastVisionErrorDegrees) <= AIM_TOLERANCE_DEGREES
+                && Math.abs(angularSpeed()) <= AIM_SETTLED_SPEED_RAD_S;
         aimStatus = aligned ? "Alinhado"
                 : "Centralizando hive " + aimFirstTagId + "-" + (aimFirstTagId + 3);
 
@@ -123,6 +139,7 @@ public class PedroDrive {
     /** Mira em X/Y globais sem visao; recalcula o rumo enquanto o robo se desloca. */
     public void aimAt(double axial, double lateral, double yaw, boolean precisionMode,
                       double targetX, double targetY) {
+        rememberHeading();
         Pose current = follower.pose();
         double dx = targetX - current.x();
         double dy = targetY - current.y();
@@ -169,6 +186,7 @@ public class PedroDrive {
     private void runHybridAim(double axial, double lateral, double yaw, boolean precisionMode,
                               double targetX, double targetY, int firstTagId,
                               AprilTagObservation observation) {
+        rememberHeading();
         if (!hybridActive || hybridFirstTagId != firstTagId
                 || Double.compare(hybridTargetX, targetX) != 0
                 || Double.compare(hybridTargetY, targetY) != 0) {
@@ -235,10 +253,20 @@ public class PedroDrive {
                 axial * multiplier, -lateral * multiplier, 0, fieldCentricHeading());
         DrivePowers powers = ManualDrive.headingLock(
                 follower, aimHeadingController, translation, aimHeading);
+        double turn = powers.turn() - AIM_TURN_DAMPING * angularSpeed();
         // Nao usa driveOrHold aqui: o hold de pose prenderia X/Y e poderia ignorar giros pequenos.
         follower.manual(new DrivePowers(powers.forward(), powers.strafe(),
-                Math.max(-1, Math.min(1, powers.turn())) * multiplier));
+                Math.max(-AIM_MAX_TURN_POWER, Math.min(AIM_MAX_TURN_POWER, turn)) * multiplier));
         follower.update();
+    }
+
+    private void rememberHeading() {
+        headingHistory.record(nanoClock.getAsLong(), follower.pose().heading());
+    }
+
+    private double angularSpeed() {
+        double speed = follower.velocity().omega;
+        return Double.isFinite(speed) ? speed : 0;
     }
 
     private void holdAim(double heading) {
@@ -253,6 +281,8 @@ public class PedroDrive {
 
     public boolean isHybridVisionAligned() {
         return hybridVisionLocked && !hybridVisionMissing && aimSource == AimSource.LIMELIGHT
+                && Double.isFinite(follower.velocity().omega)
+                && Math.abs(angularSpeed()) <= AIM_SETTLED_SPEED_RAD_S
                 && Math.abs(lastVisionErrorDegrees) <= AIM_TOLERANCE_DEGREES
                 && Math.abs(Angle.normalizeSigned(aimHeading - follower.pose().heading()))
                 <= Math.toRadians(AIM_TOLERANCE_DEGREES);
@@ -301,6 +331,11 @@ public class PedroDrive {
     public void sendTelemetry() {
         telemetry.addData("Drive Mode", follower.mode());
         telemetry.addData("Mira", aimStatus);
+        if (aimSource != AimSource.NONE) {
+            telemetry.addData("Mira giro medido (graus/s)", Math.toDegrees(angularSpeed()));
+            telemetry.addData("Mira erro atual (graus)",
+                    Math.toDegrees(Angle.normalizeSigned(aimHeading - follower.pose().heading())));
+        }
         telemetry.addData("Robot X (in)", follower.pose().x());
         telemetry.addData("Robot Y (in)", follower.pose().y());
         telemetry.addData("Field Heading (deg)", Math.toDegrees(follower.pose().heading()));
@@ -309,6 +344,7 @@ public class PedroDrive {
 
     public void stop() {
         clearAim();
+        headingHistory.clear();
         aimStatus = "Manual";
         follower.stop();
         follower.drivetrain.stop();

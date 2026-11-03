@@ -57,10 +57,10 @@ public class LimelightCenterTest {
     public void areaWeightedFusionCombinesCenterPositionsRatherThanTagCenters() {
         AprilTagObservation result = estimate(
                 Arrays.asList(tagForOpening(42, 0, 0, 2, 0, 0, 0, 1),
-                        tagForOpening(45, 0.4, 0, 2, 0, 0, 0, 3)), 42);
+                        tagForOpening(45, 0.04, 0, 2, 0, 0, 0, 3)), 42);
 
         assertTrue(result.hasTarget());
-        assertEquals(8.530765609948133, result.getTxDegrees(), EPSILON);
+        assertEquals(Math.toDegrees(Math.atan2(0.03, 2)), result.getTxDegrees(), EPSILON);
         assertEquals(2, result.getTagsUsed());
     }
 
@@ -171,9 +171,10 @@ public class LimelightCenterTest {
     public void distanceUsesTheAreaWeightedCenterIncludingHeight() {
         Limelight result = read(Arrays.asList(
                 tagForOpening(42, 0, 0, 2, 0, 0, 0, 1),
-                tagForOpening(45, 0.4, 0.8, 2, 0, 0, 0, 3)), 42);
-        // Centro ponderado (0.3, 0.6, 2), nao media das distancias individuais.
-        assertEquals(2.1095023109728985, result.getDistanceMeters().getAsDouble(), EPSILON);
+                tagForOpening(45, 0.04, 0.08, 2, 0, 0, 0, 3)), 42);
+        // Pequeno ruido de pose: centro ponderado (0.03, 0.06, 2).
+        assertEquals(Math.sqrt(4 + 0.03 * 0.03 + 0.06 * 0.06),
+                result.getDistanceMeters().getAsDouble(), EPSILON);
     }
 
     @Test
@@ -200,7 +201,33 @@ public class LimelightCenterTest {
         return read(tags, firstTagId).getObservation();
     }
 
+    @Test
+    public void oneLargeBadPoseCannotPullTheOpeningAwayFromThreeAgreeingTags() {
+        AprilTagObservation result = estimate(Arrays.asList(
+                tagForOpening(42, 0, -0.4, 2, 17, 60, 30, 1),
+                tagForOpening(43, 0, -0.4, 2, 17, 60, 30, 1),
+                tagForOpening(44, 0, -0.4, 2, 17, 60, 30, 1),
+                tagForOpening(45, 0.5, -0.4, 2, 17, 60, 30, 90)), 42);
+
+        assertTrue(result.hasTarget());
+        assertEquals(0, result.getTxDegrees(), EPSILON);
+        assertEquals(3, result.getTagsUsed());
+    }
+
+    @Test
+    public void conflictingPosesWithoutAMajorityCannotDefineTheOpening() {
+        AprilTagObservation result = estimate(Arrays.asList(
+                tagForOpening(42, -0.5, 0, 2, 0, 0, 0, 1),
+                tagForOpening(43, 0.5, 0, 2, 0, 0, 0, 10)), 42);
+
+        assertFalse(result.hasTarget());
+    }
+
     private Limelight read(List<FiducialResult> tags, int firstTagId) {
+        return read(tags, firstTagId, new AimGeometry(0, 0, 0, 0, 0, 0));
+    }
+
+    private Limelight read(List<FiducialResult> tags, int firstTagId, AimGeometry geometry) {
         Limelight3A camera = mock(Limelight3A.class);
         LLResult frame = mock(LLResult.class);
         when(camera.isConnected()).thenReturn(true);
@@ -210,10 +237,47 @@ public class LimelightCenterTest {
         when(frame.getPipelineIndex()).thenReturn(8);
         when(frame.isValid()).thenReturn(true);
         when(frame.getFiducialResults()).thenReturn(tags);
-        Limelight limelight = new Limelight(camera, null, false, 8, System::nanoTime);
+        Limelight limelight = new Limelight(camera, null, geometry, 8, System::nanoTime);
         limelight.run(firstTagId == 34 || firstTagId == 38,
                 firstTagId == 30 || firstTagId == 42, firstTagId >= 38, firstTagId < 38);
         return limelight;
+    }
+
+    @Test
+    public void calibratedInvertedCameraKeepsTheOpeningFromBothSidesNearAndFarWithOcclusion() {
+        AimGeometry mount = new AimGeometry(0, 12.9, -10.691, 49.265, 0, 180);
+        double pitch = Math.toRadians(49.265);
+        for (int first : new int[] {30, 34, 38, 42}) {
+            for (double x : new double[] {-0.5, 0, 0.5}) {
+                for (double z : new double[] {1, 3.5}) {
+                    // Abertura conhecida no lancador: (x, -1, z). Projecao inversa da montagem.
+                    double y = -1 + 0.129, depth = z + 0.10691;
+                    double cx = -x;
+                    double cy = -(Math.cos(pitch) * y + Math.sin(pitch) * depth);
+                    double cz = -Math.sin(pitch) * y + Math.cos(pitch) * depth;
+                    FiducialResult left = tagForOpening(first, cx, cy, cz, 17, 60, 30, 1);
+                    FiducialResult right = tagForOpening(first + 3, cx, cy, cz, 17, 60, 30, 1);
+                    for (List<FiducialResult> tags : Arrays.asList(
+                            Arrays.asList(left), Arrays.asList(right), Arrays.asList(left, right))) {
+                        Limelight result = read(tags, first, mount);
+                        assertEquals(Math.toDegrees(Math.atan2(x, z)),
+                                result.getObservation().getTxDegrees(), 1e-8);
+                        assertEquals(Math.sqrt(x * x + 1 + z * z),
+                                result.getRawDistanceMeters().getAsDouble(), 1e-8);
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    public void duplicateIdsCannotCreateAMajorityAndTwoEqualGroupsAreRejected() {
+        FiducialResult a = tagForOpening(42, 0, 0, 2, 0, 0, 0, 1);
+        FiducialResult b = tagForOpening(43, 0.5, 0, 2, 0, 0, 0, 1);
+        assertFalse(estimate(Arrays.asList(a, a, a, b), 42).hasTarget());
+        assertFalse(estimate(Arrays.asList(a, b,
+                tagForOpening(44, 0, 0, 2, 0, 0, 0, 1),
+                tagForOpening(45, 0.5, 0, 2, 0, 0, 0, 1)), 42).hasTarget());
     }
 
     private FiducialResult tag(int id, double x, double y, double z,

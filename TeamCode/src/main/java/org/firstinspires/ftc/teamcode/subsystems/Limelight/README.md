@@ -127,6 +127,14 @@ em 28/10/2026:
   marcos fixos para `botpose`/MegaTag. Este código usa poses relativas à câmera
   e não exige localização global nem mapa de campo.
 
+As poses individuais agora precisam concordar antes da média: o maior grupo
+deve reunir a maioria dos IDs distintos e concordar em até 12 cm. Uma única
+tag válida continua utilizável. Sem maioria entre várias tags, a leitura
+fica indisponível e o status informa a discordância. A telemetria mostra
+`Poses de tags rejeitadas` e `Idade da imagem na leitura (ms)`. A idade inclui
+captura, processamento, parsing e transporte, com limite total de 300 ms.
+O controle usa essa idade para recuperar o heading da captura.
+
 ## 6. Conferência no robô
 
 1. Aponte para uma CELL e confira os IDs no painel e a seleção na telemetria.

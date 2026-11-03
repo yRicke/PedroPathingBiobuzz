@@ -32,6 +32,9 @@ public class Limelight {
     public static final double CAMERA_YAW_RIGHT_DEGREES = 0;
     public static final int POLL_RATE_HZ = 100;
     public static final long MAX_FRAME_AGE_MS = 150;
+    public static final double MAX_IMAGE_AGE_MS = 300;
+    // Desacordo maximo entre estimativas da mesma abertura no mesmo frame.
+    public static final double MAX_OPENING_DISAGREEMENT_METERS = 0.12;
     public static final long DISTANCE_WINDOW_MS = 1000;
     public static final int DISTANCE_MAX_SAMPLES = 40;
     // BIOBUZZ, manual secao 9.9 / figuras 9-15 a 9-17.
@@ -69,6 +72,8 @@ public class Limelight {
     private long lastNewFrameNanos;
     private double decodedTimestamp = Double.NaN;
     private int decodedHive;
+    private int rejectedOpeningPoses;
+    private boolean openingWithoutConsensus;
 
     public Limelight(HardwareMap hardwareMap, Telemetry telemetry) {
         this(hardwareMap.tryGet(Limelight3A.class, DEVICE_NAME), telemetry,
@@ -145,13 +150,24 @@ public class Limelight {
             return;
         }
         if (timestamp != decodedTimestamp || decodedHive != selectedFirstTagId) {
-            decodeFrame(result, timestamp);
+            double captureMs = result.getCaptureLatency();
+            double targetingMs = result.getTargetingLatency();
+            double parseMs = result.getParseLatency();
+            double imageAgeMs = age + captureMs + targetingMs + parseMs;
+            if (!Double.isFinite(imageAgeMs) || captureMs < 0 || targetingMs < 0 || parseMs < 0
+                    || imageAgeMs > MAX_IMAGE_AGE_MS) {
+                clearFrame("Imagem com latencia invalida ou excessiva");
+                return;
+            }
+            decodeFrame(result, timestamp, imageAgeMs / 1000);
             decodedTimestamp = timestamp;
             decodedHive = selectedFirstTagId;
         }
     }
 
-    private void decodeFrame(LLResult result, double timestamp) {
+    private void decodeFrame(LLResult result, double timestamp, double imageAgeSeconds) {
+        rejectedOpeningPoses = 0;
+        openingWithoutConsensus = false;
         observation = AprilTagObservation.searching(selectedFirstTagId, timestamp);
         rawDistanceMeters = OptionalDouble.empty();
         status = "Hive selecionado nao visivel";
@@ -162,10 +178,13 @@ public class Limelight {
         if (opening != null) {
             double tx = Math.toDegrees(Math.atan2(opening.position.x, opening.position.z));
             observation = AprilTagObservation.detected(selectedFirstTagId,
-                    tx, opening.tagsUsed, timestamp);
+                    tx, opening.tagsUsed, timestamp, imageAgeSeconds);
             rawDistanceMeters = OptionalDouble.of(opening.position.distance());
             status = "Abertura da CELL estimada";
             distanceStatus = "Pose 3D (saida das bolas -> abertura da CELL)";
+        } else if (openingWithoutConsensus) {
+            status = "Poses das tags discordam: abertura sem consenso";
+            distanceStatus = status;
         } else if (tags != null) {
             for (FiducialResult tag : tags) {
                 if (tag != null && containsTag(selectedFirstTagId, tag.getFiducialId())) {
@@ -183,11 +202,8 @@ public class Limelight {
         if (tags == null || !isHive(firstTagId)) {
             return null;
         }
-        double sumX = 0;
-        double sumY = 0;
-        double sumZ = 0;
-        double totalWeight = 0;
-        int tagsUsed = 0;
+        AimGeometry.Point[] candidates = new AimGeometry.Point[TAGS_PER_HIVE];
+        double[] weights = new double[TAGS_PER_HIVE];
 
         for (FiducialResult tag : tags) {
             if (tag == null) continue;
@@ -214,19 +230,59 @@ public class Limelight {
             }
             double area = tag.getTargetArea();
             double weight = Double.isFinite(area) && area > 0 ? Math.min(area, 100) : 1;
-            sumX += opening.x * weight;
-            sumY += opening.y * weight;
-            sumZ += opening.z * weight;
-            totalWeight += weight;
-            tagsUsed++;
+            if (candidates[index] == null || weight > weights[index]) {
+                candidates[index] = opening;
+                weights[index] = weight;
+            }
         }
 
-        if (tagsUsed == 0) return null;
+        // Maioria de IDs distintos primeiro; uma tag grande com pose ruim nao vence tres boas.
+        int count = 0, bestCount = 0, bestIndex = -1;
+        double bestWeight = 0;
+        for (int i = 0; i < TAGS_PER_HIVE; i++) {
+            if (candidates[i] == null) continue;
+            count++;
+            int agreeing = 0;
+            double weight = 0;
+            for (int j = 0; j < TAGS_PER_HIVE; j++) {
+                if (candidates[j] != null && agree(candidates[i], candidates[j])) {
+                    agreeing++;
+                    weight += weights[j];
+                }
+            }
+            if (agreeing > bestCount || (agreeing == bestCount && weight > bestWeight)) {
+                bestCount = agreeing;
+                bestWeight = weight;
+                bestIndex = i;
+            }
+        }
+        if (bestIndex < 0) return null;
+        if (count > 1 && bestCount <= count / 2) {
+            openingWithoutConsensus = true;
+            rejectedOpeningPoses = count;
+            return null;
+        }
+        double sumX = 0, sumY = 0, sumZ = 0, totalWeight = 0;
+        int tagsUsed = 0;
+        for (int i = 0; i < TAGS_PER_HIVE; i++) {
+            if (candidates[i] == null || !agree(candidates[bestIndex], candidates[i])) continue;
+            sumX += candidates[i].x * weights[i];
+            sumY += candidates[i].y * weights[i];
+            sumZ += candidates[i].z * weights[i];
+            totalWeight += weights[i];
+            tagsUsed++;
+        }
+        rejectedOpeningPoses = count - tagsUsed;
         AimGeometry.Point opening = geometry.fromCamera(new AimGeometry.Point(
                 sumX / totalWeight, sumY / totalWeight, sumZ / totalWeight));
         if (!opening.isFinite() || opening.z <= 0
                 || !Double.isFinite(opening.distance())) return null;
         return new Opening(opening, tagsUsed);
+    }
+
+    private static boolean agree(AimGeometry.Point a, AimGeometry.Point b) {
+        return Math.hypot(Math.hypot(a.x - b.x, a.y - b.y), a.z - b.z)
+                <= MAX_OPENING_DISAGREEMENT_METERS;
     }
 
     /** Mira e distancia usam a mesma abertura no referencial da saida das bolas. */
@@ -305,6 +361,7 @@ public class Limelight {
     }
 
     private void clearFrame(String reason) {
+        rejectedOpeningPoses = 0;
         observation = AprilTagObservation.unavailable(selectedFirstTagId);
         rawDistanceMeters = OptionalDouble.empty();
         decodedTimestamp = Double.NaN;
@@ -329,7 +386,9 @@ public class Limelight {
         telemetry.addData("Hive selecionado", "%d-%d", selectedFirstTagId,
                 selectedFirstTagId + TAGS_PER_HIVE - 1);
         telemetry.addData("Tags usadas na abertura", observation.getTagsUsed());
+        telemetry.addData("Poses de tags rejeitadas", rejectedOpeningPoses);
         if (observation.hasTarget()) {
+            telemetry.addData("Idade da imagem na leitura (ms)", observation.getImageAgeSeconds() * 1000);
             telemetry.addData("Abertura erro horizontal (deg)", observation.getTxDegrees());
         } else {
             telemetry.addData("Abertura erro horizontal (deg)", "Indisponivel");

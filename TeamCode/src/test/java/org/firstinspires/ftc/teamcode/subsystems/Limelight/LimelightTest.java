@@ -268,6 +268,28 @@ public class LimelightTest {
         assertFalse(limelight.getDistanceMeters().isPresent());
         assertFalse(limelight.getRawDistanceMeters().isPresent());
     }
+
+    @Test public void reportsCaptureProcessingAndTransportAgeOnlyOncePerFrame() throws Exception {
+        Frame result = frame(json(1, 2, 42).put("cl", 40).put("tl", 30));
+        result.age = 10;
+        limelight.run(false, false, false, false);
+        AprilTagObservation first = limelight.getObservation();
+        assertEquals((80 + result.getParseLatency()) / 1000, first.getImageAgeSeconds(), 1e-9);
+        result.age = 20;
+        clock.set(10_000_000);
+        limelight.run(false, false, false, false);
+        assertSame(first, limelight.getObservation());
+    }
+
+    @Test public void excessiveOrInvalidLatencyCannotProvideAimOrDistance() throws Exception {
+        for (double latency : new double[] {301, -1}) {
+            frame(json(latency + 2, 2, 42).put("cl", latency).put("tl", 30));
+            limelight.run(false, false, false, false);
+            assertUnavailable();
+        }
+        assertFalse(AprilTagObservation.detected(42, 1, 1, 1, Double.NaN).hasTarget());
+        assertFalse(AprilTagObservation.detected(42, 1, 1, 1, -0.01).hasTarget());
+    }
     private Frame frame(JSONObject json) throws Exception {
         Frame frame = new Frame(json);
         when(camera.getLatestResult()).thenReturn(frame);

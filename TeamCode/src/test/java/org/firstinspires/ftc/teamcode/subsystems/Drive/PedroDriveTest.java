@@ -680,8 +680,89 @@ public class PedroDriveTest {
         drive.aimHybrid(0, 0, -0.7, false, 10, 10, 42, observation);
     }
 
+    @Test
+    public void aimBrakesRotationBeforeCrossingTheTarget() {
+        localizer.velocity = new Velocity(0, 0, -1);
+        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 2, 2, 1));
+
+        assertTrue("Deve frear o giro horario que ja esta rapido perto do alvo",
+                drivetrain.powers.turn() > 0);
+    }
+
+    @Test
+    public void aimLimitsTurnPowerWithTheRealRobotGain() {
+        drive = new PedroDrive(follower, null, Controller.proportional(3.985729017698461), clock::get);
+        drive.aim(0.6, 0.4, 0, false, AprilTagObservation.detected(42, 30, 2, 1));
+
+        assertTrue(Math.abs(drivetrain.powers.turn()) <= 0.35);
+        assertPowers(0.6, -0.4, drivetrain.powers.turn());
+    }
+
+    @Test
+    public void hybridCannotReportAlignmentWhileStillSpinningThroughTheCenter() {
+        localizer.velocity = new Velocity(0, 0, 1);
+        for (int i = 1; i <= 3; i++) hybrid(AprilTagObservation.detected(42, 0, 2, i));
+
+        assertFalse(drive.isHybridVisionAligned());
+        assertTrue("Deve frear mesmo com a imagem centralizada", drivetrain.powers.turn() < 0);
+    }
+
     private void lockHybridVision() {
         for (int i = 1; i <= 3; i++) hybrid(AprilTagObservation.detected(42, 6, 1, i));
+    }
+
+    @Test
+    public void delayedImageUsesInterpolatedCaptureHeadingRatherThanCurrentHeading() {
+        drive.run(0, 0, 0, false);
+        clock.set(100_000_000);
+        localizer.setPose(new Pose(0, 0, Math.toRadians(-6)));
+        // A velocidade mudou desde a captura: extrapolar apenas pela velocidade atual seria errado.
+        localizer.velocity = new Velocity(0, 0, Math.toRadians(-5));
+
+        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 6, 2, 1, 0.1));
+
+        assertPowers(0, 0, PedroDrive.AIM_TURN_DAMPING * Math.toRadians(5));
+    }
+
+    @Test
+    public void captureHeadingAcrossWraparoundCorrectsAnImageThatWasPreviouslyCentered() {
+        localizer.setPose(new Pose(0, 0, Math.toRadians(179)));
+        drive.run(0, 0, 0, false);
+        clock.set(100_000_000);
+        localizer.setPose(new Pose(0, 0, Math.toRadians(-179)));
+
+        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 0, 2, 1, 0.1));
+
+        assertPowers(0, 0, Math.toRadians(-2));
+    }
+
+    @Test
+    public void delayedCameraAndRotationalInertiaSettleWithoutRepeatedOvershoot() {
+        drive = new PedroDrive(follower, null, Controller.proportional(3.985729017698461), clock::get);
+        double heading = Math.toRadians(-30), omega = 0;
+        double maxOvershoot = 0;
+        java.util.List<Double> headings = new java.util.ArrayList<>();
+        AprilTagObservation frame = null;
+        // Modelo: 20 ms/ciclo, camera a 25 Hz com 100 ms de atraso, inercia de 150 ms.
+        for (int i = 0; i < 250; i++) {
+            clock.set(i * 20_000_000L);
+            localizer.setPose(new Pose(0, 0, heading));
+            localizer.velocity = new Velocity(0, 0, omega);
+            headings.add(heading);
+            if (i % 2 == 0) {
+                frame = AprilTagObservation.detected(42,
+                        Math.toDegrees(headings.get(Math.max(0, i - 5))), 2, i, 0.1);
+            }
+            drive.aim(0, 0, 0, false, frame);
+            omega += (3 * drivetrain.powers.turn() - omega) * 0.02 / 0.15;
+            heading += omega * 0.02;
+            maxOvershoot = Math.max(maxOvershoot, heading);
+        }
+        assertTrue("Overshoot em graus: " + Math.toDegrees(maxOvershoot),
+                maxOvershoot < Math.toRadians(3));
+        assertTrue("Erro final em graus: " + Math.toDegrees(heading),
+                Math.abs(heading) <= Math.toRadians(1.2));
+        assertTrue("Deve terminar com giro baixo", Math.abs(omega) < Math.toRadians(2));
     }
 
     private void assertHoldAt(double x, double y, double heading) {

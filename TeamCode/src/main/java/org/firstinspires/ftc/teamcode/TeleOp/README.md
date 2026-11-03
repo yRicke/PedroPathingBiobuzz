@@ -66,7 +66,11 @@ Reinicio do timestamp da camera tambem exige nova confirmacao.
 
 A telemetria Mira informa Pedro, confirmacao de visao, Limelight ou
 manutencao breve de heading. O limite de correcao continua em 8 graus, com
-tolerancia de alinhamento de 1 grau e escala de precisao. A mira controla
+tolerancia de alinhamento de 1 grau e escala de precisao. O erro visual usa
+o heading da captura para compensar o atraso da imagem. O giro recebe
+amortecimento pela velocidade medida e potencia maxima de 0,35; alinhamento
+exige tambem giro de no maximo 10 graus/s. Esses parametros ficam nas
+constantes `AIM_*` de `PedroDrive`. A mira controla
 somente o giro; o hold de X/Y volta quando RB e solto e os sticks estao neutros.
 
 O disparo continua sendo comandado pelo piloto no RT. A selecao da CELL

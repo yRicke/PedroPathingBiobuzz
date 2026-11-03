@@ -10,6 +10,9 @@ import com.pedropathing.utils.Angle;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.subsystems.Limelight.AprilTagObservation;
 
+import java.util.concurrent.TimeUnit;
+import java.util.function.LongSupplier;
+
 /** Drive field-centric do Pedro com hold automatico quando os controles sao soltos. */
 public class PedroDrive {
     private static final double PRECISION_MULTIPLIER = 0.3;
@@ -18,12 +21,15 @@ public class PedroDrive {
     private static final double AIM_TOLERANCE_DEGREES = 1.0;
     private static final double MAX_AIM_CORRECTION_DEGREES = 8.0;
     private static final double MIN_AIM_DISTANCE_INCHES = 1e-3;
+    private static final int HYBRID_VISION_CONFIRMATION_FRAMES = 3;
+    private static final long HYBRID_VISION_LOSS_GRACE_NANOS = TimeUnit.MILLISECONDS.toNanos(100);
 
     private enum AimSource { NONE, LIMELIGHT, POSITION }
 
     private final Follower follower;
     private final Telemetry telemetry;
     private final Controller aimHeadingController;
+    private final LongSupplier nanoClock;
     private double fieldForwardHeading;
     private AimSource aimSource = AimSource.NONE;
     private double aimHeading;
@@ -32,16 +38,34 @@ public class PedroDrive {
     private int aimFirstTagId;
     private double lastAimFrameTimestamp = Double.NaN;
     private String aimStatus = "Manual";
+    private boolean hybridActive;
+    private boolean hybridVisionLocked;
+    private boolean hybridVisionMissing;
+    private int hybridFirstTagId;
+    private int hybridValidFrames;
+    private double hybridTargetX, hybridTargetY;
+    private double hybridLastFrameTimestamp = Double.NaN;
+    private long hybridVisionLostAtNanos;
 
     public PedroDrive(Follower follower, Telemetry telemetry, Controller aimHeadingController) {
+        this(follower, telemetry, aimHeadingController, System::nanoTime);
+    }
+
+    PedroDrive(Follower follower, Telemetry telemetry, Controller aimHeadingController,
+               LongSupplier nanoClock) {
         this.follower = follower;
         this.telemetry = telemetry;
         this.aimHeadingController = aimHeadingController;
+        this.nanoClock = nanoClock;
     }
 
     public void run(double axial, double lateral, double yaw, boolean precisionMode) {
         clearAim();
         aimStatus = "Manual";
+        runManualDrive(axial, lateral, yaw, precisionMode);
+    }
+
+    private void runManualDrive(double axial, double lateral, double yaw, boolean precisionMode) {
         double multiplier = precisionMode ? PRECISION_MULTIPLIER : 1.0;
 
         // Pedro usa lateral para a esquerda e giro anti-horario positivos.
@@ -97,7 +121,8 @@ public class PedroDrive {
         double dy = targetY - current.y();
         if (!Double.isFinite(dx) || !Double.isFinite(dy)
                 || Math.hypot(dx, dy) < MIN_AIM_DISTANCE_INCHES) {
-            run(axial, lateral, yaw, precisionMode);
+            clearHeadingAim();
+            runManualDrive(axial, lateral, yaw, precisionMode);
             aimStatus = "Coordenada sem direcao valida: giro manual";
             return;
         }
@@ -119,6 +144,66 @@ public class PedroDrive {
         runAim(axial, lateral, precisionMode);
     }
 
+    /** Pedro procura a coordenada; visao confirmada assume o ajuste fino da mesma CELL. */
+    public void aimHybrid(double axial, double lateral, double yaw, boolean precisionMode,
+                          double targetX, double targetY, int firstTagId,
+                          AprilTagObservation observation) {
+        if (!hybridActive || hybridFirstTagId != firstTagId
+                || Double.compare(hybridTargetX, targetX) != 0
+                || Double.compare(hybridTargetY, targetY) != 0) {
+            clearHybridAim();
+            hybridActive = true;
+            hybridFirstTagId = firstTagId;
+            hybridTargetX = targetX;
+            hybridTargetY = targetY;
+        }
+
+        boolean selectedCell = observation != null && observation.getFirstTagId() == firstTagId;
+        boolean valid = selectedCell && observation.isVisionReady() && observation.hasTarget();
+        if (valid) {
+            double timestamp = observation.getFrameTimestamp();
+            if (timestamp < hybridLastFrameTimestamp) {
+                // Reinicio da camera exige confirmar novas imagens e descartar o heading antigo.
+                hybridVisionLocked = false;
+                hybridValidFrames = 0;
+            }
+            if (timestamp != hybridLastFrameTimestamp) {
+                hybridValidFrames = Math.min(HYBRID_VISION_CONFIRMATION_FRAMES, hybridValidFrames + 1);
+                hybridLastFrameTimestamp = timestamp;
+            }
+            hybridVisionMissing = false;
+            if (hybridVisionLocked || hybridValidFrames >= HYBRID_VISION_CONFIRMATION_FRAMES) {
+                hybridVisionLocked = true;
+                aim(axial, lateral, yaw, precisionMode, observation);
+                aimStatus = "Limelight: " + aimStatus;
+                return;
+            }
+        } else {
+            hybridValidFrames = 0;
+            if (hybridVisionLocked && selectedCell) {
+                long now = nanoClock.getAsLong();
+                if (!hybridVisionMissing) {
+                    hybridVisionMissing = true;
+                    hybridVisionLostAtNanos = now;
+                }
+                if (now - hybridVisionLostAtNanos < HYBRID_VISION_LOSS_GRACE_NANOS) {
+                    // Apenas conserva o ultimo heading global; nao reaproveita um tx antigo.
+                    runAim(axial, lateral, precisionMode);
+                    aimStatus = "Limelight: mantendo heading durante perda breve";
+                    return;
+                }
+            }
+            hybridVisionLocked = false;
+            hybridVisionMissing = false;
+            hybridLastFrameTimestamp = Double.NaN;
+        }
+
+        aimAt(axial, lateral, yaw, precisionMode, targetX, targetY);
+        aimStatus = "Pedro: " + aimStatus
+                + (valid ? " | confirmando visao " + hybridValidFrames
+                + "/" + HYBRID_VISION_CONFIRMATION_FRAMES : " | procurando CELL selecionada");
+    }
+
     private void runAim(double axial, double lateral, boolean precisionMode) {
         double multiplier = precisionMode ? PRECISION_MULTIPLIER : 1.0;
         DrivePowers translation = ManualDrive.fieldCentric(
@@ -132,11 +217,24 @@ public class PedroDrive {
     }
 
     private void clearAim() {
+        clearHeadingAim();
+        clearHybridAim();
+    }
+
+    private void clearHeadingAim() {
         if (aimSource != AimSource.NONE) {
             aimHeadingController.reset();
         }
         aimSource = AimSource.NONE;
         lastAimFrameTimestamp = Double.NaN;
+    }
+
+    private void clearHybridAim() {
+        hybridActive = false;
+        hybridVisionLocked = false;
+        hybridVisionMissing = false;
+        hybridValidFrames = 0;
+        hybridLastFrameTimestamp = Double.NaN;
     }
 
     /** Muda somente a referencia dos sticks; preserva X/Y e heading globais do Pedro. */

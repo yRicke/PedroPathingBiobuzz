@@ -1,67 +1,92 @@
-# TeleOpMainPedro
+# TeleOpMain
 
-Variante experimental do `TeleOpMain`. O modo original continua disponivel.
-Preserva intake, flywheel por distancia da Limelight, transfer, trigger,
-drive field-centric, precisao e hold automatico ao soltar os controles.
+TeleOp principal unico: drive do Pedro com field-centric, precisao e hold
+automatico, localizacao recebida do autonomo e mira hibrida Pedro/Limelight.
+O antigo TeleOpMainPedro foi incorporado ao TeleOpMain e removido da lista de OpModes.
+O modo Flywheel Calibration - 3D continua separado para calibracao manual de RPM.
 
-As constantes no inicio de `TeleOpMainPedro.java` usam o referencial global
-do Pedro: X/Y em polegadas, heading em radianos (positivo anti-horario).
-`INITIAL_POSE` define a pose sem autonomo anterior; `RESET_POSE` e a pose conhecida usada
-para corrigir a localizacao. Ambas comecam em `(8.4, 35.2, 0 graus)`.
-O heading tambem precisa corresponder a orientacao fisica do robo.
-`RIGHT_HIVE` comeca em `(57.8, 50)` e `LEFT_HIVE` em `(57.8, 90)`.
-Essas coordenadas sao absolutas; nao sao espelhadas pela selecao de alianca.
+## Referencial e coordenadas
+
+As constantes no inicio de TeleOpMain.java usam X/Y em polegadas e heading
+em radianos, positivo anti-horario. INITIAL_POSE e RESET_POSE comecam em
+(8.4, 35.2, 0 graus). O heading precisa corresponder a orientacao fisica
+adotada como zero no referencial utilizado para a alianca atual.
+
+RIGHT_HIVE = (57.8, 50) e LEFT_HIVE = (57.8, 90) sao coordenadas de busca
+aproximada. Conforme a montagem de campo informada, os mesmos numeros sao
+usados nas duas aliancas: mudar azul/vermelho altera os IDs das tags.
+O inicio, o reset e os caminhos do autonomo devem usar esse mesmo referencial.
+
+A selecao da CELL determina tambem a coordenada de busca, sem uma segunda
+selecao independente de hive:
+
+| CELL | Coordenada Pedro | Azul | Vermelha |
+| --- | --- | --- | --- |
+| Esquerda / plateia | (57.8, 90) | 38-41 | 34-37 |
+| Direita / oposta | (57.8, 50) | 42-45 | 30-33 |
+
+Inicial: azul, direita/oposta. Comandos opostos simultaneos no D-pad
+preservam a selecao daquele eixo.
+
+## Controles
 
 | Controle | Acao |
 | --- | --- |
-| Gamepad 1, Y | Define a frente atual como frente dos sticks, preservando a pose global |
-| Gamepad 1, X | Aplica `RESET_POSE` e restaura a frente global dos sticks |
-| Gamepad 1, right bumper | Mira no hive selecionado pelas coordenadas do Pedro, com translacao livre |
-| Gamepad 1, left trigger | Modo de precisao |
-| Gamepad 1, right trigger | Dispara |
-| Gamepad 1, A / left bumper | Intake / reversao do intake e transfer |
-| Gamepad 2, D-pad esquerda/direita | Ativa somente o hive esquerdo/direito (inicial: direito); tambem seleciona CELL plateia/oposta na Limelight |
-| Gamepad 2, D-pad cima/baixo | Seleciona alianca azul/vermelha para a distancia da Limelight |
+| Gamepad 1, stick esquerdo | Translacao field-centric, inclusive durante a mira |
+| Gamepad 1, stick direito | Giro manual fora da mira |
+| Gamepad 1, RB segurado | Mira hibrida: Pedro procura; Limelight ajusta |
+| Gamepad 1, LT | Precisao |
+| Gamepad 1, RT | Aciona transfer e trigger enquanto pressionado |
+| Gamepad 1, A | Alterna intake |
+| Gamepad 1, LB | Inverte intake e transfer enquanto pressionado |
+| Gamepad 1, Y | Frente atual vira referencia dos sticks; preserva a pose |
+| Gamepad 1, X | Aplica RESET_POSE e restaura a frente global dos sticks |
+| Gamepad 2, D-pad esquerda/direita | CELL plateia/oposta e hive esquerdo/direito |
+| Gamepad 2, D-pad cima/baixo | Alianca azul/vermelha |
 
-Os resets ocorrem uma vez por pressionamento; X tem prioridade sobre Y.
-Use X somente quando o robo estiver fisicamente na pose de reset. O hold
-antigo e cancelado para impedir que a correcao de coordenadas provoque uma
-tentativa de voltar a posicao anterior. Y pode ser usado em qualquer pose,
-pois altera apenas a referencia de pilotagem.
+X e Y atuam uma vez por pressionamento; X tem prioridade. Use X quando o
+robo estiver fisicamente na pose conhecida. O hold e a mira anteriores sao
+cancelados para impedir uma tentativa de voltar a outra coordenada. Y altera
+somente a pilotagem; as coordenadas e o heading da mira continuam no referencial do Pedro.
 
-A telemetria mostra X/Y, heading global e heading relativo dos controles.
-Depois de Y, o heading global continua sendo a orientacao verdadeira no campo;
-somente o heading dos controles passa a zero.
+## Mira hibrida
 
-A mira calcula `atan2(alvoY - roboY, alvoX - roboX)` continuamente, usa o menor
-erro angular e controla somente o giro com o heading lock do Pedro. Preserva
-a tolerancia de 1 grau, limite de correcao de 8 graus e escala de precisao da
-mira original. Ao soltar o bumper, o giro volta ao piloto e o hold automatico
-volta a atuar com os sticks neutros. Se alvo e robo coincidirem, o giro fica
-manual. Pressionar esquerda e direita juntos preserva a selecao anterior.
+Enquanto RB estiver pressionado, o Pedro calcula o rumo para a coordenada
+de busca da CELL selecionada. Depois de **tres frames novos consecutivos**
+com alvo valido da mesma CELL, a Limelight assume o ajuste fino de heading.
+Um frame repetido nao conta novamente. A Limelight ja rejeita imagens
+antigas, congeladas, de pipeline incorreta e sem pose 3D valida.
 
-A mira por coordenadas funciona sem a Limelight; o calculo de RPM ainda usa
-a distancia 3D da saida das bolas ate a abertura medida pela camera, como no
-`TeleOpMain`. Essa referencia exige novos pares distancia/RPM. Os seletores de alianca e CELL da camera
-continuam afetando essa distancia. Confira a correspondencia entre a CELL
-selecionada e o hive fisico ao testar os disparos.
+Uma perda breve conserva o ultimo heading global por ate **100 ms**,
+mantendo a translacao livre. Persistindo a perda, volta a procurar pelas
+coordenadas. A nova aquisicao exige tres frames. Se a visao retornar antes
+desse prazo, retoma o ajuste fino diretamente. Trocar a CELL, alianca ou
+coordenada cancela a confirmacao anterior; imagens de outro alvo sao ignoradas.
+Reinicio do timestamp da camera tambem exige nova confirmacao.
 
-`AutonomousSouthOutside`, `AutoPath` e `ExampleAuto` salvam a ultima pose medida
-em `OpModeStorage` no Stop, inclusive quando interrompidos antes do fim de um
-path. Um autonomo cancelado antes do Play nao publica pose. Ao inicializar,
-`TeleOpMainPedro` consome essa pose uma unica vez; sem ela, usa `INITIAL_POSE`.
-No INIT, a telemetria informa a origem e atualiza a localizacao continuamente,
-sem mover o robo. O Play preserva a pose, inclusive deslocamentos durante o INIT.
+A telemetria Mira informa Pedro, confirmacao de visao, Limelight ou
+manutencao breve de heading. O limite de correcao continua em 8 graus, com
+tolerancia de alinhamento de 1 grau e escala de precisao. A mira controla
+somente o giro; o hold de X/Y volta quando RB e solto e os sticks estao neutros.
 
-O heading recebido permanece global: terminar o autonomo a 23 graus faz o
-TeleOp compensar esses 23 graus nos sticks. Nao se redefine o campo no Play.
-Y ainda permite uma referencia manual dos controles e X restaura a pose e a
-referencia global conhecidas. O `TeleOpMain` original mantem seu comportamento.
+O disparo continua sendo comandado pelo piloto no RT. A selecao da CELL
+adequada e manual. A RPM usa a distancia 3D da saida das bolas ate a abertura
+medida pela Limelight, com a geometria da camera ja configurada. Os pares
+precisam ser recalibrados nessa referencia; sem pares ou leitura, usa BASE_RPM.
 
-O armazenamento e em memoria: reiniciar o Robot Controller perde a pose.
-Evite mover o robo entre o Stop do autonomo e o INIT do TeleOp; nesse intervalo
-o localizador nao esta sendo atualizado. Se o robo for reposicionado, use X
-na pose conhecida. Outros autonomos devem limpar o armazenamento no init e
-salvar a pose medida no encerramento somente se chegaram ao Play.
+## Pose do autonomo
 
-Referencia: [uso do Pedro no TeleOp](https://pedropathing.com/docs/pathing/guide/teleop-usage).
+AutonomousSouthOutside, AutoPath e ExampleAuto salvam a ultima pose medida
+no Stop, inclusive em paths interrompidos. Um autonomo cancelado antes
+do Play nao publica pose. O TeleOpMain consome a pose uma unica vez no INIT;
+sem ela, usa INITIAL_POSE. A telemetria informa a origem e acompanha movimentos
+durante INIT. O Play preserva a pose e o heading recebidos: 23 graus continuam
+sendo 23 graus no referencial do campo, compensados nos sticks.
+
+O armazenamento e em memoria. Reiniciar o Robot Controller perde a pose.
+Entre o Stop do autonomo e o INIT do TeleOp o localizador nao esta sendo
+atualizado; se houver reposicionamento, relocalize na pose conhecida com X.
+
+Referencias: [Pedro no TeleOp](https://pedropathing.com/docs/pathing/guide/teleop-usage),
+[geometria da mira](../../../../../../../../../docs/aim-geometry.md),
+[calibracao da flywheel](../../../../../../../../../docs/flywheel-tdist-calibration.md).

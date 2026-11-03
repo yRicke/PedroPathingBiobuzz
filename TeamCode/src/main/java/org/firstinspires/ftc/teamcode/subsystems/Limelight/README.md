@@ -94,7 +94,7 @@ e a geometria do adesivo corretos.
 Tags de outras CELLS são ignoradas e podem aparecer na mesma imagem. A
 distância fica indisponível quando não há pose 3D válida de uma tag da CELL
 selecionada; nesse caso a flywheel solicita `BASE_RPM`. Confira a seleção e
-o status da distância antes de capturar pares.
+o status da distância antes de anotar pares.
 
 **Refaça os pares antigos, inclusive os medidos da câmera ao adesivo.** A
 nova tabela usa distância da saída até a abertura, na calibração e no jogo.
@@ -139,8 +139,9 @@ em 28/10/2026:
 4. Ao selecionar outra aliança/CELL sem mover a câmera, confirme que as
    leituras do alvo antigo desaparecem. Depois enquadre o novo alvo.
 5. Faça o [procedimento de calibração](../../../../../../../../../../docs/flywheel-tdist-calibration.md).
-   Nesse TeleOp o D-pad ajusta RPM/passo: **clique no stick esquerdo para azul,
-   direito para vermelho; Y alterna CELL**. A captura inclui aliança e IDs.
+   Nesse TeleOp o D-pad do gamepad 1 ajusta RPM/passo e A/B/X/Y alternam
+   flywheel/intake/transfer/trigger. A seleção de aliança/CELL fica no D-pad
+   do gamepad 2, como no TeleOp principal. Anote os pares distância/RPM à mão.
 6. Valide os pares nas duas alianças e nas posições estáveis usadas. Não
    reutilize distâncias de referências antigas. Alterar câmera, geometria,
    launcher ou elemento exige conferir a calibração novamente.

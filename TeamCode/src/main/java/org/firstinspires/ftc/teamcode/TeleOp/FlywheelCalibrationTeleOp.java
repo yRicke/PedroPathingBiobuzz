@@ -9,18 +9,18 @@ import org.firstinspires.ftc.teamcode.subsystems.Limelight.Limelight;
 import org.firstinspires.ftc.teamcode.subsystems.Transfer.Transfer;
 import org.firstinspires.ftc.teamcode.subsystems.Trigger.Trigger;
 
-import java.util.Locale;
 import java.util.OptionalDouble;
 
-/** Calibracao parada: RPM manual, distancia 3D da saida ate a abertura e captura. */
+/** Calibracao parada com anotacao manual da distancia e RPM. */
 @TeleOp(name = "Flywheel Calibration - 3D", group = "Flywheel")
 public class FlywheelCalibrationTeleOp extends LinearOpMode {
     private static final int[] STEPS_TENTHS = {1, 10, 100, 1000, 10000};
     private int maxTenths;
     private int targetTenths;
     private int stepIndex = 2;
-    private boolean enabled;
-    private boolean previousUp, previousDown, previousLeft, previousRight, previousA;
+    private boolean flywheelEnabled, intakeEnabled, transferEnabled, triggerEnabled;
+    private boolean previousUp, previousDown, previousLeft, previousRight;
+    private boolean previousFlywheel, previousIntake, previousTransfer, previousTrigger;
 
     void resetCalibrationControls(double initialRpm, double maxRpm) {
         if (!Double.isFinite(initialRpm) || !Double.isFinite(maxRpm)
@@ -31,12 +31,13 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
         maxTenths = (int) Math.round(maxRpm * 10);
         targetTenths = (int) Math.round(initialRpm * 10);
         stepIndex = 2;
-        enabled = false;
-        previousUp = previousDown = previousLeft = previousRight = previousA = false;
+        flywheelEnabled = intakeEnabled = transferEnabled = triggerEnabled = false;
+        previousUp = previousDown = previousLeft = previousRight = false;
+        previousFlywheel = previousIntake = previousTransfer = previousTrigger = false;
     }
 
     void updateCalibrationControls(boolean up, boolean down, boolean left, boolean right,
-                       boolean a, boolean stop) {
+                                   boolean flywheel, boolean intake, boolean transfer, boolean trigger) {
         if (left != right) {
             if (left && !previousLeft) stepIndex = Math.max(0, stepIndex - 1);
             if (right && !previousRight) {
@@ -52,19 +53,27 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
                 targetTenths = Math.max(0, targetTenths - STEPS_TENTHS[stepIndex]);
             }
         }
-        if (stop) enabled = false;
-        else if (a && !previousA) enabled = !enabled;
+        if (flywheel && !previousFlywheel) flywheelEnabled = !flywheelEnabled;
+        if (intake && !previousIntake) intakeEnabled = !intakeEnabled;
+        if (transfer && !previousTransfer) transferEnabled = !transferEnabled;
+        if (trigger && !previousTrigger) triggerEnabled = !triggerEnabled;
         previousUp = up;
         previousDown = down;
         previousLeft = left;
         previousRight = right;
-        previousA = a;
+        previousFlywheel = flywheel;
+        previousIntake = intake;
+        previousTransfer = transfer;
+        previousTrigger = trigger;
     }
 
     double getCalibrationRpm() { return targetTenths / 10.0; }
     double getCalibrationStep() { return STEPS_TENTHS[stepIndex] / 10.0; }
-    boolean isFlywheelEnabled() { return enabled; }
-    double getCommandedRpm() { return enabled ? getCalibrationRpm() : 0; }
+    boolean isFlywheelEnabled() { return flywheelEnabled; }
+    boolean isIntakeEnabled() { return intakeEnabled; }
+    boolean isTransferEnabled() { return transferEnabled; }
+    boolean isTriggerEnabled() { return triggerEnabled; }
+    double getCommandedRpm() { return flywheelEnabled ? getCalibrationRpm() : 0; }
 
     @Override
     public void runOpMode() {
@@ -73,71 +82,37 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
         Transfer transfer = new Transfer(hardwareMap, telemetry);
         Trigger trigger = new Trigger(hardwareMap, telemetry);
         Intake intake = new Intake(hardwareMap, telemetry);
+        intake.offMotor();
         trigger.setTriggerClosed();
         Limelight limelight = new Limelight(hardwareMap, telemetry);
-        boolean audienceCell = false;
-        boolean previousX = false, previousY = false;
-        String capturedPair = "Nenhum: X captura; anote antes de sair";
-        String capturedDetails = "Captura fica apenas nesta execucao";
 
         try {
             telemetry.setMsTransmissionInterval(100);
-            telemetry.addLine("Robo parado. A liga/desliga flywheel; B desliga.");
-            telemetry.addLine("Distancia: saida das bolas -> abertura da CELL. Recalibre os pares antigos.");
-            telemetry.addLine("D-pad cima/baixo: RPM; esquerda/direita: passo.");
-            telemetry.addLine("RT dispara; LB alterna intake; RB abre dedinho.");
-            telemetry.addLine("Y troca CELL; X congela par para anotar.");
-            telemetry.addLine("Clique stick esquerdo: AZUL / direito: VERMELHA.");
-            limelight.sendTelemetry();
-            telemetry.update();
+            do {
+                limelight.run(gamepad2.dpad_left, gamepad2.dpad_right,
+                        gamepad2.dpad_up, gamepad2.dpad_down);
+                telemetry.addLine("Anote distancia/RPM manualmente. Robo parado.");
+                telemetry.addLine("G2 D-pad: cima azul / baixo vermelha / esquerda plateia / direita oposta");
+                sendCalibrationTelemetry(flywheel, limelight);
+                idle();
+            } while (opModeInInit());
             waitForStart();
             if (isStopRequested()) return;
 
             while (opModeIsActive()) {
                 updateCalibrationControls(gamepad1.dpad_up, gamepad1.dpad_down,
-                        gamepad1.dpad_left, gamepad1.dpad_right, gamepad1.a, gamepad1.b);
-                if (gamepad1.y && !previousY) audienceCell = !audienceCell;
-                previousY = gamepad1.y;
-                limelight.run(audienceCell, !audienceCell,
-                        gamepad1.left_stick_button, gamepad1.right_stick_button);
-                int firstTagId = limelight.getObservation().getFirstTagId();
-                double currentRpm = flywheel.getRPM();
-                OptionalDouble distance = limelight.getDistanceMeters();
-
-                if (gamepad1.x && !previousX) {
-                    if (isFlywheelEnabled() && getCalibrationRpm() > 0
-                            && distance.isPresent() && Double.isFinite(currentRpm)) {
-                        capturedPair = String.format(Locale.US,
-                                "{%.3f, %.1f}, // saida -> abertura cm, RPM desejada",
-                                distance.getAsDouble() * 100, getCalibrationRpm());
-                        capturedDetails = String.format(Locale.US,
-                                "%s | CELL %d-%d | RPM medida %.1f | %d amostras",
-                                limelight.isRedAlliance() ? "VERMELHA" : "AZUL",
-                                firstTagId, firstTagId + Limelight.TAGS_PER_HIVE - 1,
-                                currentRpm, limelight.getDistanceSampleCount());
-                    } else {
-                        capturedDetails = "Captura recusada: ligue flywheel e confira distancia 3D valida";
-                    }
-                }
-                previousX = gamepad1.x;
+                        gamepad1.dpad_left, gamepad1.dpad_right,
+                        gamepad1.a, gamepad1.b, gamepad1.x, gamepad1.y);
+                limelight.run(gamepad2.dpad_left, gamepad2.dpad_right,
+                        gamepad2.dpad_up, gamepad2.dpad_down);
 
                 flywheel.run(getCommandedRpm());
-                boolean shoot = getCommandedRpm() > 0 && gamepad1.right_trigger > 0;
-                transfer.run(shoot);
-                trigger.run(shoot);
-                intake.run(gamepad1.left_bumper, false);
+                if (intakeEnabled) intake.onMotor();
+                else intake.offMotor();
+                transfer.run(transferEnabled);
+                trigger.run(triggerEnabled);
 
-                telemetry.addData("Flywheel", isFlywheelEnabled() ? "LIGADA" : "DESLIGADA (A liga)");
-                telemetry.addData("RPM desejada", "%.1f", getCalibrationRpm());
-                telemetry.addData("Passo RPM", "%.1f", getCalibrationStep());
-                flywheel.sendTelemetry();
-                limelight.sendTelemetry();
-                telemetry.addData("PAR ANOTADO", capturedPair);
-                telemetry.addData("Captura", capturedDetails);
-                telemetry.addLine("Cima/baixo RPM | Esq/dir passo | A liga | B desliga");
-                telemetry.addLine("RT dispara | LB intake | RB dedinho | Y CELL | X captura");
-                telemetry.addLine("Clique stick esq: AZUL | dir: VERMELHA");
-                telemetry.update();
+                sendCalibrationTelemetry(flywheel, limelight);
                 idle();
             }
         } finally {
@@ -153,5 +128,28 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
                 }
             }
         }
+    }
+
+    private void sendCalibrationTelemetry(Flywheel flywheel, Limelight limelight) {
+        OptionalDouble distance = limelight.getDistanceMeters();
+        if (distance.isPresent()) {
+            telemetry.addData("Distancia abertura (cm)", "%.1f", distance.getAsDouble() * 100);
+        } else {
+            telemetry.addData("Distancia abertura (cm)", "Sem leitura");
+        }
+        telemetry.addData("RPM desejada / medida", "%.1f / %.1f", getCalibrationRpm(), flywheel.getRPM());
+        telemetry.addData("Passo RPM", "%.1f", getCalibrationStep());
+        telemetry.addData("A Flywheel | B Intake", "%s | %s",
+                flywheelEnabled ? "ON" : "OFF", intakeEnabled ? "ON" : "OFF");
+        telemetry.addData("X Transfer | Y Trigger", "%s | %s",
+                transferEnabled ? "ON" : "OFF", triggerEnabled ? "ABERTO" : "FECHADO");
+        int firstTagId = limelight.getObservation().getFirstTagId();
+        boolean audience = firstTagId == Limelight.RED_AUDIENCE_FIRST_TAG
+                || firstTagId == Limelight.BLUE_AUDIENCE_FIRST_TAG;
+        telemetry.addData("Alvo (G2)", "%s | %s | %d-%d",
+                limelight.isRedAlliance() ? "VERMELHA" : "AZUL",
+                audience ? "plateia" : "oposta", firstTagId, firstTagId + Limelight.TAGS_PER_HIVE - 1);
+        telemetry.addLine("D-pad: cima/baixo RPM | esquerda/direita passo");
+        telemetry.update();
     }
 }

@@ -5,41 +5,39 @@
 1. Abra o TeleOp **Flywheel Calibration - 3D**, grupo **Flywheel**. Ele não
    aciona o drivetrain; coloque o robô na posição de teste.
 2. Confira a pipeline 8, aliança e CELL mostradas (azul 42–45 inicialmente).
-   Clique no stick esquerdo para azul ou direito para vermelho; Y alterna
-   CELL plateia/oposta. Aguarde `Distancia abertura filtrada (cm)` válida.
-3. A RPM desejada começa em **2720**, com a flywheel desligada. A liga/desliga;
-   B desliga sem perder o ajuste. Ajuste a RPM e o passo pelo D-pad.
-4. Aguarde a `Flywheel RPM medido` se aproximar da RPM desejada e a distância estabilizar
+   No gamepad 2, D-pad cima/baixo seleciona azul/vermelha e esquerda/direita
+   seleciona CELL plateia/oposta. Aguarde `Distancia abertura (cm)` válida.
+3. A RPM desejada começa em `Flywheel.BASE_RPM` (**2670** atualmente), com
+   todos os mecanismos desligados. No gamepad 1, A alterna flywheel, B intake,
+   X transfer e Y abre/fecha o trigger. Ajuste a RPM e o passo pelo D-pad.
+4. Aguarde a RPM medida se aproximar da desejada e a distância estabilizar
    depois de mover o robô (a janela do filtro é de um segundo).
-5. Faça lançamentos com RT. LB alterna o intake; RB abre o dedinho enquanto
-   pressionado. Verifique a repetibilidade com POLLEN.
-6. Quando encontrar um bom ajuste, pressione X. `PAR ANOTADO` congela a
-   distância **3D da saída das bolas até a abertura, filtrada em centímetros**, e a **RPM desejada**. Também
-   mostra RPM medida, aliança, IDs da CELL e quantidade de amostras na captura.
-7. Anote o par antes de sair. A captura fica apenas nesta execução; X não
-   grava arquivo nem modifica o código. Repita em outras posições.
+5. Com a flywheel na RPM desejada, ligue transfer com X e abra o trigger com Y
+   para lançar; outro clique desliga/fecha cada um. B liga/desliga o intake.
+   Os quatro mecanismos têm controles independentes.
+6. Quando encontrar um bom ajuste, anote à mão a distância e a RPM desejada.
+   Repita em outras posições. A tela permanece ao vivo, sem captura de pares.
 
-X registra a escolha manual; não verifica se o lançamento acertou ou se a
-RPM já estava estabilizada. A telemetria ao vivo continua atualizando enquanto
-o par capturado fica congelado. Se uma captura falhar, o último par permanece.
-
-| Controle | Ação |
+| Controle (gamepad 1) | Ação |
 | --- | --- |
 | D-pad cima / baixo | Aumenta / diminui RPM desejada, um passo por clique |
 | D-pad esquerda / direita | Diminui / aumenta o passo: 0,1; 1; 10; 100; 1000 RPM |
 | A | Liga / desliga flywheel mantendo o ajuste |
-| B | Desliga flywheel e impede alimentação pelo RT |
-| RT | Aciona transfer e trigger enquanto pressionado, com flywheel ligada |
-| LB | Alterna intake |
-| RB | Abre dedinho enquanto pressionado |
-| Clique stick esquerdo / direito | Seleciona aliança azul / vermelha |
-| Y | Alterna CELL da plateia / oposta dentro da aliança |
-| X | Congela o par distância/RPM para anotação |
+| B | Liga / desliga intake |
+| X | Liga / desliga transfer |
+| Y | Abre / fecha trigger |
 
-O passo inicial é 10 RPM. Segurar D-pad/A/Y/X não repete o comando a cada loop.
+No gamepad 2, D-pad cima/baixo seleciona aliança azul/vermelha e
+esquerda/direita seleciona CELL plateia/oposta, como no TeleOp principal.
+
+A tela mostra somente distância, RPM desejada/medida, passo, estado dos
+quatro mecanismos e alvo selecionado. A distância exibida já é filtrada e
+usa a referência 3D da saída das bolas até a abertura da CELL.
+
+O passo inicial é 10 RPM. Segurar D-pad/A/B/X/Y não repete o comando a cada loop.
 A RPM fica entre zero e `Flywheel.MAX_RPM` (6000 inicialmente; configure conforme o launcher). `BASE_RPM` e `MAX_RPM` ficam em `Flywheel`; `PIPELINE_INDEX` e
 `UPSIDE_DOWN` ficam em `Limelight`. Ao parar o OpMode, a flywheel, o
-transfer e o intake são desligados, os servos são fechados e a câmera é parada.
+transfer e o intake são desligados, o trigger é fechado e a câmera é parada.
 
 ## Configuração da Limelight
 
@@ -56,7 +54,7 @@ são ignoradas. A tabela recebe a leitura filtrada convertida para centímetros.
 
 A montagem configurada está centralizada, 12,9 cm acima e 10,691 cm atrás
 da saída das bolas, com pitch de +49,265 graus, yaw zero e roll 180.
-Confira o sentido de giro antes de capturar pares. Os valores
+Confira o sentido de giro antes de anotar pares. Os valores
 ficam nas constantes `CAMERA_*` e `UPSIDE_DOWN` de `Limelight.java`.
 Não é necessário configurar a montagem, POI ou crosshair no painel.
 
@@ -101,5 +99,5 @@ quando acima da RPM desejada, pode reduzir a potência até zero.
 Registre novos pares ao alterar ângulo, câmera, geometria das tags, compressão, flywheel ou
 elemento lançado. Esta calibração é de POLLEN; não foi medida para NECTAR.
 
-Valide os pares nas duas alianças e com a CELL estabilizada. Os IDs do alvo
-e a aliança ficam registrados na captura para conferir a referência usada.
+Valide os pares nas duas alianças e com a CELL estabilizada. A tela mostra
+os IDs e a aliança do alvo; inclua essa informação nas suas anotações.

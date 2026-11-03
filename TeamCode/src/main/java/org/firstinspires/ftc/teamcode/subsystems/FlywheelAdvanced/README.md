@@ -9,9 +9,13 @@ seu estado. As configurações ficam no início de `Flywheel.java`.
 | `TICKS_PER_REVOLUTION`, `GEAR_RATIO` | Conversão do encoder para RPM |
 | `KS`, `KV`, `KP` | Feedforward e proporcional |
 | `MAX_RPM` | Limite configurado do launcher |
-| `BASE_RPM`, `BASE_DISTANCE_CM` | Primeiro par por distância 3D ao centro da CELL; RPM base também é usada sem leitura |
+| `BASE_RPM`, `BASE_DISTANCE_CM` | Primeiro par por distância 3D da saída até a abertura; RPM base também é usada sem leitura |
 | `BASE_RPM_2/3`, `BASE_DISTANCE_2/3_CM` | Pares adicionais |
 | `SETPOINT_UPDATE_MS`, `SETPOINT_DEADBAND_RPM` | Estabilização da RPM automática |
+
+As três distâncias estão em zero para invalidar os pares da referência antiga
+(câmera → adesivo). Recalibre usando `Distancia abertura filtrada (cm)` e
+preencha os novos pares. Até lá, o automático usa a RPM base e indica "Sem pares".
 
 ## Uso
 

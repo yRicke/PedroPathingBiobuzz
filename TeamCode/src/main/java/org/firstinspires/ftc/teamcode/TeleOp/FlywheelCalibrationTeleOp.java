@@ -12,7 +12,7 @@ import org.firstinspires.ftc.teamcode.subsystems.Trigger.Trigger;
 import java.util.Locale;
 import java.util.OptionalDouble;
 
-/** Calibracao parada: RPM manual, distancia 3D ao centro da CELL e captura. */
+/** Calibracao parada: RPM manual, distancia 3D da saida ate a abertura e captura. */
 @TeleOp(name = "Flywheel Calibration - 3D", group = "Flywheel")
 public class FlywheelCalibrationTeleOp extends LinearOpMode {
     private static final int[] STEPS_TENTHS = {1, 10, 100, 1000, 10000};
@@ -83,6 +83,7 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
         try {
             telemetry.setMsTransmissionInterval(100);
             telemetry.addLine("Robo parado. A liga/desliga flywheel; B desliga.");
+            telemetry.addLine("Distancia: saida das bolas -> abertura da CELL. Recalibre os pares antigos.");
             telemetry.addLine("D-pad cima/baixo: RPM; esquerda/direita: passo.");
             telemetry.addLine("RT dispara; LB alterna intake; RB abre dedinho.");
             telemetry.addLine("Y troca CELL; X congela par para anotar.");
@@ -107,7 +108,7 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
                     if (isFlywheelEnabled() && getCalibrationRpm() > 0
                             && distance.isPresent() && Double.isFinite(currentRpm)) {
                         capturedPair = String.format(Locale.US,
-                                "{%.3f, %.1f}, // centro CELL cm, RPM desejada",
+                                "{%.3f, %.1f}, // saida -> abertura cm, RPM desejada",
                                 distance.getAsDouble() * 100, getCalibrationRpm());
                         capturedDetails = String.format(Locale.US,
                                 "%s | CELL %d-%d | RPM medida %.1f | %d amostras",

@@ -55,6 +55,12 @@ Use medidas reais da montagem. Zero representa alinhamento e coincidencia
 fisica, nao uma medida desconhecida. Mudar a camera, a saida das bolas ou
 o angulo do lancador exige conferir novamente a geometria e a calibracao.
 
+Montagem informada por CAD e confirmada em **02/11/2026**, aplicada nas
+constantes `CAMERA_*` de `Limelight.java`: direita **0 cm**, acima **12,9 cm**,
+a frente **-10,691 cm** (atras), pitch **+50 graus**, yaw **0 graus** e
+roll **180 graus** (`UPSIDE_DOWN = true`). O pitch foi informado como
+aproximado; confira o valor fisico para obter repetibilidade em diferentes posicoes.
+
 ## Painel e calibracao
 
 Mantenha a pipeline 8 configurada com AprilTags, tamanho real das tags,
@@ -62,7 +68,7 @@ os IDs 30-45 e Full 3D. Para este calculo nao e necessario criar POI,
 ajustar crosshair nem configurar robotspace no painel: o codigo usa
 exclusivamente as poses no espaco da camera e a montagem medida no Java.
 
-Depois que a geometria estiver integrada e configurada:
+Antes de cadastrar os novos pares:
 
 1. Confira o sentido do giro com o robo parado e o shooter desligado.
 2. Confira o mesmo ponto de mira cobrindo tags diferentes da CELL selecionada.

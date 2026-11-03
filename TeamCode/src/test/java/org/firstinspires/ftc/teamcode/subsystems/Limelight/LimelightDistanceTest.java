@@ -101,7 +101,8 @@ public class LimelightDistanceTest {
         when(frame.getFiducialResults()).thenReturn(Collections.singletonList(tag));
         if (value.isPresent()) {
             when(tag.getTargetPoseCameraSpace()).thenReturn(new Pose3D(
-                    new Position(DistanceUnit.METER, -0.1651, 0, value.getAsDouble(), 0),
+                    new Position(DistanceUnit.METER, -0.1651, 0.18255996,
+                            value.getAsDouble() - 0.1427988, 0),
                     new YawPitchRollAngles(AngleUnit.DEGREES, 0, 0, 0, 0)));
         }
         when(camera.getLatestResult()).thenReturn(frame);

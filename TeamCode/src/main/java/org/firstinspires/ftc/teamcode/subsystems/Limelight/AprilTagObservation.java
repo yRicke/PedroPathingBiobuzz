@@ -1,6 +1,6 @@
 package org.firstinspires.ftc.teamcode.subsystems.Limelight;
 
-/** Observacao imutavel do centro do hive para controle de heading. */
+/** Observacao imutavel da abertura da CELL para controle de heading do lancador. */
 public final class AprilTagObservation {
     private final int firstTagId;
     private final boolean visionReady;

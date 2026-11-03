@@ -5,7 +5,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.OptionalDouble;
 
-/** Tabela imutavel: valida e ordena pares {distancia ao centro em cm, RPM}. */
+/** Tabela imutavel: valida e ordena pares {distancia da saida a abertura em cm, RPM}. */
 public final class FlywheelRpmTable {
     public enum Mode {
         STOPPED("Desligada"), NO_DISTANCE("Sem distancia 3D: RPM base"),

@@ -27,10 +27,9 @@ public class LimelightCenterTest {
     public void eachOfSixteenTagsAloneFindsSameCenterForItsCell() {
         int[] ids = {30, 31, 32, 33, 34, 35, 36, 37,
                 38, 39, 40, 41, 42, 43, 44, 45};
-        double[] tagX = {0.1349, 0.23015, 0.36985, 0.4651};
 
         for (int i = 0; i < ids.length; i++) {
-            FiducialResult tag = tag(ids[i], tagX[i % 4], -0.4, 2, 0, 0, 0, 1);
+            FiducialResult tag = tagForOpening(ids[i], 0.3, -0.4, 2, 0, 0, 0, 1);
             int firstTag = 30 + (ids[i] - 30) / 4 * 4;
 
             AprilTagObservation result =
@@ -45,9 +44,9 @@ public class LimelightCenterTest {
     @Test
     public void hiddenRightmostTagDoesNotMoveEstimatedCenter() {
         AprilTagObservation result = estimate(
-                Arrays.asList(tag(42, -0.1651, 0, 2, 0, 0, 0, 1),
-                        tag(43, -0.06985, 0, 2, 0, 0, 0, 1),
-                        tag(44, 0.06985, 0, 2, 0, 0, 0, 1)), 42);
+                Arrays.asList(tagForOpening(42, 0, 0, 2, 0, 0, 0, 1),
+                        tagForOpening(43, 0, 0, 2, 0, 0, 0, 1),
+                        tagForOpening(44, 0, 0, 2, 0, 0, 0, 1)), 42);
 
         assertTrue(result.hasTarget());
         assertEquals(0, result.getTxDegrees(), EPSILON);
@@ -57,8 +56,8 @@ public class LimelightCenterTest {
     @Test
     public void areaWeightedFusionCombinesCenterPositionsRatherThanTagCenters() {
         AprilTagObservation result = estimate(
-                Arrays.asList(tag(42, -0.1651, 0, 2, 0, 0, 0, 1),
-                        tag(45, 0.5651, 0, 2, 0, 0, 0, 3)), 42);
+                Arrays.asList(tagForOpening(42, 0, 0, 2, 0, 0, 0, 1),
+                        tagForOpening(45, 0.4, 0, 2, 0, 0, 0, 3)), 42);
 
         assertTrue(result.hasTarget());
         assertEquals(8.530765609948133, result.getTxDegrees(), EPSILON);
@@ -67,8 +66,7 @@ public class LimelightCenterTest {
 
     @Test
     public void tagRotationProjectsOffsetWithDepthAndHeightChanges() {
-        FiducialResult tilted = tag(42, 0.2285096029175946, -0.441275,
-                2.142980794164811, 17, 60, 30, 1);
+        FiducialResult tilted = tagForOpening(42, 0.3, -0.4, 2, 17, 60, 30, 1);
 
         AprilTagObservation result =
                 estimate(Arrays.asList(tilted), 42);
@@ -79,7 +77,7 @@ public class LimelightCenterTest {
 
     @Test
     public void upsideDownCameraPoseRotatesTheTagOffsetBeforeProjection() {
-        FiducialResult rotated = tag(42, -0.1349, 0.4, 2, 0, 0, 180, 1);
+        FiducialResult rotated = tagForOpening(42, -0.3, 0.4, 2, 0, 0, 180, 1);
 
         AprilTagObservation result =
                 estimate(Arrays.asList(rotated), 42);
@@ -93,12 +91,11 @@ public class LimelightCenterTest {
         for (int first : new int[] {30, 34}) {
             // A mesma CELL vista girada 180 graus no plano da imagem.
             AprilTagObservation rotated = estimate(Arrays.asList(
-                    tag(first, -0.1349, 0.4, 2, 0, 0, 180, 1)), first);
+                    tagForOpening(first, -0.3, 0.4, 2, 0, 0, 180, 1)), first);
             assertEquals(-8.530765609948133, rotated.getTxDegrees(), EPSILON);
             // A inclinacao do HIVE e resolvida pela pose, nao por altura fixa.
             AprilTagObservation tilted = estimate(Arrays.asList(
-                    tag(first, 0.2285096029175946, -0.441275,
-                            2.142980794164811, 17, 60, 30, 1)), first);
+                    tagForOpening(first, 0.3, -0.4, 2, 17, 60, 30, 1)), first);
             assertEquals(8.530765609948133, tilted.getTxDegrees(), EPSILON);
         }
     }
@@ -108,7 +105,7 @@ public class LimelightCenterTest {
         FiducialResult inches = mock(FiducialResult.class);
         when(inches.getFiducialId()).thenReturn(42);
         when(inches.getTargetPoseCameraSpace()).thenReturn(new Pose3D(
-                new Position(DistanceUnit.INCH, -6.5, 0, 40, 0),
+                new Position(DistanceUnit.INCH, -6.5, 7.1874, 40 - 5.622, 0),
                 new YawPitchRollAngles(AngleUnit.DEGREES, 0, 0, 0, 0)));
 
         AprilTagObservation result =
@@ -140,7 +137,7 @@ public class LimelightCenterTest {
     public void invalidTagDoesNotDiscardAnotherUsableTag() {
         AprilTagObservation result = estimate(
                 Arrays.asList(tag(42, 0, 0, 0, 0, 0, 0, 1),
-                        tag(43, -0.06985, 0, 2, 0, 0, 0, 1)), 42);
+                        tagForOpening(43, 0, 0, 2, 0, 0, 0, 1)), 42);
 
         assertTrue(result.hasTarget());
         assertEquals(1, result.getTagsUsed());
@@ -148,11 +145,10 @@ public class LimelightCenterTest {
 
     @Test
     public void eachTagUsesTheSameThreeDimensionalCenterDistance() {
-        double[] tagX = {2.8349, 2.93015, 3.06985, 3.1651};
         for (int id = 30; id <= 45; id++) {
             int firstTag = 30 + (id - 30) / 4 * 4;
             Limelight result = read(Arrays.asList(
-                    tag(id, tagX[(id - 30) % 4], 4, 12, 0, 0, 0, 1)), firstTag);
+                    tagForOpening(id, 3, 4, 12, 0, 0, 0, 1)), firstTag);
             // Centro (3, 4, 12): distancia 13 m, incluindo altura e offset local.
             assertEquals("Tag " + id, 13, result.getDistanceMeters().getAsDouble(), EPSILON);
         }
@@ -161,11 +157,10 @@ public class LimelightCenterTest {
     @Test
     public void tiltedAndInvertedPosesKeepTheSameCenterDistance() {
         for (int first : new int[] {30, 34, 38, 42}) {
-            Limelight tilted = read(Arrays.asList(tag(first,
-                    0.2285096029175946, -0.441275, 2.142980794164811,
-                    17, 60, 30, 1)), first);
-            Limelight inverted = read(Arrays.asList(tag(first,
-                    -0.1349, 0.4, 2, 0, 0, 180, 1)), first);
+            Limelight tilted = read(Arrays.asList(tagForOpening(first,
+                    0.3, -0.4, 2, 17, 60, 30, 1)), first);
+            Limelight inverted = read(Arrays.asList(tagForOpening(first,
+                    -0.3, 0.4, 2, 0, 0, 180, 1)), first);
             // Ambos representam o centro a (+/-0.3, +/-0.4, 2) m.
             assertEquals(2.0615528128088303, tilted.getDistanceMeters().getAsDouble(), EPSILON);
             assertEquals(2.0615528128088303, inverted.getDistanceMeters().getAsDouble(), EPSILON);
@@ -175,8 +170,8 @@ public class LimelightCenterTest {
     @Test
     public void distanceUsesTheAreaWeightedCenterIncludingHeight() {
         Limelight result = read(Arrays.asList(
-                tag(42, -0.1651, 0, 2, 0, 0, 0, 1),
-                tag(45, 0.5651, 0.8, 2, 0, 0, 0, 3)), 42);
+                tagForOpening(42, 0, 0, 2, 0, 0, 0, 1),
+                tagForOpening(45, 0.4, 0.8, 2, 0, 0, 0, 3)), 42);
         // Centro ponderado (0.3, 0.6, 2), nao media das distancias individuais.
         assertEquals(2.1095023109728985, result.getDistanceMeters().getAsDouble(), EPSILON);
     }
@@ -184,9 +179,9 @@ public class LimelightCenterTest {
     @Test
     public void hiddenTagsDoNotChangeTheDistanceReference() {
         Limelight result = read(Arrays.asList(
-                tag(42, -0.1651, 0, 2, 0, 0, 0, 1),
-                tag(43, -0.06985, 0, 2, 0, 0, 0, 1),
-                tag(44, 0.06985, 0, 2, 0, 0, 0, 1)), 42);
+                tagForOpening(42, 0, 0, 2, 0, 0, 0, 1),
+                tagForOpening(43, 0, 0, 2, 0, 0, 0, 1),
+                tagForOpening(44, 0, 0, 2, 0, 0, 0, 1)), 42);
         assertEquals(2, result.getDistanceMeters().getAsDouble(), EPSILON);
     }
 
@@ -230,5 +225,21 @@ public class LimelightCenterTest {
                 new Position(DistanceUnit.METER, x, y, z, 0),
                 new YawPitchRollAngles(AngleUnit.DEGREES, yaw, pitch, roll, 0)));
         return tag;
+    }
+
+    /** Gera poses de tags a partir de uma abertura conhecida, usando a matriz Rz*Ry*Rx. */
+    private FiducialResult tagForOpening(int id, double x, double y, double z,
+                                         double roll, double pitch, double yaw, double area) {
+        double[] memberX = {-0.1651, -0.06985, 0.06985, 0.1651};
+        double mx = memberX[Math.floorMod(id - 30, 4)], my = 0.18255996, mz = -0.1427988;
+        double cr = Math.cos(Math.toRadians(roll)), sr = Math.sin(Math.toRadians(roll));
+        double cp = Math.cos(Math.toRadians(pitch)), sp = Math.sin(Math.toRadians(pitch));
+        double cy = Math.cos(Math.toRadians(yaw)), sy = Math.sin(Math.toRadians(yaw));
+        double rx = cy * cp * mx + (cy * sp * sr - sy * cr) * my
+                + (cy * sp * cr + sy * sr) * mz;
+        double ry = sy * cp * mx + (sy * sp * sr + cy * cr) * my
+                + (sy * sp * cr - cy * sr) * mz;
+        double rz = -sp * mx + cp * sr * my + cp * cr * mz;
+        return tag(id, x + rx, y + ry, z + rz, roll, pitch, yaw, area);
     }
 }

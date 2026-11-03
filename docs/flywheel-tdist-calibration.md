@@ -1,4 +1,4 @@
-# Calibrar a flywheel com POLLEN e distância 3D ao centro da CELL
+# Calibrar a flywheel com POLLEN e distância 3D até a abertura da CELL
 
 ## Primeiro teste
 
@@ -6,7 +6,7 @@
    aciona o drivetrain; coloque o robô na posição de teste.
 2. Confira a pipeline 8, aliança e CELL mostradas (azul 42–45 inicialmente).
    Clique no stick esquerdo para azul ou direito para vermelho; Y alterna
-   CELL plateia/oposta. Aguarde `Distancia centro filtrada (cm)` válida.
+   CELL plateia/oposta. Aguarde `Distancia abertura filtrada (cm)` válida.
 3. A RPM desejada começa em **2720**, com a flywheel desligada. A liga/desliga;
    B desliga sem perder o ajuste. Ajuste a RPM e o passo pelo D-pad.
 4. Aguarde a `Flywheel RPM medido` se aproximar da RPM desejada e a distância estabilizar
@@ -14,7 +14,7 @@
 5. Faça lançamentos com RT. LB alterna o intake; RB abre o dedinho enquanto
    pressionado. Verifique a repetibilidade com POLLEN.
 6. Quando encontrar um bom ajuste, pressione X. `PAR ANOTADO` congela a
-   distância **3D ao centro da CELL, filtrada em centímetros**, e a **RPM desejada**. Também
+   distância **3D da saída das bolas até a abertura, filtrada em centímetros**, e a **RPM desejada**. Também
    mostra RPM medida, aliança, IDs da CELL e quantidade de amostras na captura.
 7. Anote o par antes de sair. A captura fica apenas nesta execução; X não
    grava arquivo nem modifica o código. Repita em outras posições.
@@ -48,22 +48,29 @@ com pipeline 8, família 36h11, tamanho nominal 82,55 mm, filtros dos 16 IDs,
 e Full3D. **Limelight OS 2026.0 é suficiente**; não é necessário atualizar
 para 2026.1, configurar POIs ou fornecer `tdist` no JSON.
 
-O Java calcula a distância **3D da câmera ao centro do cluster de tags da
-CELL selecionada** a partir de `getTargetPoseCameraSpace()`. Inclui os três
-eixos e os deslocamentos locais entre tags e centro; não é distância
-horizontal nem medida da saída do launcher. Tags de outras CELLS são
-ignoradas. A tabela usa a leitura filtrada convertida para centímetros.
+O Java calcula a distância **3D da saída das bolas até a abertura da CELL
+selecionada** a partir de `getTargetPoseCameraSpace()`, da geometria oficial
+do SDK FTC 12.0.0 e da montagem da câmera. Inclui altura, profundidade e
+deslocamento da lente; a mira usa essa mesma abertura. Tags de outras CELLS
+são ignoradas. A tabela recebe a leitura filtrada convertida para centímetros.
 
-Refaça os pares antigos obtidos por `tdist`/POI, pois a referência física
-mudou. Calibração e modo automático agora usam o mesmo centro calculado em Java,
-sem depender de qual tag a pipeline escolhe como principal. O cálculo é
-exercitado com `LLResult` real do SDK FTC 12.0.0 e JSON sem `tdist`.
+A montagem configurada está centralizada, 12,9 cm acima e 10,691 cm atrás
+da saída das bolas, com pitch aproximado de +50 graus, yaw zero e roll 180.
+Confira o pitch real e o sentido de giro antes de capturar pares. Os valores
+ficam nas constantes `CAMERA_*` e `UPSIDE_DOWN` de `Limelight.java`.
+Não é necessário configurar a montagem, POI ou crosshair no painel.
+
+**Os pares anteriores foram desativados com distância zero em `Flywheel`.**
+Refaça os pares obtidos por `tdist`/POI ou da câmera até o centro do adesivo.
+Até cadastrar os novos, o modo automático usa `BASE_RPM` e indica "Sem pares".
+Calibração e modo automático usam a mesma referência calculada em Java, sem
+depender da tag principal. Veja [a geometria da mira](aim-geometry.md).
 
 ## Aplicar os pares
 
 Edite `subsystems/FlywheelAdvanced/Flywheel.java`:
 
-| Par | Distância ao centro filtrada (cm) | RPM desejada anotada |
+| Par | Distância saída → abertura filtrada (cm) | RPM desejada anotada |
 | --- | --- | --- |
 | 1 | `BASE_DISTANCE_CM` | `BASE_RPM` |
 | 2 | `BASE_DISTANCE_2_CM` | `BASE_RPM_2` |
@@ -74,7 +81,7 @@ par validado, sem duplicar distâncias. A tabela aceita qualquer ordem e copia
 os valores na inicialização. Para mais pontos, adicione pares em
 `Flywheel.createRpmTable()` e gere o programa novamente.
 
-- Sem pares: usa `BASE_RPM` (2720 inicialmente).
+- Sem pares: usa `BASE_RPM` (2670 atualmente).
 - Um par: mantém a RPM desse par; não existe curva medida ainda.
 - Dois ou mais: interpola entre os pontos vizinhos.
 - Fora da faixa: limita ao extremo e sinaliza que a posição não foi calibrada.

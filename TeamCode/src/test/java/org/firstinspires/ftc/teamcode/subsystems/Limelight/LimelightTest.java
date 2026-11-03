@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.subsystems.Limelight;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes.FiducialResult;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
+import com.qualcomm.robotcore.hardware.HardwareMap;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -118,7 +119,8 @@ public class LimelightTest {
         assertTrue(limelight.getObservation().hasTarget());
         assertEquals(0, limelight.getObservation().getTxDegrees(), 1e-9);
         json = json(2, 3, 43);
-        json.getJSONArray("Fiducial").getJSONObject(0).put("t6t_cs", new JSONArray(new double[] {0.3 - 0.06985, 0, 2, 0, 0, 0}));
+        json.getJSONArray("Fiducial").getJSONObject(0).put("t6t_cs", new JSONArray(new double[] {
+                0.3 - 0.06985, 0.18255996, 2 - 0.1427988, 0, 0, 0}));
         frame(json);
         Limelight inverted = new Limelight(camera, null, true, 8, clock::get);
         inverted.run(false, false, false, false);
@@ -133,6 +135,38 @@ public class LimelightTest {
         limelight.run(false, true, false, false);
         assertTrue(limelight.getObservation().hasTarget());
         assertEquals(2, limelight.getDistanceMeters().getAsDouble(), 1e-9);
+    }
+
+    @Test public void realSdkJsonAndConfirmedCameraMountAimAndMeasureFromTheBallExit() throws Exception {
+        // Abertura no referencial da saida: (0.3, -0.6, 2) m.
+        // Lente 12.9 cm acima, 10.691 cm atras; pitch +50 graus e roll 180.
+        // Pose bruta da tag 42, com a geometria oficial da abertura aplicada ao inverso.
+        JSONObject json = json(1, 2, 42);
+        json.getJSONArray("Fiducial").getJSONObject(0).put("t6t_cs", new JSONArray(new double[] {
+                -0.1349, -1.493793693489446, 1.5723037754337053, 0, 0, 180}));
+        frame(json);
+        HardwareMap hardwareMap = mock(HardwareMap.class);
+        when(hardwareMap.tryGet(Limelight3A.class, Limelight.DEVICE_NAME)).thenReturn(camera);
+        Limelight configured = new Limelight(hardwareMap, null);
+
+        configured.run(false, false, false, false);
+
+        assertTrue(configured.getObservation().hasTarget());
+        assertEquals(8.530765609948133, configured.getObservation().getTxDegrees(), 1e-9);
+        assertEquals(2.1095023109728985, configured.getRawDistanceMeters().getAsDouble(), 1e-9);
+        assertEquals(2.1095023109728985, configured.getDistanceMeters().getAsDouble(), 1e-9);
+        assertEquals("Pose 3D (saida das bolas -> abertura da CELL)", configured.getDistanceStatus());
+    }
+
+    @Test public void targetBehindLauncherCannotSupplyAimOrDistance() throws Exception {
+        frame(json(1, 2, 42));
+        Limelight backwards = new Limelight(camera, null,
+                new AimGeometry(0, 0, 0, 0, 180, 0), 8, clock::get);
+
+        backwards.run(false, false, false, false);
+
+        assertFalse(backwards.getObservation().hasTarget());
+        assertFalse(backwards.getDistanceMeters().isPresent());
     }
 
     @Test public void os2026FramesWithoutTdistSupplyDistanceFromTheCellCenter() throws Exception {
@@ -213,7 +247,7 @@ public class LimelightTest {
         frame(json(1, 2, 42));
         limelight.run(false, false, false, false);
         limelight.sendTelemetry();
-        verify(telemetry).addData("Distancia centro filtrada (cm)", "%.3f", 200.0);
+        verify(telemetry).addData("Distancia abertura filtrada (cm)", "%.3f", 200.0);
         limelight.stop();
         verify(camera).stop();
         assertUnavailable();
@@ -243,7 +277,9 @@ public class LimelightTest {
         JSONArray tags = new JSONArray();
         double[] offsets = {0.1651, 0.06985, -0.06985, -0.1651};
         for (int id : ids) tags.put(new JSONObject().put("fID", id).put("ta", 1)
-                .put("t6t_cs", new JSONArray(new double[] {-offsets[Math.floorMod(id - 30, 4)], 0, distance, 0, 0, 0})));
+                .put("t6t_cs", new JSONArray(new double[] {
+                        -offsets[Math.floorMod(id - 30, 4)], 0.18255996,
+                        distance - 0.1427988, 0, 0, 0})));
         return new JSONObject().put("v", 1).put("pID", 8).put("ts", timestamp)
                 .put("Fiducial", tags);
     }

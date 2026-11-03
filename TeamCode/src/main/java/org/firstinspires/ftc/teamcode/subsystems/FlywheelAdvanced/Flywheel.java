@@ -22,11 +22,13 @@ public class Flywheel {
     public static final double KP = 0.00169;
     public static final double MAX_RPM = 6000;
     public static final double BASE_RPM = 2670;
-    public static final double BASE_DISTANCE_CM = 177;
+    // Nova referencia: saida das bolas -> abertura. Zero invalida os pares do adesivo.
+    // Preencher com as leituras do Flywheel Calibration - 3D apos recalibrar.
+    public static final double BASE_DISTANCE_CM = 0;
     public static final double BASE_RPM_2 = 2670;
-    public static final double BASE_DISTANCE_2_CM = 165.5;
+    public static final double BASE_DISTANCE_2_CM = 0;
     public static final double BASE_RPM_3 = 2685;
-    public static final double BASE_DISTANCE_3_CM = 190;
+    public static final double BASE_DISTANCE_3_CM = 0;
     public static final long SETPOINT_UPDATE_MS = 100;
     public static final double SETPOINT_DEADBAND_RPM = 10;
 
@@ -151,7 +153,7 @@ public class Flywheel {
         setMotorPower(power);
     }
 
-    /** Pares {distancia 3D ao centro da CELL em cm, RPM}; zero desativa o par. */
+    /** Pares {distancia 3D da saida ate a abertura em cm, RPM}; zero desativa o par. */
     private static FlywheelRpmTable createRpmTable() {
         return new FlywheelRpmTable(BASE_RPM, MAX_RPM, new double[][] {
                 {BASE_DISTANCE_CM, BASE_RPM},

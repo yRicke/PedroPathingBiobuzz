@@ -40,8 +40,9 @@ mira original. Ao soltar o bumper, o giro volta ao piloto e o hold automatico
 volta a atuar com os sticks neutros. Se alvo e robo coincidirem, o giro fica
 manual. Pressionar esquerda e direita juntos preserva a selecao anterior.
 
-A mira funciona sem a Limelight; o calculo de RPM por distancia ainda usa
-a camera, como no `TeleOpMain`. Os seletores de alianca e CELL da camera
+A mira por coordenadas funciona sem a Limelight; o calculo de RPM ainda usa
+a distancia 3D da saida das bolas ate a abertura medida pela camera, como no
+`TeleOpMain`. Essa referencia exige novos pares distancia/RPM. Os seletores de alianca e CELL da camera
 continuam afetando essa distancia. Confira a correspondencia entre a CELL
 selecionada e o hive fisico ao testar os disparos.
 

@@ -18,11 +18,18 @@ import java.util.OptionalDouble;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 
-/** Publica heading e distancia 3D do centro da CELL, com validacao de frames. */
+/** Publica mira e distancia 3D da saida das bolas ate a abertura da CELL. */
 public class Limelight {
     public static final String DEVICE_NAME = "limelight";
     public static final int PIPELINE_INDEX = 8;
     public static final boolean UPSIDE_DOWN = true;
+    // Medidas do CAD e montagem confirmadas em 02/11/2026; pitch aproximado.
+    // Direita, acima e a frente positivos; pitch acima da horizontal e yaw a direita.
+    public static final double CAMERA_RIGHT_CM = 0;
+    public static final double CAMERA_ABOVE_CM = 12.9;
+    public static final double CAMERA_FORWARD_CM = -10.691;
+    public static final double CAMERA_PITCH_UP_DEGREES = 50;
+    public static final double CAMERA_YAW_RIGHT_DEGREES = 0;
     public static final int POLL_RATE_HZ = 100;
     public static final long MAX_FRAME_AGE_MS = 150;
     public static final long DISTANCE_WINDOW_MS = 1000;
@@ -34,20 +41,15 @@ public class Limelight {
     public static final int BLUE_OPPOSITE_FIRST_TAG = 42;
     public static final int TAGS_PER_HIVE = 4;
 
-    // Deslocamento local ate o centro do cluster da CELL (nao a abertura).
-    // IDs crescentes da esquerda para a direita olhando de frente o adesivo:
-    // centros a -6.5, -2.75, +2.75, +6.5 pol. Nao espelhar por alianca;
-    // a pose 3D ja considera a orientacao da CELL, inclusive sua inclinacao.
-    private static final double[] TAG_TO_CENTER_METERS = {0.1651, 0.06985, -0.06985, -0.1651};
     private static final long WINDOW_NANOS = TimeUnit.MILLISECONDS.toNanos(DISTANCE_WINDOW_MS);
     private static final long SAMPLE_INTERVAL_NANOS = WINDOW_NANOS / DISTANCE_MAX_SAMPLES;
 
     private final Limelight3A camera;
     private final Telemetry telemetry;
-    private final boolean upsideDown;
+    private final AimGeometry geometry;
     private final int pipelineIndex;
     private final LongSupplier nanoClock;
-    // Janela circular da distancia ao centro; so muda com novas amostras.
+    // Janela circular da distancia a abertura; so muda com novas amostras.
     private final double[] distanceSamples;
     private final long[] distanceSampleTimes;
     private int distanceHead;
@@ -70,10 +72,18 @@ public class Limelight {
 
     public Limelight(HardwareMap hardwareMap, Telemetry telemetry) {
         this(hardwareMap.tryGet(Limelight3A.class, DEVICE_NAME), telemetry,
-                UPSIDE_DOWN, PIPELINE_INDEX, System::nanoTime);
+                new AimGeometry(CAMERA_RIGHT_CM, CAMERA_ABOVE_CM, CAMERA_FORWARD_CM,
+                        CAMERA_PITCH_UP_DEGREES, CAMERA_YAW_RIGHT_DEGREES,
+                        UPSIDE_DOWN ? 180 : 0), PIPELINE_INDEX, System::nanoTime);
     }
 
     Limelight(Limelight3A camera, Telemetry telemetry, boolean upsideDown,
+              int pipelineIndex, LongSupplier nanoClock) {
+        this(camera, telemetry, new AimGeometry(0, 0, 0, 0, 0, upsideDown ? 180 : 0),
+                pipelineIndex, nanoClock);
+    }
+
+    Limelight(Limelight3A camera, Telemetry telemetry, AimGeometry geometry,
               int pipelineIndex, LongSupplier nanoClock) {
         if (DISTANCE_MAX_SAMPLES <= 0 || WINDOW_NANOS < DISTANCE_MAX_SAMPLES) {
             throw new IllegalArgumentException("Janela de distancia invalida");
@@ -82,7 +92,7 @@ public class Limelight {
         distanceSampleTimes = new long[DISTANCE_MAX_SAMPLES];
         this.camera = camera;
         this.telemetry = telemetry;
-        this.upsideDown = upsideDown;
+        this.geometry = geometry;
         this.pipelineIndex = pipelineIndex;
         this.nanoClock = nanoClock;
         if (camera != null) {
@@ -148,14 +158,14 @@ public class Limelight {
         distanceStatus = "Sem alvo valido";
         if (!result.isValid()) return;
         List<FiducialResult> tags = result.getFiducialResults();
-        CellCenter center = estimateCenter(tags);
-        if (center != null) {
-            double tx = Math.toDegrees(Math.atan2(center.x, center.z));
+        Opening opening = estimateOpening(tags);
+        if (opening != null) {
+            double tx = Math.toDegrees(Math.atan2(opening.position.x, opening.position.z));
             observation = AprilTagObservation.detected(selectedFirstTagId,
-                    upsideDown ? -tx : tx, center.tagsUsed, timestamp);
-            rawDistanceMeters = OptionalDouble.of(center.distanceMeters);
-            status = "Centro do hive estimado";
-            distanceStatus = "Pose 3D (camera -> centro da CELL)";
+                    tx, opening.tagsUsed, timestamp);
+            rawDistanceMeters = OptionalDouble.of(opening.position.distance());
+            status = "Abertura da CELL estimada";
+            distanceStatus = "Pose 3D (saida das bolas -> abertura da CELL)";
         } else if (tags != null) {
             for (FiducialResult tag : tags) {
                 if (tag != null && containsTag(selectedFirstTagId, tag.getFiducialId())) {
@@ -168,7 +178,7 @@ public class Limelight {
         }
     }
 
-    private CellCenter estimateCenter(List<FiducialResult> tags) {
+    private Opening estimateOpening(List<FiducialResult> tags) {
         int firstTagId = selectedFirstTagId;
         if (tags == null || !isHive(firstTagId)) {
             return null;
@@ -182,7 +192,7 @@ public class Limelight {
         for (FiducialResult tag : tags) {
             if (tag == null) continue;
             int index = tag.getFiducialId() - firstTagId;
-            if (index < 0 || index >= TAG_TO_CENTER_METERS.length) continue;
+            if (index < 0 || index >= TAGS_PER_HIVE) continue;
 
             Pose3D pose = tag.getTargetPoseCameraSpace();
             if (pose == null || pose.getPosition() == null || pose.getOrientation() == null
@@ -197,43 +207,35 @@ public class Limelight {
                     || !Double.isFinite(yaw) || !Double.isFinite(pitch)
                     || !Double.isFinite(roll)) continue;
 
-            // Limelight: X direita, Y baixo, Z frente. Rz(yaw)*Ry(pitch)*Rx(roll)
-            // transforma o deslocamento local (d, 0, 0) para o espaco da camera.
-            double offset = TAG_TO_CENTER_METERS[index];
-            double x = position.x + offset * Math.cos(pitch) * Math.cos(yaw);
-            double y = position.y + offset * Math.cos(pitch) * Math.sin(yaw);
-            double z = position.z - offset * Math.sin(pitch);
-            if (!Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(z) || z <= 0) {
+            AimGeometry.Point opening = AimGeometry.openingFromTag(index,
+                    position.x, position.y, position.z, roll, pitch, yaw);
+            if (!opening.isFinite() || opening.z <= 0) {
                 continue;
             }
             double area = tag.getTargetArea();
             double weight = Double.isFinite(area) && area > 0 ? Math.min(area, 100) : 1;
-            sumX += x * weight;
-            sumY += y * weight;
-            sumZ += z * weight;
+            sumX += opening.x * weight;
+            sumY += opening.y * weight;
+            sumZ += opening.z * weight;
             totalWeight += weight;
             tagsUsed++;
         }
 
         if (tagsUsed == 0) return null;
-        double x = sumX / totalWeight;
-        double y = sumY / totalWeight;
-        double z = sumZ / totalWeight;
-        double distance = Math.hypot(Math.hypot(x, y), z);
-        if (!Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(z)
-                || !Double.isFinite(distance) || distance <= 0) return null;
-        return new CellCenter(x, z, distance, tagsUsed);
+        AimGeometry.Point opening = geometry.fromCamera(new AimGeometry.Point(
+                sumX / totalWeight, sumY / totalWeight, sumZ / totalWeight));
+        if (!opening.isFinite() || opening.z <= 0
+                || !Double.isFinite(opening.distance())) return null;
+        return new Opening(opening, tagsUsed);
     }
 
-    /** A mira e a distancia usam a mesma estimativa do centro, inclusive sem tdist. */
-    private static final class CellCenter {
-        final double x, z, distanceMeters;
+    /** Mira e distancia usam a mesma abertura no referencial da saida das bolas. */
+    private static final class Opening {
+        final AimGeometry.Point position;
         final int tagsUsed;
 
-        CellCenter(double x, double z, double distanceMeters, int tagsUsed) {
-            this.x = x;
-            this.z = z;
-            this.distanceMeters = distanceMeters;
+        Opening(AimGeometry.Point position, int tagsUsed) {
+            this.position = position;
             this.tagsUsed = tagsUsed;
         }
     }
@@ -312,7 +314,7 @@ public class Limelight {
 
     public boolean isRedAlliance() { return redAlliance; }
     public AprilTagObservation getObservation() { return observation; }
-    /** Distancia 3D filtrada da camera ao centro do cluster da CELL, em metros. */
+    /** Distancia 3D filtrada da saida das bolas ate a abertura da CELL, em metros. */
     public OptionalDouble getDistanceMeters() { return distanceMeters; }
     public OptionalDouble getRawDistanceMeters() { return rawDistanceMeters; }
     public int getDistanceSampleCount() { return distanceCount; }
@@ -326,23 +328,23 @@ public class Limelight {
         telemetry.addData("CELL selecionada", audienceCell ? "Lado da plateia" : "Oposta a plateia");
         telemetry.addData("Hive selecionado", "%d-%d", selectedFirstTagId,
                 selectedFirstTagId + TAGS_PER_HIVE - 1);
-        telemetry.addData("Tags usadas no centro", observation.getTagsUsed());
+        telemetry.addData("Tags usadas na abertura", observation.getTagsUsed());
         if (observation.hasTarget()) {
-            telemetry.addData("Centro hive erro horizontal (deg)", observation.getTxDegrees());
+            telemetry.addData("Abertura erro horizontal (deg)", observation.getTxDegrees());
         } else {
-            telemetry.addData("Centro hive erro horizontal (deg)", "Indisponivel");
+            telemetry.addData("Abertura erro horizontal (deg)", "Indisponivel");
         }
-        telemetry.addData("Distancia centro status", distanceStatus);
-        telemetry.addData("Distancia centro amostras", distanceCount);
+        telemetry.addData("Distancia abertura status", distanceStatus);
+        telemetry.addData("Distancia abertura amostras", distanceCount);
         if (rawDistanceMeters.isPresent()) {
-            telemetry.addData("Distancia centro instantanea (cm)", "%.3f", rawDistanceMeters.getAsDouble() * 100);
+            telemetry.addData("Distancia abertura instantanea (cm)", "%.3f", rawDistanceMeters.getAsDouble() * 100);
         } else {
-            telemetry.addData("Distancia centro instantanea (cm)", "Indisponivel");
+            telemetry.addData("Distancia abertura instantanea (cm)", "Indisponivel");
         }
         if (distanceMeters.isPresent()) {
-            telemetry.addData("Distancia centro filtrada (cm)", "%.3f", distanceMeters.getAsDouble() * 100);
+            telemetry.addData("Distancia abertura filtrada (cm)", "%.3f", distanceMeters.getAsDouble() * 100);
         } else {
-            telemetry.addData("Distancia centro filtrada (cm)", "Indisponivel");
+            telemetry.addData("Distancia abertura filtrada (cm)", "Indisponivel");
         }
     }
 

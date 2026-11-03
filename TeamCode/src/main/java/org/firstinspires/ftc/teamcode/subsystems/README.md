@@ -14,6 +14,41 @@ O TeleOp coordena entradas e chamadas dos subsistemas.
 | `Transfer/` | Alimentação dos elementos |
 | `Trigger/` | Abertura do disparo |
 | `DedinhoNervoso/` | Retenção/liberação pelo servo |
+| `FlowerCollect/` | Dois servos espelhados, posições independentes e TeleOp de ajuste |
+
+## Flower Collect
+
+O `FlowerCollect` usa os servos posicionais `flowerCollect1` e `flowerCollect2`,
+em portas separadas. O primeiro usa `FORWARD` e o segundo `REVERSE`. As posições
+lógicas são independentes e limitadas entre 0 e 1; a inversão do segundo já é
+aplicada pelo SDK. As quatro constantes no início de `FlowerCollect.java`
+definem aberto/fechado para cada servo: aberto começa em 0 e fechado em 1,
+provisoriamente. `run(true)` fecha, `run(false)` abre. `setPositions(...)` ou
+os métodos `setServoOnePosition(...)` e `setServoTwoPosition(...)` permitem
+ajustes independentes. Ainda não está integrado ao `TeleOpMain`.
+
+Selecione **Flower Collect Tuner**, grupo **FlowerCollect**, na Driver Station.
+No controle 1, **A** seleciona o servo 1 e **B** seleciona o servo 2. D-pad
+cima/baixo aumenta/diminui somente a posição selecionada; esquerda/direita
+diminui/aumenta o passo entre **0.001, 0.01 e 0.1**. Começa com servo 1 e passo
+0.001. Cada toque faz um ajuste; segurar não repete. A seleção mantém a posição
+do outro servo. A telemetria mostra o servo selecionado, o passo e as duas
+posições comandadas (não são medições físicas). Anote os valores e copie cada
+um para sua constante correspondente; o tuner não salva a calibração.
+
+O goBILDA **2000-0025-0502** precisa estar no modo de posição, que é o padrão
+de fábrica. No Servo Programmer, selecione a chave **S** e pressione **P**;
+os LEDs piscam ao confirmar. O modo de rotação contínua controla velocidade e
+não serve para este tuner. Consulte a [ficha do servo](https://www.gobilda.com/2000-series-5-turn-dual-mode-servo-25-2-torque/)
+e as [instruções do programador](https://www.gobilda.com/servo-programmer-for-2000-series-dual-mode-servo/).
+
+Esse modelo pode percorrer até cinco voltas (1800°), dependendo da faixa PWM
+do controlador. O código mantém a faixa PWM padrão do SDK. **Antes do primeiro
+INIT, desacople os braços do mecanismo:** a inicialização comanda ambos para
+0 lógico, com sentidos opostos. Só depois alinhe os braços na abertura
+desejada, sem forçar batentes. Ajuste um lado por vez com passo 0.001. A posição
+fechada 1 é provisória e pode estar várias voltas distante; encontre o valor
+de cada lado antes de usar `setClosed()` no mecanismo montado.
 
 ## TeleOp principal
 

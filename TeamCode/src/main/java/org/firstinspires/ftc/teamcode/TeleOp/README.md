@@ -76,7 +76,7 @@ precisam ser recalibrados nessa referencia; sem pares ou leitura, usa BASE_RPM.
 
 ## Pose do autonomo
 
-AutonomousSouthOutside, AutoPath e ExampleAuto salvam a ultima pose medida
+AutonomousSouthOutside, AutonomousSouthOutsideV2, AutoPath e ExampleAuto salvam a ultima pose medida
 no Stop, inclusive em paths interrompidos. Um autonomo cancelado antes
 do Play nao publica pose. O TeleOpMain consome a pose uma unica vez no INIT;
 sem ela, usa INITIAL_POSE. A telemetria informa a origem e acompanha movimentos

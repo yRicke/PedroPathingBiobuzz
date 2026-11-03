@@ -37,6 +37,8 @@ public class PedroDrive {
     private double aimTargetY;
     private int aimFirstTagId;
     private double lastAimFrameTimestamp = Double.NaN;
+    private double lastVisionErrorDegrees = Double.NaN;
+    private Pose aimHoldPosition;
     private String aimStatus = "Manual";
     private boolean hybridActive;
     private boolean hybridVisionLocked;
@@ -66,6 +68,10 @@ public class PedroDrive {
     }
 
     private void runManualDrive(double axial, double lateral, double yaw, boolean precisionMode) {
+        if (aimHoldPosition != null) {
+            holdAim(aimHoldPosition.heading());
+            return;
+        }
         double multiplier = precisionMode ? PRECISION_MULTIPLIER : 1.0;
 
         // Pedro usa lateral para a esquerda e giro anti-horario positivos.
@@ -99,6 +105,7 @@ public class PedroDrive {
         aimSource = AimSource.LIMELIGHT;
         aimFirstTagId = observation.getFirstTagId();
         double error = observation.getTxDegrees();
+        lastVisionErrorDegrees = error;
         boolean aligned = Math.abs(error) <= AIM_TOLERANCE_DEGREES;
         if (observation.getFrameTimestamp() != lastAimFrameTimestamp) {
             double correction = aligned ? 0 : Math.max(-MAX_AIM_CORRECTION_DEGREES,
@@ -148,6 +155,20 @@ public class PedroDrive {
     public void aimHybrid(double axial, double lateral, double yaw, boolean precisionMode,
                           double targetX, double targetY, int firstTagId,
                           AprilTagObservation observation) {
+        aimHoldPosition = null;
+        runHybridAim(axial, lateral, yaw, precisionMode, targetX, targetY, firstTagId, observation);
+    }
+
+    /** Mesma mira hibrida do TeleOp, preservando X/Y em hold para o autonomo. */
+    public void aimHybridHold(Pose position, double targetX, double targetY, int firstTagId,
+                              AprilTagObservation observation) {
+        aimHoldPosition = position;
+        runHybridAim(0, 0, 0, false, targetX, targetY, firstTagId, observation);
+    }
+
+    private void runHybridAim(double axial, double lateral, double yaw, boolean precisionMode,
+                              double targetX, double targetY, int firstTagId,
+                              AprilTagObservation observation) {
         if (!hybridActive || hybridFirstTagId != firstTagId
                 || Double.compare(hybridTargetX, targetX) != 0
                 || Double.compare(hybridTargetY, targetY) != 0) {
@@ -205,6 +226,10 @@ public class PedroDrive {
     }
 
     private void runAim(double axial, double lateral, boolean precisionMode) {
+        if (aimHoldPosition != null) {
+            holdAim(aimHeading);
+            return;
+        }
         double multiplier = precisionMode ? PRECISION_MULTIPLIER : 1.0;
         DrivePowers translation = ManualDrive.fieldCentric(
                 axial * multiplier, -lateral * multiplier, 0, fieldCentricHeading());
@@ -216,7 +241,25 @@ public class PedroDrive {
         follower.update();
     }
 
+    private void holdAim(double heading) {
+        Pose target = new Pose(aimHoldPosition.x(), aimHoldPosition.y(), heading);
+        Pose held = follower.holding() ? follower.poseAt(0) : null;
+        if (held == null || Math.hypot(held.x() - target.x(), held.y() - target.y()) > 1e-9
+                || Math.abs(Angle.normalizeSigned(held.heading() - heading)) > 1e-9) {
+            follower.hold(target);
+        }
+        follower.update();
+    }
+
+    public boolean isHybridVisionAligned() {
+        return hybridVisionLocked && !hybridVisionMissing && aimSource == AimSource.LIMELIGHT
+                && Math.abs(lastVisionErrorDegrees) <= AIM_TOLERANCE_DEGREES
+                && Math.abs(Angle.normalizeSigned(aimHeading - follower.pose().heading()))
+                <= Math.toRadians(AIM_TOLERANCE_DEGREES);
+    }
+
     private void clearAim() {
+        aimHoldPosition = null;
         clearHeadingAim();
         clearHybridAim();
     }
@@ -227,6 +270,7 @@ public class PedroDrive {
         }
         aimSource = AimSource.NONE;
         lastAimFrameTimestamp = Double.NaN;
+        lastVisionErrorDegrees = Double.NaN;
     }
 
     private void clearHybridAim() {

@@ -124,7 +124,7 @@ public class TeleOpMain extends LinearOpMode {
     }
 
     /** A CELL selecionada determina tanto as tags quanto a coordenada de busca. */
-    static Pose targetForCell(int firstTagId) {
+    public static Pose targetForCell(int firstTagId) {
         switch (firstTagId) {
             case Limelight.BLUE_AUDIENCE_FIRST_TAG:
             case Limelight.RED_AUDIENCE_FIRST_TAG:

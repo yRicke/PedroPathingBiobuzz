@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
@@ -611,6 +612,68 @@ public class PedroDriveTest {
                 assertPowers(0.4, -0.2, i < 3 ? -0.5 : Math.toRadians(-3));
             }
         }
+    }
+
+    @Test
+    public void hybridHoldKeepsEndpointXYWhileBothAimSourcesAdjustHeading() {
+        Pose endpoint = new Pose(10, 20, 0);
+        localizer.setPose(endpoint);
+        for (int i = 1; i <= 3; i++) {
+            drive.aimHybridHold(endpoint, 10, 30, 42,
+                    AprilTagObservation.detected(42, 6, 1, i));
+            assertHoldAt(10, 20, Math.toRadians(i < 3 ? 8 : -6));
+        }
+
+        localizer.setPose(new Pose(11, 19, Math.toRadians(1)));
+        drive.aimHybridHold(endpoint, 10, 30, 42,
+                AprilTagObservation.detected(42, 3, 1, 4));
+        assertHoldAt(10, 20, Math.toRadians(-2));
+    }
+
+    @Test
+    public void hybridAlignmentRequiresConfirmedVisionAndIsClearedDuringLossOrRelease() {
+        Pose endpoint = Pose.zero();
+        for (int i = 1; i <= 3; i++) {
+            drive.aimHybridHold(endpoint, 10, 0, 42,
+                    AprilTagObservation.detected(42, 0.5, 1, i));
+            assertEquals(i == 3, drive.isHybridVisionAligned());
+        }
+        drive.aimHybridHold(endpoint, 10, 0, 42,
+                AprilTagObservation.detected(42, 6, 1, 4));
+        assertFalse(drive.isHybridVisionAligned());
+        drive.aimHybridHold(endpoint, 10, 0, 42,
+                AprilTagObservation.detected(42, 0, 1, 5));
+        assertTrue(drive.isHybridVisionAligned());
+
+        drive.aimHybridHold(endpoint, 10, 0, 42, AprilTagObservation.unavailable(42));
+        assertFalse(drive.isHybridVisionAligned());
+        assertTrue(follower.holding());
+
+        drive.aimHybridHold(endpoint, 10, 0, 42,
+                AprilTagObservation.detected(42, 0, 1, 6));
+        assertTrue(drive.isHybridVisionAligned());
+        drive.run(0, 0, 0, false);
+        assertFalse(drive.isHybridVisionAligned());
+    }
+
+    @Test
+    public void teleOpHybridRestoresFreeTranslationAfterAnAutonomousAimHold() {
+        drive.aimHybridHold(Pose.zero(), 10, 10, 42, AprilTagObservation.unavailable(42));
+        assertTrue(follower.holding());
+
+        drive.aimHybrid(0.6, 0.4, 0.8, false, 10, 10, 42, AprilTagObservation.unavailable(42));
+
+        assertTrue(follower.manual());
+        assertPowers(0.6, -0.4, Math.toRadians(8));
+    }
+
+    @Test
+    public void hybridHoldWithInvalidCoordinatesStillHoldsTheKnownEndpoint() {
+        Pose endpoint = new Pose(10, 20, 0.6);
+        drive.aimHybridHold(endpoint, Double.NaN, 0, 42, AprilTagObservation.unavailable(42));
+
+        assertHoldAt(10, 20, 0.6);
+        assertFalse(drive.isHybridVisionAligned());
     }
 
     private void hybrid(AprilTagObservation observation) {

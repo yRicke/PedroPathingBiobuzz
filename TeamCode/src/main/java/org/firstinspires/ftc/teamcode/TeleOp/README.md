@@ -1,7 +1,7 @@
 # TeleOpMain
 
 TeleOp principal unico: drive do Pedro com field-centric, precisao e hold
-automatico, localizacao recebida do autonomo e mira hibrida Pedro/Limelight.
+automatico, localizacao recebida do autonomo e mira somente pela Limelight.
 O antigo TeleOpMainPedro foi incorporado ao TeleOpMain e removido da lista de OpModes.
 O modo Flywheel Calibration - 3D continua separado para calibracao manual de RPM.
 
@@ -12,18 +12,13 @@ em radianos, positivo anti-horario. INITIAL_POSE e RESET_POSE comecam em
 (8.4, 35.2, 0 graus). O heading precisa corresponder a orientacao fisica
 adotada como zero no referencial utilizado para a alianca atual.
 
-RIGHT_HIVE = (57.8, 50) e LEFT_HIVE = (57.8, 90) sao coordenadas de busca
-aproximada. Conforme a montagem de campo informada, os mesmos numeros sao
-usados nas duas aliancas: mudar azul/vermelho altera os IDs das tags.
-O inicio, o reset e os caminhos do autonomo devem usar esse mesmo referencial.
+A mira recebe somente a observacao da Limelight. Nao ha coordenadas de HIVE
+nem busca automatica baseada em X/Y. A selecao da CELL escolhe os IDs:
 
-A selecao da CELL determina tambem a coordenada de busca, sem uma segunda
-selecao independente de hive:
-
-| CELL | Coordenada Pedro | Azul | Vermelha |
-| --- | --- | --- | --- |
-| Esquerda / plateia | (57.8, 90) | 38-41 | 34-37 |
-| Direita / oposta | (57.8, 50) | 42-45 | 30-33 |
+| CELL | Azul | Vermelha |
+| --- | --- | --- |
+| Esquerda / plateia | 38-41 | 34-37 |
+| Direita / oposta | 42-45 | 30-33 |
 
 Inicial: azul, direita/oposta. Comandos opostos simultaneos no D-pad
 preservam a selecao daquele eixo.
@@ -33,8 +28,8 @@ preservam a selecao daquele eixo.
 | Controle | Acao |
 | --- | --- |
 | Gamepad 1, stick esquerdo | Translacao field-centric, inclusive durante a mira |
-| Gamepad 1, stick direito | Giro manual fora da mira |
-| Gamepad 1, RB segurado | Mira hibrida: Pedro procura; Limelight ajusta |
+| Gamepad 1, stick direito | Giro manual fora da mira ou sem alvo confirmado |
+| Gamepad 1, RB segurado | Mira pela Limelight, com translacao livre |
 | Gamepad 1, LT | Precisao |
 | Gamepad 1, RT | Aciona transfer e trigger enquanto pressionado |
 | Gamepad 1, A | Alterna intake |
@@ -47,31 +42,35 @@ preservam a selecao daquele eixo.
 X e Y atuam uma vez por pressionamento; X tem prioridade. Use X quando o
 robo estiver fisicamente na pose conhecida. O hold e a mira anteriores sao
 cancelados para impedir uma tentativa de voltar a outra coordenada. Y altera
-somente a pilotagem; as coordenadas e o heading da mira continuam no referencial do Pedro.
+somente a referencia dos sticks. A mira continua usando o erro visual da CELL.
 
-## Mira hibrida
+## Mira Limelight
 
-Enquanto RB estiver pressionado, o Pedro calcula o rumo para a coordenada
-de busca da CELL selecionada. Depois de **tres frames novos consecutivos**
-com alvo valido da mesma CELL, a Limelight assume o ajuste fino de heading.
+Enquanto RB estiver pressionado, **tres frames novos consecutivos** com alvo
+valido da mesma CELL confirmam o ajuste visual de heading.
 Um frame repetido nao conta novamente. A Limelight ja rejeita imagens
 antigas, congeladas, de pipeline incorreta e sem pose 3D valida.
 
-Uma perda breve conserva o ultimo heading global por ate **100 ms**,
-mantendo a translacao livre. Persistindo a perda, volta a procurar pelas
-coordenadas. A nova aquisicao exige tres frames. Se a visao retornar antes
-desse prazo, retoma o ajuste fino diretamente. Trocar a CELL, alianca ou
-coordenada cancela a confirmacao anterior; imagens de outro alvo sao ignoradas.
-Reinicio do timestamp da camera tambem exige nova confirmacao.
+Sem alvo ou sem confirmacao, o giro volta imediatamente ao stick direito.
+Com sticks neutros, o drive conserva a pose atual. A nova aquisicao exige
+tres frames. Trocar CELL/alianca, soltar RB, relocalizar ou reiniciar o
+timestamp da camera cancela a confirmacao anterior.
 
-A telemetria Mira informa Pedro, confirmacao de visao, Limelight ou
-manutencao breve de heading. O limite de correcao continua em 8 graus, com
+A telemetria Mira informa confirmacao, Limelight ou giro manual. O limite
+de correcao continua em 8 graus, com
 tolerancia de alinhamento de 1 grau e escala de precisao. O erro visual usa
 o heading da captura para compensar o atraso da imagem. O giro recebe
 amortecimento pela velocidade medida e potencia maxima de 0,35; alinhamento
 exige tambem giro de no maximo 10 graus/s. Esses parametros ficam nas
 constantes `AIM_*` de `PedroDrive`. A mira controla
 somente o giro; o hold de X/Y volta quando RB e solto e os sticks estao neutros.
+
+A referencia visual e filtrada uma vez por imagem nova, com ganho 0,25 e
+passo maximo de 1 grau. Ao entrar na faixa central de 1 grau com giro baixo,
+pequenas variacoes deixam de virar comandos alternados. A correcao retoma
+ao atingir 1,5 grau; giro real rapido ainda recebe frenagem. Os parametros
+ficam em `Drive/VisionHeadingTarget.java`. A telemetria mostra o erro bruto,
+o filtrado e a potencia de giro comandada.
 
 O disparo continua sendo comandado pelo piloto no RT. A selecao da CELL
 adequada e manual. A RPM usa a distancia 3D da saida das bolas ate a abertura

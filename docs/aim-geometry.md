@@ -97,8 +97,9 @@ combinar essas posicoes, `Limelight` procura o maior grupo que concorda em
 ate **12 cm** (`MAX_OPENING_DISAGREEMENT_METERS`). Conta IDs distintos;
 somente depois aplica os pesos pela area dentro do grupo. Uma tag grande
 com pose 3D ruim nao pode arrastar tres estimativas consistentes. Sem maioria
-entre varias tags, a leitura fica indisponivel e a mira hibrida aplica sua
-regra de perda de visao. Uma unica tag valida continua utilizavel.
+entre varias tags, a leitura fica indisponivel. O TeleOp devolve o giro ao
+piloto; o autonomo conserva o hold e suspende a alimentacao. Uma unica tag
+valida continua utilizavel. Nao existe busca pelas coordenadas da HIVE.
 
 O erro visual pertence ao instante da captura. `AprilTagObservation` agora
 informa a idade na primeira leitura: captura + processamento + parsing +
@@ -126,6 +127,14 @@ A tolerancia angular continua em 1 grau; a correcao comandada continua limitada
 a 8 graus e a precisao escala tambem o giro. No autonomo em hold, X/Y e a
 frenagem continuam sob o Foresight do Pedro; a referencia visual recebe a
 mesma compensacao de latencia e verificacao de velocidade para alinhamento.
+
+No RB do TeleOp, `VisionHeadingTarget` filtra o heading visual global uma vez
+por frame novo, com ganho 0,25 e passo maximo de 1 grau. Ao alinhar dentro
+de 1 grau e com giro baixo, a potencia automatica fica em zero. A correcao
+retoma ao atingir 1,5 grau; um giro real rapido ainda recebe frenagem.
+Isso evita transformar ruido visual e pequenas oscilacoes do giroscopio
+em inversoes sucessivas de potencia. As leituras visuais continuam sendo
+atualizadas nessa faixa para permitir acompanhar deslocamentos reais.
 
 A telemetria mostra a idade da imagem, poses rejeitadas, erro atual e giro
 medido. Os testes cobrem camera atrasada com inercia, frames repetidos,

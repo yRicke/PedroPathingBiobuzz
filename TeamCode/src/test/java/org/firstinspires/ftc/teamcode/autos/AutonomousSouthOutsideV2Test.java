@@ -62,6 +62,8 @@ public class AutonomousSouthOutsideV2Test {
     public void setUp() throws Exception {
         OpModeStorage.clearAutonomousPose();
         when(localizer.state()).thenAnswer(inv -> MotionState.ofVelocity(pose, velocity));
+        doAnswer(inv -> pose).when(localizer).pose();
+        doAnswer(inv -> velocity).when(localizer).velocity();
         when(drivetrain.maxScaling(any(), any())).thenReturn(1.0);
         when(drivetrain.interpolateVelocity(anyDouble(), anyDouble(), anyDouble())).thenReturn(1.0);
         follower = spy(new Follower(localizer, drivetrain, new Foresight(Constants.foresightConfig)));

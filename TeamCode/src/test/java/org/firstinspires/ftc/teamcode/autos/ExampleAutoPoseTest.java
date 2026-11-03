@@ -43,6 +43,7 @@ public class ExampleAutoPoseTest {
     public void setUp() {
         OpModeStorage.clearAutonomousPose();
         mocks = MockitoAnnotations.openMocks(this);
+        doAnswer(invocation -> measuredPose).when(localizer).pose();
         when(localizer.state()).thenAnswer(invocation ->
                 MotionState.ofVelocity(measuredPose, Velocity.zero()));
     }

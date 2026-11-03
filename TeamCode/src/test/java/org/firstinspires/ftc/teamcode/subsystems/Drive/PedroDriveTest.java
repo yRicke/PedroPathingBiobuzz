@@ -352,101 +352,6 @@ public class PedroDriveTest {
     }
 
     @Test
-    public void coordinateAimPreservesTranslationOverridesYawAndDoesNotHoldXY() {
-        localizer.setPose(new Pose(57.8, 35.2, Math.PI / 2 - Math.toRadians(3)));
-
-        drive.aimAt(0.6, 0.4, -0.8, false, 57.8, 50);
-
-        double heading = follower.pose().heading();
-        assertTrue(follower.manual());
-        assertPowers(0.6 * Math.cos(heading) - 0.4 * Math.sin(heading),
-                -0.6 * Math.sin(heading) - 0.4 * Math.cos(heading), Math.toRadians(3));
-    }
-
-    @Test
-    public void coordinateAimUpdatesBearingAsRobotMovesAndHiveChanges() {
-        localizer.setPose(new Pose(50, 50, 0));
-        drive.aimAt(0, 0, 0.5, false, 57.8, 50);
-        assertPowers(0, 0, 0);
-        assertTrue(follower.manual());
-
-        localizer.setPose(new Pose(50, 51, 0));
-        drive.aimAt(0, 0, 0.5, false, 57.8, 50);
-        assertPowers(0, 0, Math.atan2(-1, 7.8));
-
-        drive.aimAt(0, 0, -0.5, false, 57.8, 90);
-        assertPowers(0, 0, Math.toRadians(8));
-    }
-
-    @Test
-    public void coordinateAimUsesShortestTurnAcrossAngleWraparound() {
-        localizer.setPose(new Pose(0, 0, Math.toRadians(179)));
-
-        drive.aimAt(0, 0, 0, false, -10, -10 * Math.tan(Math.toRadians(2)));
-
-        assertPowers(0, 0, Math.toRadians(3));
-    }
-
-    @Test
-    public void fieldResetDoesNotRotateGlobalHiveCoordinates() {
-        localizer.setPose(new Pose(50, 70, Math.PI / 2));
-        drive.resetFieldCentric();
-
-        drive.aimAt(0.6, 0.4, 0, false, 57.8, 50);
-
-        assertPowers(0.6, -0.4, Math.toRadians(-8));
-        assertEquals(Math.PI / 2, follower.pose().heading(), EPSILON);
-    }
-
-    @Test
-    public void coordinateAimPrecisionScalesTranslationAndCorrection() {
-        drive.aimAt(0.6, 0.4, 1, true, 10, 10 * Math.tan(Math.toRadians(-6)));
-
-        assertPowers(0.18, -0.12, Math.toRadians(-1.8));
-    }
-
-    @Test
-    public void coordinateAimInsideToleranceIgnoresManualYawUntilReleased() {
-        drive.aimAt(0, 0, 0.8, false, 10, 10 * Math.tan(Math.toRadians(0.5)));
-
-        assertTrue(follower.manual());
-        assertPowers(0, 0, 0);
-
-        drive.run(0, 0, 0.5, false);
-        assertPowers(0, 0, -0.5);
-        drive.run(0, 0, 0, false);
-        assertHoldAt(0, 0, 0);
-    }
-
-    @Test
-    public void coincidentOrInvalidTargetReturnsYawToDriver() {
-        drive.aimAt(0, 0, 0, false, 10, 10);
-        localizer.setPose(new Pose(10, 10, 0));
-
-        drive.aimAt(0.6, 0.4, 0.5, false, 10, 10);
-        assertPowers(0.6, -0.4, -0.5);
-
-        drive.aimAt(0.6, 0.4, 0.5, false, Double.NaN, 10);
-        assertPowers(0.6, -0.4, -0.5);
-
-        drive.aimAt(0, 0, 0, false, 10, 10);
-        assertHoldAt(10, 10, 0);
-        assertPowers(0, 0, 0);
-    }
-
-    @Test
-    public void switchingAimSourcesReacquiresVisionEvenForRepeatedFrame() {
-        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 6, 1, 1));
-        drive.aimAt(0, 0, 0, false, 10, 10);
-        assertPowers(0, 0, Math.toRadians(8));
-        localizer.setPose(new Pose(1, 2, Math.PI / 2));
-
-        drive.aim(0, 0, 0, false, AprilTagObservation.detected(42, 3, 1, 1));
-
-        assertPowers(0, 0, Math.toRadians(-3));
-    }
-
-    @Test
     public void autonomousHeadingOf23DegreesDoesNotBecomeNewFieldForward() {
         OpModeStorage.saveAutonomousPose(new Pose(11, 42, Math.toRadians(23)));
         drive.resetPose(OpModeStorage.consumeAutonomousPose());
@@ -457,227 +362,140 @@ public class PedroDriveTest {
         assertEquals(Math.toRadians(23), drive.fieldCentricHeading(), EPSILON);
         assertPowers(Math.cos(Math.toRadians(23)), -Math.sin(Math.toRadians(23)), 0);
 
-        drive.aimAt(0, 0, 0.5, false, 21, 42 + 10 * Math.tan(Math.toRadians(26)));
+        drive.aim(0, 0, 0.5, false, AprilTagObservation.detected(42, -3, 1, 1));
         assertPowers(0, 0, Math.toRadians(3));
     }
 
     @Test
-    public void hybridUsesCoordinatesUntilThreeDistinctVisionFramesAreConfirmed() {
-        hybrid(AprilTagObservation.unavailable(42));
-        assertPowers(0, 0, Math.toRadians(8));
-
+    public void visionNeedsThreeDistinctFramesBeforeOverridingManualYaw() {
+        vision(AprilTagObservation.unavailable(42));
+        assertPowers(0, 0, 0.7);
         for (int i = 0; i < 20; i++) {
-            hybrid(AprilTagObservation.detected(42, 6, 1, 1));
-            assertPowers(0, 0, Math.toRadians(8));
+            vision(AprilTagObservation.detected(42, 6, 1, 1));
+            assertPowers(0, 0, 0.7);
         }
-        hybrid(AprilTagObservation.detected(42, 6, 1, 2));
-        assertPowers(0, 0, Math.toRadians(8));
-        hybrid(AprilTagObservation.detected(42, 6, 1, 3));
-        assertPowers(0, 0, Math.toRadians(-6));
-        assertTrue(follower.manual());
-    }
-
-    @Test
-    public void hybridAcquisitionStartsOverWhenTargetDisappearsBetweenFrames() {
-        hybrid(AprilTagObservation.detected(42, 6, 1, 1));
-        hybrid(AprilTagObservation.detected(42, 6, 1, 2));
-        hybrid(AprilTagObservation.searching(42, 3));
-
-        hybrid(AprilTagObservation.detected(42, 6, 1, 4));
-        hybrid(AprilTagObservation.detected(42, 6, 1, 5));
-        assertPowers(0, 0, Math.toRadians(8));
-        hybrid(AprilTagObservation.detected(42, 6, 1, 6));
+        vision(AprilTagObservation.detected(42, 6, 1, 2));
+        assertPowers(0, 0, 0.7);
+        vision(AprilTagObservation.detected(42, 6, 1, 3));
         assertPowers(0, 0, Math.toRadians(-6));
     }
 
     @Test
-    public void hybridHoldsLastGlobalHeadingBrieflyThenSearchesAndReconfirmsVision() {
-        lockHybridVision();
-        localizer.setPose(new Pose(0, 0, Math.toRadians(-2)));
-
-        hybrid(AprilTagObservation.unavailable(42));
-        assertPowers(0, 0, Math.toRadians(-4));
-        clock.set(99_000_000);
-        hybrid(AprilTagObservation.unavailable(42));
-        assertPowers(0, 0, Math.toRadians(-4));
-
-        clock.set(100_000_000);
-        hybrid(AprilTagObservation.unavailable(42));
-        assertPowers(0, 0, Math.toRadians(8));
-
-        hybrid(AprilTagObservation.detected(42, 3, 1, 4));
-        hybrid(AprilTagObservation.detected(42, 3, 1, 5));
-        assertPowers(0, 0, Math.toRadians(8));
-        hybrid(AprilTagObservation.detected(42, 3, 1, 6));
-        assertPowers(0, 0, Math.toRadians(-3));
-    }
-
-    @Test
-    public void hybridReturnsDirectlyToVisionWhenShortDropoutEnds() {
-        lockHybridVision();
-        hybrid(AprilTagObservation.searching(42, 4));
-        clock.set(50_000_000);
-
-        hybrid(AprilTagObservation.detected(42, 3, 1, 5));
-
-        assertPowers(0, 0, Math.toRadians(-3));
-    }
-
-    @Test
-    public void hybridTargetChangeImmediatelyDropsOldHeadingAndRejectsOtherCellFrames() {
-        lockHybridVision();
-        for (int i = 4; i < 10; i++) {
-            drive.aimHybrid(0, 0, 0.8, false, 10, -10, 38,
-                    AprilTagObservation.detected(42, 6, 1, i));
-            assertPowers(0, 0, Math.toRadians(-8));
+    public void lossImmediatelyRestoresYawAndReacquisitionNeedsThreeNewFrames() {
+        lockVision();
+        vision(AprilTagObservation.unavailable(42));
+        assertPowers(0, 0, 0.7);
+        assertFalse(drive.isVisionAligned());
+        for (int i = 4; i <= 6; i++) {
+            vision(AprilTagObservation.detected(42, 3, 1, i));
+            assertPowers(0, 0, i < 6 ? 0.7 : Math.toRadians(-3));
         }
+    }
+
+    @Test
+    public void neutralSticksWithoutVisionHoldCurrentPoseInsteadOfSearchingTheField() {
+        for (Pose pose : new Pose[] {new Pose(57.8, 50, 0), new Pose(-400, 800, 1.2)}) {
+            drive.stop();
+            localizer.setPose(pose);
+            drive.aimVision(0, 0, 0, false, AprilTagObservation.unavailable(42));
+            assertHoldAt(pose.x(), pose.y(), pose.heading());
+            assertPowers(0, 0, 0);
+        }
+    }
+
+    @Test
+    public void cellChangeRequiresNewFramesAndDoesNotSearchCoordinates() {
+        lockVision();
         for (int i = 1; i <= 3; i++) {
-            drive.aimHybrid(0, 0, 0.8, false, 10, -10, 38,
-                    AprilTagObservation.detected(38, -3, 1, i));
-            assertPowers(0, 0, Math.toRadians(i < 3 ? -8 : 3));
+            drive.aimVision(0, 0, 0.8, false, AprilTagObservation.detected(38, -3, 1, i));
+            assertPowers(0, 0, i < 3 ? -0.8 : Math.toRadians(3));
         }
     }
 
     @Test
-    public void hybridAllianceChangeKeepsCoordinatesButReconfirmsTheNewTags() {
-        lockHybridVision();
-        for (int i = 3; i <= 5; i++) {
-            drive.aimHybrid(0, 0, 0.8, false, 10, 10, 30,
-                    AprilTagObservation.detected(30, -3, 1, i));
-            assertPowers(0, 0, Math.toRadians(i < 5 ? 8 : 3));
-        }
-    }
-
-    @Test
-    public void hybridReleaseRestoresManualYawAndNextActivationReconfirmsVision() {
-        lockHybridVision();
-
+    public void releaseAndPoseResetPreserveGlobalPoseAndRequireFreshVision() {
+        lockVision();
         drive.run(0.4, 0, -0.5, false);
         assertPowers(0.4, 0, 0.5);
-        hybrid(AprilTagObservation.detected(42, 6, 1, 3));
-        hybrid(AprilTagObservation.detected(42, 6, 1, 4));
-        assertPowers(0, 0, Math.toRadians(8));
-        hybrid(AprilTagObservation.detected(42, 6, 1, 5));
-        assertPowers(0, 0, Math.toRadians(-6));
-
-        drive.run(0, 0, 0, false);
-        assertHoldAt(0, 0, 0);
-        assertPowers(0, 0, 0);
-    }
-
-    @Test
-    public void hybridRelocalizationClearsVisionAndPreservesTheNewGlobalHeading() {
-        lockHybridVision();
-        drive.resetPose(new Pose(8.4, 35.2, Math.PI / 2));
-
+        Pose pose = new Pose(21, 42, Math.toRadians(23));
+        drive.resetPose(pose);
         for (int i = 3; i <= 5; i++) {
-            drive.aimHybrid(0, 0, 0.8, false, 8.4, 50, 42,
-                    AprilTagObservation.detected(42, 3, 1, i));
-            assertPowers(0, 0, i < 5 ? 0 : Math.toRadians(-3));
+            drive.aimVision(0, 0, 0.8, false, AprilTagObservation.detected(42, 3, 1, i));
+            assertPowers(0, 0, i < 5 ? -0.8 : Math.toRadians(-3));
         }
-        assertEquals(Math.PI / 2, drive.fieldCentricHeading(), EPSILON);
+        assertSame(pose, follower.pose());
+        assertEquals(Math.toRadians(23), drive.fieldCentricHeading(), EPSILON);
     }
 
     @Test
-    public void hybridPrecisionAndFieldResetApplyDuringBothAimStages() {
-        localizer.setPose(new Pose(8.4, 35.2, Math.PI / 2));
-        drive.resetFieldCentric();
+    public void cameraTimestampRestartRequiresThreeNewFrames() {
+        for (int i = 100; i <= 102; i++) vision(AprilTagObservation.detected(42, 6, 1, i));
         for (int i = 1; i <= 3; i++) {
-            drive.aimHybrid(0.6, 0.4, 0.8, true, 8.4, 50, 42,
-                    AprilTagObservation.detected(42, 6, 1, i));
-            assertPowers(0.18, -0.12, i < 3 ? 0 : Math.toRadians(-1.8));
+            vision(AprilTagObservation.detected(42, 6, 1, i));
+            assertPowers(0, 0, i < 3 ? 0.7 : Math.toRadians(-6));
         }
-        assertEquals(Math.PI / 2, follower.pose().heading(), EPSILON);
     }
 
     @Test
-    public void hybridCameraTimestampRestartRequiresThreeNewFrames() {
-        for (int i = 100; i <= 102; i++) hybrid(AprilTagObservation.detected(42, 6, 1, i));
-        assertPowers(0, 0, Math.toRadians(-6));
-
-        hybrid(AprilTagObservation.detected(42, 6, 1, 1));
-        hybrid(AprilTagObservation.detected(42, 6, 1, 2));
-        assertPowers(0, 0, Math.toRadians(8));
-        hybrid(AprilTagObservation.detected(42, 6, 1, 3));
-        assertPowers(0, 0, Math.toRadians(-6));
-    }
-
-    @Test
-    public void hybridCanAcquireVisionEvenWhenCoordinatesCannotGiveADirection() {
-        for (double targetX : new double[] {0, Double.NaN}) {
+    public void visualAimIsIndependentOfTheStoredXYCoordinates() {
+        for (double x : new double[] {0, 57.8, -10000}) {
             drive.stop();
-            for (int i = 1; i <= 3; i++) {
-                drive.aimHybrid(0.4, 0.2, 0.5, false, targetX, 0, 42,
-                        AprilTagObservation.detected(42, 3, 1, i));
-                assertPowers(0.4, -0.2, i < 3 ? -0.5 : Math.toRadians(-3));
-            }
+            localizer.setPose(new Pose(x, 12345, 0));
+            for (int i = 1; i <= 3; i++) vision(AprilTagObservation.detected(42, -6, 2, i));
+            assertPowers(0, 0, Math.toRadians(6));
         }
     }
 
     @Test
-    public void hybridHoldKeepsEndpointXYWhileBothAimSourcesAdjustHeading() {
+    public void visionHoldKeepsEndpointXYAndLastVisualHeadingDuringLoss() {
         Pose endpoint = new Pose(10, 20, 0);
         localizer.setPose(endpoint);
         for (int i = 1; i <= 3; i++) {
-            drive.aimHybridHold(endpoint, 10, 30, 42,
-                    AprilTagObservation.detected(42, 6, 1, i));
-            assertHoldAt(10, 20, Math.toRadians(i < 3 ? 8 : -6));
+            drive.aimVisionHold(endpoint, AprilTagObservation.detected(42, 6, 1, i));
+            assertHoldAt(10, 20, i < 3 ? 0 : Math.toRadians(-6));
         }
-
         localizer.setPose(new Pose(11, 19, Math.toRadians(1)));
-        drive.aimHybridHold(endpoint, 10, 30, 42,
-                AprilTagObservation.detected(42, 3, 1, 4));
-        assertHoldAt(10, 20, Math.toRadians(-2));
+        drive.aimVisionHold(endpoint, AprilTagObservation.unavailable(42));
+        assertHoldAt(10, 20, Math.toRadians(-6));
+        assertFalse(drive.isVisionAligned());
+        for (int i = 4; i <= 6; i++) {
+            drive.aimVisionHold(endpoint, AprilTagObservation.detected(42, 3, 1, i));
+            assertHoldAt(10, 20, Math.toRadians(i < 6 ? -6 : -2));
+        }
     }
 
     @Test
-    public void hybridAlignmentRequiresConfirmedVisionAndIsClearedDuringLossOrRelease() {
+    public void alignmentRequiresConfirmedVisionAndIsClearedDuringLossOrRelease() {
         Pose endpoint = Pose.zero();
         for (int i = 1; i <= 3; i++) {
-            drive.aimHybridHold(endpoint, 10, 0, 42,
-                    AprilTagObservation.detected(42, 0.5, 1, i));
-            assertEquals(i == 3, drive.isHybridVisionAligned());
+            drive.aimVisionHold(endpoint, AprilTagObservation.detected(42, 0.5, 1, i));
+            assertEquals(i == 3, drive.isVisionAligned());
         }
-        drive.aimHybridHold(endpoint, 10, 0, 42,
-                AprilTagObservation.detected(42, 6, 1, 4));
-        assertFalse(drive.isHybridVisionAligned());
-        drive.aimHybridHold(endpoint, 10, 0, 42,
-                AprilTagObservation.detected(42, 0, 1, 5));
-        assertTrue(drive.isHybridVisionAligned());
-
-        drive.aimHybridHold(endpoint, 10, 0, 42, AprilTagObservation.unavailable(42));
-        assertFalse(drive.isHybridVisionAligned());
-        assertTrue(follower.holding());
-
-        drive.aimHybridHold(endpoint, 10, 0, 42,
-                AprilTagObservation.detected(42, 0, 1, 6));
-        assertTrue(drive.isHybridVisionAligned());
+        drive.aimVisionHold(endpoint, AprilTagObservation.detected(42, 6, 1, 4));
+        assertFalse(drive.isVisionAligned());
+        drive.aimVisionHold(endpoint, AprilTagObservation.detected(42, 0, 1, 5));
+        assertTrue(drive.isVisionAligned());
+        drive.aimVisionHold(endpoint, AprilTagObservation.unavailable(42));
+        assertFalse(drive.isVisionAligned());
+        for (int i = 6; i <= 8; i++) {
+            drive.aimVisionHold(endpoint, AprilTagObservation.detected(42, 0, 1, i));
+            assertEquals(i == 8, drive.isVisionAligned());
+        }
         drive.run(0, 0, 0, false);
-        assertFalse(drive.isHybridVisionAligned());
+        assertFalse(drive.isVisionAligned());
     }
 
     @Test
-    public void teleOpHybridRestoresFreeTranslationAfterAnAutonomousAimHold() {
-        drive.aimHybridHold(Pose.zero(), 10, 10, 42, AprilTagObservation.unavailable(42));
+    public void teleOpRestoresFreeTranslationAfterAnAutonomousAimHold() {
+        drive.aimVisionHold(Pose.zero(), AprilTagObservation.unavailable(42));
         assertTrue(follower.holding());
-
-        drive.aimHybrid(0.6, 0.4, 0.8, false, 10, 10, 42, AprilTagObservation.unavailable(42));
-
+        drive.aimVision(0.6, 0.4, 0.8, false, AprilTagObservation.unavailable(42));
         assertTrue(follower.manual());
-        assertPowers(0.6, -0.4, Math.toRadians(8));
+        assertPowers(0.6, -0.4, -0.8);
     }
 
-    @Test
-    public void hybridHoldWithInvalidCoordinatesStillHoldsTheKnownEndpoint() {
-        Pose endpoint = new Pose(10, 20, 0.6);
-        drive.aimHybridHold(endpoint, Double.NaN, 0, 42, AprilTagObservation.unavailable(42));
-
-        assertHoldAt(10, 20, 0.6);
-        assertFalse(drive.isHybridVisionAligned());
-    }
-
-    private void hybrid(AprilTagObservation observation) {
-        drive.aimHybrid(0, 0, -0.7, false, 10, 10, 42, observation);
+    private void vision(AprilTagObservation observation) {
+        drive.aimVision(0, 0, -0.7, false, observation);
     }
 
     @Test
@@ -699,16 +517,16 @@ public class PedroDriveTest {
     }
 
     @Test
-    public void hybridCannotReportAlignmentWhileStillSpinningThroughTheCenter() {
+    public void visionCannotReportAlignmentWhileStillSpinningThroughTheCenter() {
         localizer.velocity = new Velocity(0, 0, 1);
-        for (int i = 1; i <= 3; i++) hybrid(AprilTagObservation.detected(42, 0, 2, i));
+        for (int i = 1; i <= 3; i++) vision(AprilTagObservation.detected(42, 0, 2, i));
 
-        assertFalse(drive.isHybridVisionAligned());
+        assertFalse(drive.isVisionAligned());
         assertTrue("Deve frear mesmo com a imagem centralizada", drivetrain.powers.turn() < 0);
     }
 
-    private void lockHybridVision() {
-        for (int i = 1; i <= 3; i++) hybrid(AprilTagObservation.detected(42, 6, 1, i));
+    private void lockVision() {
+        for (int i = 1; i <= 3; i++) vision(AprilTagObservation.detected(42, 6, 1, i));
     }
 
     @Test
@@ -772,6 +590,89 @@ public class PedroDriveTest {
         assertEquals(y, target.y(), EPSILON);
         double difference = target.heading() - heading;
         assertEquals(0, Math.atan2(Math.sin(difference), Math.cos(difference)), EPSILON);
+    }
+
+    @Test
+    public void teleOpVisionJitterAtTheCenterDoesNotAlternateDrivetrainCommands() {
+        for (int i = 1; i <= 3; i++) {
+            drive.aimVision(0.6, 0.4, 0, false, AprilTagObservation.detected(42, 0, 2, i));
+        }
+        for (int i = 4; i < 44; i++) {
+            clock.addAndGet(20_000_000);
+            localizer.velocity = new Velocity(0, 0, Math.toRadians(i % 2 == 0 ? 6 : -6));
+            drive.aimVision(0.6, 0.4, 0, false, AprilTagObservation.detected(42, i % 2 == 0 ? 2.4 : -2.4, 2, i));
+
+            assertPowers(0.6, -0.4, 0);
+        }
+    }
+
+    @Test
+    public void teleOpRepeatedImageCannotKeepMovingTheFilteredReference() {
+        for (int i = 1; i <= 3; i++) {
+            drive.aimVision(0, 0, 0, false, AprilTagObservation.detected(42, 0, 2, i));
+        }
+        AprilTagObservation oneImage = AprilTagObservation.detected(42, 4, 2, 4);
+        for (int i = 0; i < 100; i++) {
+            clock.addAndGet(1_000_000);
+            drive.aimVision(0, 0, 0, false, oneImage);
+            assertPowers(0, 0, 0);
+        }
+        for (int i = 5; i <= 8; i++) {
+            drive.aimVision(0, 0, 0, false, AprilTagObservation.detected(42, 4, 2, i));
+        }
+        assertTrue("Erro persistente deve voltar a corrigir", drivetrain.powers.turn() < 0);
+    }
+
+    @Test
+    public void teleOpOneBadImageCannotKickTheDrivetrainAfterAlignment() {
+        for (int i = 1; i <= 3; i++) {
+            drive.aimVision(0, 0, 0, false, AprilTagObservation.detected(42, 0, 2, i));
+        }
+        drive.aimVision(0, 0, 0, false, AprilTagObservation.detected(42, 30, 2, 4));
+        assertPowers(0, 0, 0);
+        for (int i = 5; i < 15; i++) {
+            drive.aimVision(0, 0, 0, false, AprilTagObservation.detected(42, 0, 2, i));
+            assertPowers(0, 0, 0);
+        }
+    }
+
+    @Test
+    public void teleOpVisionSettlesWithDelayedNoisyVisionAndNoisyAngularVelocity() {
+        drive = new PedroDrive(follower, null, Controller.proportional(3.985729017698461), clock::get);
+        double heading = Math.toRadians(-20), omega = 0, maxOvershoot = 0;
+        java.util.List<Double> headings = new java.util.ArrayList<>();
+        AprilTagObservation frame = null;
+        for (int i = 0; i < 300; i++) {
+            clock.set(i * 20_000_000L);
+            localizer.setPose(new Pose(0, 0, heading));
+            localizer.velocity = new Velocity(0, 0, omega + Math.toRadians(i % 2 == 0 ? 5 : -5));
+            headings.add(heading);
+            if (i % 2 == 0) {
+                double noise = i % 4 == 0 ? 2.4 : -2.4;
+                frame = AprilTagObservation.detected(42,
+                        Math.toDegrees(headings.get(Math.max(0, i - 5))) + noise, 2, i, 0.1);
+            }
+            drive.aimVision(0, 0, 0, false, frame);
+            omega += (3 * drivetrain.powers.turn() - omega) * 0.02 / 0.15;
+            heading += omega * 0.02;
+            maxOvershoot = Math.max(maxOvershoot, heading);
+            if (i >= 250) assertEquals("Nao deve continuar cacando o ruido", 0, drivetrain.powers.turn(), 1e-9);
+        }
+        assertTrue("Overshoot em graus: " + Math.toDegrees(maxOvershoot),
+                maxOvershoot < Math.toRadians(4));
+        assertTrue("Erro final em graus: " + Math.toDegrees(heading),
+                Math.abs(heading) <= Math.toRadians(1.5));
+    }
+
+    @Test
+    public void teleOpStableBandStillBrakesAnActualFastRotation() {
+        for (int i = 1; i <= 3; i++) {
+            drive.aimVision(0, 0, 0, false, AprilTagObservation.detected(42, 0, 2, i));
+        }
+        localizer.velocity = new Velocity(0, 0, 1);
+        drive.aimVision(0, 0, 0, false, AprilTagObservation.detected(42, 0, 2, 4));
+        assertPowers(0, 0, -PedroDrive.AIM_TURN_DAMPING);
+        assertFalse(drive.isVisionAligned());
     }
 
     private void assertPowers(double forward, double strafe, double turn) {

@@ -7,7 +7,7 @@ O TeleOp coordena entradas e chamadas dos subsistemas.
 
 | Pasta | Responsabilidade |
 | --- | --- |
-| `Drive/` | Drive manual, field-centric, hold e mira híbrida por coordenadas/visão |
+| `Drive/` | Drive manual, field-centric, hold e mira pela Limelight |
 | `Limelight/` | Câmera, validação de frames e abertura da CELL no referencial do lançador |
 | `FlywheelAdvanced/` | Motores, consulta da tabela e estabilização da RPM |
 | `Intake/` | Coleta e ejeção |
@@ -23,10 +23,11 @@ o Play preserva o heading global. Y redefine somente a frente dos controles
 e X relocaliza na pose conhecida e restaura a referência global.
 O stick esquerdo controla a translação field-centric, o direito controla o giro
 e o gatilho esquerdo aplica modo precisão. Ao parar e soltar os sticks, o
-Pedro mantém a pose. Right bumper ativa a mira híbrida com translação livre:
-o Pedro procura a coordenada da CELL e três frames novos confirmam a Limelight
-para o ajuste fino. Perda breve conserva o heading por 100 ms; perda persistente
-volta às coordenadas. Right trigger continua acionando transfer/trigger.
+Pedro mantém a pose. Right bumper ativa a mira pela Limelight com translação
+livre após três frames novos da CELL selecionada. Sem alvo confirmado, o giro
+volta imediatamente ao piloto; com sticks neutros conserva a pose atual.
+A mira não faz busca por coordenadas da HIVE. Right trigger continua acionando
+transfer/trigger.
 
 Depois de atualizar a Limelight, o TeleOp chama:
 
@@ -34,9 +35,9 @@ Depois de atualizar a Limelight, o TeleOp chama:
 flywheel.runByDistance(limelight.getDistanceMeters());
 ```
 
-A mira recebe `limelight.getObservation()` e a coordenada associada à mesma
-CELL por `drive.aimHybrid(...)`. As coordenadas esquerda/direita são mantidas
-nas duas alianças, mudando somente os IDs das tags. No modo manual/teste, a flywheel
+A mira recebe somente `limelight.getObservation()` por `drive.aimVision(...)`.
+A seleção de aliança/CELL determina quais tags serão utilizadas.
+No modo manual/teste, a flywheel
 recebe uma RPM diretamente por `flywheel.run(rpm)`.
 
 ## Quatro classes principais

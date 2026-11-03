@@ -19,17 +19,17 @@ que foi fornecida.
 
 ## Mesmo sistema do TeleOpMain
 
-O drive compartilha a logica hibrida do TeleOp: procura pelas coordenadas,
-confirma tres frames novos da CELL e usa a Limelight para o ajuste fino.
+O drive confirma tres frames novos da CELL e usa somente a Limelight para
+definir a mira. Nao procura coordenadas da HIVE.
 No autonomo, essa mira preserva o hold de X/Y em vez de liberar a translacao.
 O primeiro disparo seleciona direita/oposta e o segundo, esquerda/plateia.
-As coordenadas de busca sao obtidas diretamente de TeleOpMain.targetForCell,
-assim os dois modos compartilham os valores (57.8, 50) e (57.8, 90).
+Sem visao confirmada, conserva a posicao e o ultimo heading visual (ou o
+heading do fim do path, antes da primeira leitura). A perda de visao exige
+nova confirmacao e interrompe a alimentacao imediatamente.
 
 No INIT, o D-pad do gamepad 2 seleciona a alianca: cima azul, baixo vermelha.
 Inicial: azul. A escolha fica fixa depois do Play. Azul usa 42-45 no primeiro
-disparo e 38-41 no segundo; vermelha usa 30-33 e depois 34-37. Os numeros das
-coordenadas permanecem iguais, no referencial definido para a alianca atual.
+disparo e 38-41 no segundo; vermelha usa 30-33 e depois 34-37.
 
 A flywheel chama runByDistance(limelight.getDistanceMeters()) em todos os
 ciclos ativos, inclusive durante os paths e as esperas. Usa a mesma geometria

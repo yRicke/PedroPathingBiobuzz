@@ -10,7 +10,6 @@ import com.pedropathing.utils.Angle;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.subsystems.Limelight.AprilTagObservation;
 
-import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 
 /** Drive field-centric do Pedro com hold automatico quando os controles sao soltos. */
@@ -20,39 +19,37 @@ public class PedroDrive {
     private static final double HOLD_VELOCITY_THRESHOLD = 0.2;
     private static final double AIM_TOLERANCE_DEGREES = 1.0;
     private static final double MAX_AIM_CORRECTION_DEGREES = 8.0;
-    private static final double MIN_AIM_DISTANCE_INCHES = 1e-3;
     // Potencia por rad/s: freia pela velocidade medida, sem derivar o tx ruidoso.
     public static final double AIM_TURN_DAMPING = 0.18;
     public static final double AIM_MAX_TURN_POWER = 0.35;
     public static final double AIM_SETTLED_SPEED_RAD_S = Math.toRadians(10);
-    private static final int HYBRID_VISION_CONFIRMATION_FRAMES = 3;
-    private static final long HYBRID_VISION_LOSS_GRACE_NANOS = TimeUnit.MILLISECONDS.toNanos(100);
+    private static final int VISION_CONFIRMATION_FRAMES = 3;
 
-    private enum AimSource { NONE, LIMELIGHT, POSITION }
+    private enum AimSource { NONE, LIMELIGHT }
 
     private final Follower follower;
     private final Telemetry telemetry;
     private final Controller aimHeadingController;
     private final LongSupplier nanoClock;
     private final HeadingHistory headingHistory = new HeadingHistory();
+    private final VisionHeadingTarget teleOpVisionTarget = new VisionHeadingTarget();
+    private boolean teleOpVisionActive;
+    private boolean visionSettled;
+    private double aimTurnCommand;
     private double fieldForwardHeading;
     private AimSource aimSource = AimSource.NONE;
     private double aimHeading;
-    private double aimTargetX;
-    private double aimTargetY;
     private int aimFirstTagId;
     private double lastAimFrameTimestamp = Double.NaN;
     private double lastVisionErrorDegrees = Double.NaN;
     private Pose aimHoldPosition;
     private String aimStatus = "Manual";
-    private boolean hybridActive;
-    private boolean hybridVisionLocked;
-    private boolean hybridVisionMissing;
-    private int hybridFirstTagId;
-    private int hybridValidFrames;
-    private double hybridTargetX, hybridTargetY;
-    private double hybridLastFrameTimestamp = Double.NaN;
-    private long hybridVisionLostAtNanos;
+    private boolean visionAimActive;
+    private boolean visionHoldMode;
+    private int visionFirstTagId;
+    private int visionValidFrames;
+    private double visionLastFrameTimestamp = Double.NaN;
+    private double visionHoldHeading;
 
     public PedroDrive(Follower follower, Telemetry telemetry, Controller aimHeadingController) {
         this(follower, telemetry, aimHeadingController, System::nanoTime);
@@ -75,7 +72,7 @@ public class PedroDrive {
     private void runManualDrive(double axial, double lateral, double yaw, boolean precisionMode) {
         rememberHeading();
         if (aimHoldPosition != null) {
-            holdAim(aimHoldPosition.heading());
+            holdAim(visionHoldHeading);
             return;
         }
         double multiplier = precisionMode ? PRECISION_MULTIPLIER : 1.0;
@@ -96,19 +93,30 @@ public class PedroDrive {
     /** Transla pelo stick; corrige so o heading com alvo visivel, senao libera o giro. */
     public void aim(double axial, double lateral, double yaw, boolean precisionMode,
                     AprilTagObservation observation) {
-        if (!observation.isVisionReady() || !observation.hasTarget()) {
+        aimHoldPosition = null;
+        clearVisionAim();
+        aimWithObservation(axial, lateral, yaw, precisionMode, observation, false);
+    }
+
+    private void aimWithObservation(double axial, double lateral, double yaw, boolean precisionMode,
+                                    AprilTagObservation observation, boolean stabilizeTeleOp) {
+        if (observation == null || !observation.isVisionReady() || !observation.hasTarget()) {
             run(axial, lateral, yaw, precisionMode);
-            aimStatus = observation.isVisionReady()
+            aimStatus = observation != null && observation.isVisionReady()
                     ? "Sem alvo: giro manual" : "Sem visao: giro manual";
             return;
         }
 
         Pose current = follower.pose();
         rememberHeading();
-        if (aimSource != AimSource.LIMELIGHT || aimFirstTagId != observation.getFirstTagId()) {
+        if (aimSource != AimSource.LIMELIGHT || aimFirstTagId != observation.getFirstTagId()
+                || teleOpVisionActive != stabilizeTeleOp) {
             aimHeadingController.reset();
             lastAimFrameTimestamp = Double.NaN;
+            teleOpVisionTarget.reset();
         }
+        teleOpVisionActive = stabilizeTeleOp;
+        if (!stabilizeTeleOp) teleOpVisionTarget.reset();
         aimSource = AimSource.LIMELIGHT;
         aimFirstTagId = observation.getFirstTagId();
         if (observation.getFrameTimestamp() != lastAimFrameTimestamp) {
@@ -119,8 +127,9 @@ public class PedroDrive {
                 capturedHeading = current.heading() - angularSpeed() * observation.getImageAgeSeconds();
             }
             double targetHeading = capturedHeading - Math.toRadians(observation.getTxDegrees());
+            lastVisionErrorDegrees = -Math.toDegrees(Angle.normalizeSigned(targetHeading - current.heading()));
+            if (stabilizeTeleOp) targetHeading = teleOpVisionTarget.update(targetHeading);
             double error = -Math.toDegrees(Angle.normalizeSigned(targetHeading - current.heading()));
-            lastVisionErrorDegrees = error;
             boolean aligned = Math.abs(error) <= AIM_TOLERANCE_DEGREES;
             double correction = aligned ? 0 : Math.max(-MAX_AIM_CORRECTION_DEGREES,
                     Math.min(MAX_AIM_CORRECTION_DEGREES, error));
@@ -128,7 +137,9 @@ public class PedroDrive {
             aimHeading = Angle.normalizeSigned(current.heading() - Math.toRadians(correction));
             lastAimFrameTimestamp = observation.getFrameTimestamp();
         }
-        boolean aligned = Math.abs(lastVisionErrorDegrees) <= AIM_TOLERANCE_DEGREES
+        double alignmentError = teleOpVisionActive
+                ? Math.toDegrees(teleOpVisionTarget.error(current.heading())) : lastVisionErrorDegrees;
+        boolean aligned = Math.abs(alignmentError) <= AIM_TOLERANCE_DEGREES
                 && Math.abs(angularSpeed()) <= AIM_SETTLED_SPEED_RAD_S;
         aimStatus = aligned ? "Alinhado"
                 : "Centralizando hive " + aimFirstTagId + "-" + (aimFirstTagId + 3);
@@ -136,111 +147,60 @@ public class PedroDrive {
         runAim(axial, lateral, precisionMode);
     }
 
-    /** Mira em X/Y globais sem visao; recalcula o rumo enquanto o robo se desloca. */
-    public void aimAt(double axial, double lateral, double yaw, boolean precisionMode,
-                      double targetX, double targetY) {
-        rememberHeading();
-        Pose current = follower.pose();
-        double dx = targetX - current.x();
-        double dy = targetY - current.y();
-        if (!Double.isFinite(dx) || !Double.isFinite(dy)
-                || Math.hypot(dx, dy) < MIN_AIM_DISTANCE_INCHES) {
-            clearHeadingAim();
-            runManualDrive(axial, lateral, yaw, precisionMode);
-            aimStatus = "Coordenada sem direcao valida: giro manual";
-            return;
-        }
-
-        if (aimSource != AimSource.POSITION || aimTargetX != targetX || aimTargetY != targetY) {
-            aimHeadingController.reset();
-        }
-        aimSource = AimSource.POSITION;
-        aimTargetX = targetX;
-        aimTargetY = targetY;
-        // atan2 usa os mesmos eixos globais do Pedro, independente do reset dos sticks.
-        double error = Angle.normalizeSigned(Math.atan2(dy, dx) - current.heading());
-        boolean aligned = Math.abs(error) <= Math.toRadians(AIM_TOLERANCE_DEGREES);
-        double maxCorrection = Math.toRadians(MAX_AIM_CORRECTION_DEGREES);
-        double correction = aligned ? 0 : Math.max(-maxCorrection, Math.min(maxCorrection, error));
-        aimHeading = Angle.normalizeSigned(current.heading() + correction);
-        aimStatus = aligned ? "Alinhado por coordenadas" : "Centralizando hive por coordenadas";
-
-        runAim(axial, lateral, precisionMode);
-    }
-
-    /** Pedro procura a coordenada; visao confirmada assume o ajuste fino da mesma CELL. */
-    public void aimHybrid(double axial, double lateral, double yaw, boolean precisionMode,
-                          double targetX, double targetY, int firstTagId,
+    /** RB do TeleOp: usa so a CELL vista; sem visao confirmada, o giro e manual. */
+    public void aimVision(double axial, double lateral, double yaw, boolean precisionMode,
                           AprilTagObservation observation) {
         aimHoldPosition = null;
-        runHybridAim(axial, lateral, yaw, precisionMode, targetX, targetY, firstTagId, observation);
+        runVisionAim(axial, lateral, yaw, precisionMode, observation);
     }
 
-    /** Mesma mira hibrida do TeleOp, preservando X/Y em hold para o autonomo. */
-    public void aimHybridHold(Pose position, double targetX, double targetY, int firstTagId,
-                              AprilTagObservation observation) {
+    /** Limelight define o giro; Pedro conserva a posicao de disparo do path. */
+    public void aimVisionHold(Pose position, AprilTagObservation observation) {
         aimHoldPosition = position;
-        runHybridAim(0, 0, 0, false, targetX, targetY, firstTagId, observation);
+        runVisionAim(0, 0, 0, false, observation);
     }
 
-    private void runHybridAim(double axial, double lateral, double yaw, boolean precisionMode,
-                              double targetX, double targetY, int firstTagId,
+    private void runVisionAim(double axial, double lateral, double yaw, boolean precisionMode,
                               AprilTagObservation observation) {
         rememberHeading();
-        if (!hybridActive || hybridFirstTagId != firstTagId
-                || Double.compare(hybridTargetX, targetX) != 0
-                || Double.compare(hybridTargetY, targetY) != 0) {
-            clearHybridAim();
-            hybridActive = true;
-            hybridFirstTagId = firstTagId;
-            hybridTargetX = targetX;
-            hybridTargetY = targetY;
+        int firstTagId = observation == null ? -1 : observation.getFirstTagId();
+        boolean holdMode = aimHoldPosition != null;
+        if (!visionAimActive || visionFirstTagId != firstTagId || visionHoldMode != holdMode) {
+            clearHeadingAim();
+            clearVisionAim();
+            visionAimActive = true;
+            visionFirstTagId = firstTagId;
+            visionHoldMode = holdMode;
+            visionHoldHeading = holdMode ? aimHoldPosition.heading() : follower.pose().heading();
         }
 
-        boolean selectedCell = observation != null && observation.getFirstTagId() == firstTagId;
-        boolean valid = selectedCell && observation.isVisionReady() && observation.hasTarget();
+        boolean valid = observation != null && observation.isVisionReady() && observation.hasTarget();
         if (valid) {
             double timestamp = observation.getFrameTimestamp();
-            if (timestamp < hybridLastFrameTimestamp) {
-                // Reinicio da camera exige confirmar novas imagens e descartar o heading antigo.
-                hybridVisionLocked = false;
-                hybridValidFrames = 0;
+            if (timestamp < visionLastFrameTimestamp) {
+                clearHeadingAim();
+                visionValidFrames = 0;
             }
-            if (timestamp != hybridLastFrameTimestamp) {
-                hybridValidFrames = Math.min(HYBRID_VISION_CONFIRMATION_FRAMES, hybridValidFrames + 1);
-                hybridLastFrameTimestamp = timestamp;
+            if (timestamp != visionLastFrameTimestamp) {
+                visionValidFrames = Math.min(VISION_CONFIRMATION_FRAMES, visionValidFrames + 1);
+                visionLastFrameTimestamp = timestamp;
             }
-            hybridVisionMissing = false;
-            if (hybridVisionLocked || hybridValidFrames >= HYBRID_VISION_CONFIRMATION_FRAMES) {
-                hybridVisionLocked = true;
-                aim(axial, lateral, yaw, precisionMode, observation);
+            if (visionValidFrames >= VISION_CONFIRMATION_FRAMES) {
+                aimWithObservation(axial, lateral, yaw, precisionMode, observation, !holdMode);
+                visionHoldHeading = aimHeading;
                 aimStatus = "Limelight: " + aimStatus;
                 return;
             }
         } else {
-            hybridValidFrames = 0;
-            if (hybridVisionLocked && selectedCell) {
-                long now = nanoClock.getAsLong();
-                if (!hybridVisionMissing) {
-                    hybridVisionMissing = true;
-                    hybridVisionLostAtNanos = now;
-                }
-                if (now - hybridVisionLostAtNanos < HYBRID_VISION_LOSS_GRACE_NANOS) {
-                    // Apenas conserva o ultimo heading global; nao reaproveita um tx antigo.
-                    runAim(axial, lateral, precisionMode);
-                    aimStatus = "Limelight: mantendo heading durante perda breve";
-                    return;
-                }
-            }
-            hybridVisionLocked = false;
-            hybridVisionMissing = false;
-            hybridLastFrameTimestamp = Double.NaN;
+            visionValidFrames = 0;
+            visionLastFrameTimestamp = Double.NaN;
         }
 
-        aimAt(axial, lateral, yaw, precisionMode, targetX, targetY);
-        aimStatus = "Pedro: " + aimStatus
-                + (valid ? " | confirmando visao " + hybridValidFrames
-                + "/" + HYBRID_VISION_CONFIRMATION_FRAMES : " | procurando CELL selecionada");
+        // Nenhuma coordenada da HIVE participa da mira. Sem alvo, nao inicia uma busca.
+        clearHeadingAim();
+        runManualDrive(axial, lateral, yaw, precisionMode);
+        aimStatus = (valid ? "Confirmando Limelight " + visionValidFrames + "/" + VISION_CONFIRMATION_FRAMES
+                : "Sem CELL visivel") + (holdMode ? ": mantendo hold" : ": giro manual");
     }
 
     private void runAim(double axial, double lateral, boolean precisionMode) {
@@ -254,9 +214,18 @@ public class PedroDrive {
         DrivePowers powers = ManualDrive.headingLock(
                 follower, aimHeadingController, translation, aimHeading);
         double turn = powers.turn() - AIM_TURN_DAMPING * angularSpeed();
+        visionSettled = teleOpVisionActive
+                && teleOpVisionTarget.settled(follower.pose().heading(), angularSpeed());
+        if (visionSettled) {
+            // Na faixa central, ruido do tx e do giroscopio nao deve virar giro alternado.
+            // Giro real ainda rapido recebe apenas frenagem, sem perseguir uma nova referencia.
+            turn = Math.abs(angularSpeed()) <= AIM_SETTLED_SPEED_RAD_S
+                    ? 0 : -AIM_TURN_DAMPING * angularSpeed();
+        }
+        aimTurnCommand = Math.max(-AIM_MAX_TURN_POWER, Math.min(AIM_MAX_TURN_POWER, turn)) * multiplier;
         // Nao usa driveOrHold aqui: o hold de pose prenderia X/Y e poderia ignorar giros pequenos.
         follower.manual(new DrivePowers(powers.forward(), powers.strafe(),
-                Math.max(-AIM_MAX_TURN_POWER, Math.min(AIM_MAX_TURN_POWER, turn)) * multiplier));
+                aimTurnCommand));
         follower.update();
     }
 
@@ -279,11 +248,14 @@ public class PedroDrive {
         follower.update();
     }
 
-    public boolean isHybridVisionAligned() {
-        return hybridVisionLocked && !hybridVisionMissing && aimSource == AimSource.LIMELIGHT
+    public boolean isVisionAligned() {
+        double alignmentError = teleOpVisionActive
+                ? Math.toDegrees(teleOpVisionTarget.error(follower.pose().heading())) : lastVisionErrorDegrees;
+        return visionAimActive && visionValidFrames >= VISION_CONFIRMATION_FRAMES
+                && aimSource == AimSource.LIMELIGHT
                 && Double.isFinite(follower.velocity().omega)
                 && Math.abs(angularSpeed()) <= AIM_SETTLED_SPEED_RAD_S
-                && Math.abs(lastVisionErrorDegrees) <= AIM_TOLERANCE_DEGREES
+                && Math.abs(alignmentError) <= AIM_TOLERANCE_DEGREES
                 && Math.abs(Angle.normalizeSigned(aimHeading - follower.pose().heading()))
                 <= Math.toRadians(AIM_TOLERANCE_DEGREES);
     }
@@ -291,10 +263,13 @@ public class PedroDrive {
     private void clearAim() {
         aimHoldPosition = null;
         clearHeadingAim();
-        clearHybridAim();
+        clearVisionAim();
     }
 
     private void clearHeadingAim() {
+        teleOpVisionActive = visionSettled = false;
+        aimTurnCommand = 0;
+        teleOpVisionTarget.reset();
         if (aimSource != AimSource.NONE) {
             aimHeadingController.reset();
         }
@@ -303,12 +278,10 @@ public class PedroDrive {
         lastVisionErrorDegrees = Double.NaN;
     }
 
-    private void clearHybridAim() {
-        hybridActive = false;
-        hybridVisionLocked = false;
-        hybridVisionMissing = false;
-        hybridValidFrames = 0;
-        hybridLastFrameTimestamp = Double.NaN;
+    private void clearVisionAim() {
+        visionAimActive = false;
+        visionValidFrames = 0;
+        visionLastFrameTimestamp = Double.NaN;
     }
 
     /** Muda somente a referencia dos sticks; preserva X/Y e heading globais do Pedro. */
@@ -332,6 +305,13 @@ public class PedroDrive {
         telemetry.addData("Drive Mode", follower.mode());
         telemetry.addData("Mira", aimStatus);
         if (aimSource != AimSource.NONE) {
+            if (aimHoldPosition == null) telemetry.addData("Mira giro comandado", aimTurnCommand);
+            if (teleOpVisionActive) {
+                telemetry.addData("Mira erro visual bruto (graus)", lastVisionErrorDegrees);
+                telemetry.addData("Mira erro visual filtrado (graus)",
+                        Math.toDegrees(teleOpVisionTarget.error(follower.pose().heading())));
+                telemetry.addData("Mira na faixa estavel", visionSettled);
+            }
             telemetry.addData("Mira giro medido (graus/s)", Math.toDegrees(angularSpeed()));
             telemetry.addData("Mira erro atual (graus)",
                     Math.toDegrees(Angle.normalizeSigned(aimHeading - follower.pose().heading())));

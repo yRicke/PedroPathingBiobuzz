@@ -21,9 +21,6 @@ public class TeleOpMain extends LinearOpMode {
     // Referencial adotado para a alianca atual: X/Y em polegadas, heading em radianos.
     private static final Pose INITIAL_POSE = new Pose(8.4, 35.2, Math.toRadians(0));
     private static final Pose RESET_POSE = new Pose(8.4, 35.2, Math.toRadians(0));
-    // Os mesmos numeros sao usados nas duas aliancas; a cor altera somente os IDs das tags.
-    private static final Pose RIGHT_HIVE = new Pose(57.8, 50);
-    private static final Pose LEFT_HIVE = new Pose(57.8, 90);
 
     private PedroDrive drive;
     private Limelight limelight;
@@ -79,13 +76,12 @@ public class TeleOpMain extends LinearOpMode {
                 limelight.run(gamepad2.dpad_left, gamepad2.dpad_right,
                         gamepad2.dpad_up, gamepad2.dpad_down);
                 AprilTagObservation observation = limelight.getObservation();
-                Pose target = targetForCell(observation.getFirstTagId());
                 boolean aimRequested = gamepad1.right_bumper;
                 boolean shootRequested = gamepad1.right_trigger > 0;
                 if (aimRequested) {
-                    drive.aimHybrid(-gamepad1.left_stick_y, gamepad1.left_stick_x,
+                    drive.aimVision(-gamepad1.left_stick_y, gamepad1.left_stick_x,
                             gamepad1.right_stick_x, gamepad1.left_trigger > 0,
-                            target.x(), target.y(), observation.getFirstTagId(), observation);
+                            observation);
                 } else {
                     drive.run(-gamepad1.left_stick_y, gamepad1.left_stick_x,
                             gamepad1.right_stick_x, gamepad1.left_trigger > 0);
@@ -95,7 +91,6 @@ public class TeleOpMain extends LinearOpMode {
                 transfer.run(shootRequested, gamepad1.left_bumper);
                 trigger.run(shootRequested);
                 drive.sendTelemetry();
-                telemetry.addData("Hive Pedro (in)", "%.1f, %.1f", target.x(), target.y());
                 limelight.sendTelemetry();
                 intake.sendTelemetry();
                 flywheel.sendTelemetry();
@@ -123,30 +118,14 @@ public class TeleOpMain extends LinearOpMode {
         }
     }
 
-    /** A CELL selecionada determina tanto as tags quanto a coordenada de busca. */
-    public static Pose targetForCell(int firstTagId) {
-        switch (firstTagId) {
-            case Limelight.BLUE_AUDIENCE_FIRST_TAG:
-            case Limelight.RED_AUDIENCE_FIRST_TAG:
-                return LEFT_HIVE;
-            case Limelight.BLUE_OPPOSITE_FIRST_TAG:
-            case Limelight.RED_OPPOSITE_FIRST_TAG:
-                return RIGHT_HIVE;
-            default:
-                throw new IllegalArgumentException("CELL desconhecida: " + firstTagId);
-        }
-    }
-
     private void sendInitTelemetry(boolean restoredFromAuto) {
         telemetry.addData("Origem da pose", restoredFromAuto ? "Final do autonomo" : "INITIAL_POSE");
-        telemetry.addLine("RB: mira hibrida Pedro -> Limelight | LT: precisao | RT: disparar");
+        telemetry.addLine("RB: mira Limelight | Sem alvo: giro manual | LT: precisao | RT: disparar");
         telemetry.addLine("A: intake | LB: inverter intake/transfer");
         telemetry.addLine("Y: frente atual dos controles | X: RESET_POSE e frente global");
         telemetry.addLine("G2 cima/baixo: azul/vermelha | esquerda/direita: CELL plateia/oposta");
         telemetry.addData("Pose inicial sem autonomo (in, in, rad)", INITIAL_POSE);
         telemetry.addData("Pose de reset (in, in, rad)", RESET_POSE);
-        Pose target = targetForCell(limelight.getObservation().getFirstTagId());
-        telemetry.addData("Hive Pedro (in)", "%.1f, %.1f", target.x(), target.y());
         drive.sendTelemetry();
         limelight.sendTelemetry();
         telemetry.update();

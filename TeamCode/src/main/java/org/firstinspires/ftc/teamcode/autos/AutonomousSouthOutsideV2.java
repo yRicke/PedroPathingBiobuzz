@@ -9,7 +9,6 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 import org.firstinspires.ftc.teamcode.OpModeStorage;
-import org.firstinspires.ftc.teamcode.TeleOp.TeleOpMain;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.Drive.PedroDrive;
 import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Flywheel;
@@ -22,7 +21,7 @@ import org.firstinspires.ftc.teamcode.subsystems.Trigger.Trigger;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 
-/** Seis trechos, com mira hibrida e RPM por distancia nos disparos apos path1 e path4. */
+/** Seis trechos, com mira Limelight e RPM por distancia nos disparos apos path1 e path4. */
 @Autonomous(name = "AutonomousSouthOutsideV2", group = "Autonomous")
 public class AutonomousSouthOutsideV2 extends LinearOpMode {
     private static final long SPIN_UP_MS = 1500;
@@ -86,7 +85,7 @@ public class AutonomousSouthOutsideV2 extends LinearOpMode {
                 follower.update();
                 limelight.run(false, true, gamepad2.dpad_up, gamepad2.dpad_down);
                 redAlliance = limelight.isRedAlliance();
-                telemetry.addLine("Disparos em hold: fim de path1 e path4, com mira hibrida e RPM por distancia");
+                telemetry.addLine("Disparos em hold: fim de path1 e path4, com mira Limelight e RPM por distancia");
                 telemetry.addLine("G2 cima: AZUL / baixo: VERMELHA (selecao antes do Play)");
                 limelight.sendTelemetry();
                 telemetry.update();
@@ -154,10 +153,8 @@ public class AutonomousSouthOutsideV2 extends LinearOpMode {
             case AIMING:
             case SHOOTING:
                 AprilTagObservation observation = limelight.getObservation();
-                Pose target = TeleOpMain.targetForCell(observation.getFirstTagId());
-                drive.aimHybridHold(paths[pathIndex].endPose(), target.x(), target.y(),
-                        observation.getFirstTagId(), observation);
-                boolean ready = drive.isHybridVisionAligned() && !follower.isBusy() && rpmReady();
+                drive.aimVisionHold(paths[pathIndex].endPose(), observation);
+                boolean ready = drive.isVisionAligned() && !follower.isBusy() && rpmReady();
                 if (ready && !wasReady) readySinceNanos = now;
                 wasReady = ready;
                 boolean stableReady = ready && elapsedMillis(now, readySinceNanos) >= READY_STABLE_MS;

@@ -30,7 +30,10 @@ public class TeleOpMain extends LinearOpMode {
     private Transfer transfer;
     private Trigger trigger;
     private FlowerCollect flowerCollect;
+//<<<<<<< HEAD
 
+//=======
+//>>>>>>> d06ca30eaecb8a46b87eb487276679374d961ce3
     @Override
     public void runOpMode() {
         Follower follower = Constants.create(hardwareMap);

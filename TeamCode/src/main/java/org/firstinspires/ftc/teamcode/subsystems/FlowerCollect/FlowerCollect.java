@@ -12,8 +12,8 @@ public class FlowerCollect {
     public static final double SERVO_ONE_OPEN_POSITION = 0.0;
     public static final double SERVO_TWO_OPEN_POSITION = 0.0;
     // Provisorias: substituir separadamente pelos valores encontrados no tuner.
-    public static final double SERVO_ONE_CLOSED_POSITION = 1.0;
-    public static final double SERVO_TWO_CLOSED_POSITION = 1.0;
+    public static final double SERVO_ONE_CLOSED_POSITION = 0.83;
+    public static final double SERVO_TWO_CLOSED_POSITION = 0.83;
 
     private final Servo servoOne;
     private final Servo servoTwo;

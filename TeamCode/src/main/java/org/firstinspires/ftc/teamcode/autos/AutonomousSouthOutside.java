@@ -26,9 +26,9 @@ import org.firstinspires.ftc.teamcode.subsystems.Trigger.Trigger;
 
 @Autonomous(name = "AutonomousSouthOutside", group = "Autonomous")
 public class AutonomousSouthOutside extends LinearOpMode {
-    private static final double FLYWHEEL_RPM = 2670;
+    private static final double FLYWHEEL_RPM = 2640;
     private static final double SPIN_UP_MS = 1500;
-    private static final double SHOOT_TIME_MS = 3000;
+    private static final double SHOOT_TIME_MS = 1500;
 
     private Follower follower;
     private Intake intake;
@@ -37,17 +37,19 @@ public class AutonomousSouthOutside extends LinearOpMode {
     private Trigger trigger;
     private String stage = "Inicializado";
 
+
     private final PoseFactory poseFactory = PoseFactory.degrees();
 
-    private final Pose start = poseFactory.of(56, 9, 90);
-    private final Pose foward = poseFactory.of(56, 15, 90);
-    private final Pose path1 = poseFactory.of(31, 15, 180);
-    private final Pose point2 = poseFactory.of(12, 15, 180);
-    private final Pose point3 = poseFactory.of(56, 133, -90);
-    private final Pose point3Control1 = poseFactory.of(79, 1, 0);
-    private final Pose point4 = poseFactory.of(4, 116, 0.0923);
-    private final Pose point4Control1 = poseFactory.of(57, 116, 0);
 
+
+    private final Pose start = poseFactory.of(59.4224, 8.9015, 90);
+    private final Pose path1 = poseFactory.of(59.6615, 22.6852, 180);
+    private final Pose point2Start = poseFactory.of(59.6615, 22.6852, 180);
+    private final Pose point2 = poseFactory.of(34.6943, 13.8732, 180);
+    private final Pose point3Start = poseFactory.of(34.6943, 13.8732, 180);
+    private final Pose point3 = poseFactory.of(16.3534, 13.615, 180);
+    private final Pose point4 = poseFactory.of(65.9708, 36.2126, -155.5137);
+    private final Pose point5 = poseFactory.of(65.7135, 137.5009, -89.8545);
     @Override
     public void runOpMode() {
         OpModeStorage.clearAutonomousPose();
@@ -127,13 +129,14 @@ public class AutonomousSouthOutside extends LinearOpMode {
                 hold(follower, start),
                 waitMs(SPIN_UP_MS),
                 shoot("Disparo inicial em hold"),
-                followPath("foward", foward()),
-                followPath("path1", path1()),
+                followPath("foward", path1()),
                 followPath("path2", path2()),
                 followPath("path3", path3()),
-                // holdEnd conserva a pose final real, incluindo o reverseTangent.
-                shoot("Disparo apos path3 em hold"),
                 followPath("path4", path4()),
+                followPath("path5", path5()),
+                // holdEnd conserva a pose final real, incluindo o reverseTangent.
+                shoot("Disparo apos path5  em hold"),
+
                 instant(() -> stage = "Concluido em hold")
         );
     }
@@ -162,23 +165,24 @@ public class AutonomousSouthOutside extends LinearOpMode {
         transfer.run(enabled);
     }
 
-    public Path foward() {
-        return Paths.line(start, foward).linear(start, foward);
-    }
 
     public Path path1() {
-        return Paths.line(foward, path1).linear(foward, path1);
+        return Paths.line(start, path1).linear(start, path1);
     }
 
     public Path path2() {
-        return Paths.line(path1, point2).tangent();
+        return Paths.line(point2Start, point2).linear(point2Start, point2);
     }
 
     public Path path3() {
-        return Paths.curve(point2, point3Control1, point3).reverseTangent();
+        return Paths.line(point3Start, point3).linear(point3Start, point3);
     }
 
     public Path path4() {
-        return Paths.curve(point3, point4Control1, point4).reverseTangent();
+        return Paths.line(point3, point4).reverseTangent();
+    }
+
+    public Path path5() {
+        return Paths.line(point4, point5).reverseTangent();
     }
 }

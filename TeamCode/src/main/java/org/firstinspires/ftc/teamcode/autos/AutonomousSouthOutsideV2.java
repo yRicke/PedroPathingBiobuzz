@@ -34,7 +34,7 @@ public class AutonomousSouthOutsideV2 extends LinearOpMode {
     private static final String[] PATH_NAMES = {"path1", "path1_2", "path3", "path4", "path5", "path6"};
     private final PoseFactory poseFactory = PoseFactory.degrees();
     private final Pose start = poseFactory.of(57.8428, 8.1749, 90);
-    private final Pose point1 = poseFactory.of(57.8922, 18.3733, 89.7226);
+    private final Pose point1 = poseFactory.of(57.8922, 20.3733, 89.7226);
     private final Pose path1Start = poseFactory.of(57.8922, 18.3733, 90);
     private final Pose path1 = poseFactory.of(31.0559, 8.6016, 180);
     private final Pose point3 = poseFactory.of(8.8197, 8.5043, 180);

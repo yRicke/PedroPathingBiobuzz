@@ -14,35 +14,31 @@ O TeleOp coordena entradas e chamadas dos subsistemas.
 | `Transfer/` | Alimentação dos elementos |
 | `Trigger/` | Abertura do disparo |
 | `DedinhoNervoso/` | Retenção/liberação pelo servo |
-| `FlowerCollect/` | Dois servos espelhados com posições independentes |
+| `FlowerCollector/` | Dois CRServos com abertura e fechamento por tempo |
 
-## Flower Collect
+## Flower Collector
 
-O `FlowerCollect` usa os servos posicionais `flowerCollect1` e `flowerCollect2`,
-em portas separadas. O primeiro usa `FORWARD` e o segundo `REVERSE`. As posições
-lógicas são independentes e limitadas entre 0 e 1; a inversão do segundo já é
-aplicada pelo SDK. As quatro constantes no início de `FlowerCollect.java`
-definem aberto/fechado para cada servo: aberto começa em 0 e fechado em 1,
-provisoriamente. `run(true)` fecha, `run(false)` abre. `setPositions(...)` ou
-os métodos `setServoOnePosition(...)` e `setServoTwoPosition(...)` permitem
-ajustes independentes. Ainda não está integrado ao `TeleOpMain`.
+O `FlowerCollector` usa dois `CRServo`, com os nomes de hardware `flowerCollect1`
+e `flowerCollect2` preservados. Configure as portas como **Continuous Rotation
+Servo** na Driver Station e programe os goBILDA no modo contínuo. Ambos começam
+em `FORWARD`; cada direção pode ser invertida diretamente no construtor.
 
-O ajuste fica no **Servo Tuner Universal**, grupo **Tuning**, na pasta `TeleOp/`.
-O [guia de ajuste de servos](../../../../../../../../../docs/servo-tuning.md)
-explica seleção por nome/porta, passos, faixa PWM e modo posicional dos goBILDA.
-O tuner começa com PWM desligado e aciona somente o servo selecionado após A.
-Anote posição, sentido e faixa PWM de cada lado antes de copiar os valores para
-as quatro constantes. Para reproduzir a configuração atual do `FlowerCollect`,
-use a mesma faixa PWM do subsistema, FORWARD no primeiro e REVERSE no segundo.
-O subsistema mantém a faixa configurada pelo SDK/Robot Configuration; o tuner
-oferece explicitamente o padrão SDK de 600–2400 µs ou 500–2500 µs. Se ampliar a
-faixa no tuner, configure a mesma faixa no subsistema antes de reutilizar os valores.
+O único ajuste de movimento no topo de `FlowerCollector.java` é
+`SERVO_RUN_TIME_SECONDS`, inicialmente **1.0 segundo**, comum aos dois servos e
+aos dois sentidos. `open()` aplica +1 nos dois; `close()` aplica -1. Ao terminar
+o prazo, ambos recebem potência zero. O construtor começa com os dois parados.
 
-O goBILDA **2000-0025-0502** pode percorrer cinco voltas (1800°). **O construtor
-de `FlowerCollect` ainda comanda ambos para 0 lógico, com sentidos opostos.**
-As posições aberta 0 e fechada 1 são provisórias e podem estar várias voltas
-distantes. Calibre com o mecanismo desacoplado antes de usar o subsistema;
-anote os limites úteis de cada lado para evitar forçar os batentes.
+Chame `update()` a cada ciclo após solicitar `open()`/`close()` por evento, ou
+use `run(boolean closed)` a cada ciclo (`true` fecha, `false` abre). Repetir o
+mesmo alvo não renova o prazo nem reinicia um movimento concluído. O comando
+oposto inverte imediatamente e começa um novo prazo completo. `stop()` cancela
+o movimento e libera uma nova solicitação do mesmo alvo; deve ser chamado no
+encerramento do OpMode. O temporizador não usa `sleep` nem bloqueia o drive.
+
+Potência zero para a rotação, sem controle de posição ou confirmação de aberto/
+fechado. O batente físico não interrompe a potência antes do prazo: ajuste o
+tempo para evitar esforço prolongado. Ainda não está integrado ao `TeleOpMain`.
+Veja a [configuração e exemplos de uso](../../../../../../../../../docs/flower-collector.md).
 
 ## TeleOp principal
 

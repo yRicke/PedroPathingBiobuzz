@@ -4,8 +4,6 @@ TeleOp principal unico: drive do Pedro com field-centric, precisao e hold
 automatico, localizacao recebida do autonomo e mira somente pela Limelight.
 O antigo TeleOpMainPedro foi incorporado ao TeleOpMain e removido da lista de OpModes.
 O modo Flywheel Calibration - 3D continua separado para calibracao manual de RPM.
-O **Servo Tuner Universal**, grupo **Tuning**, ajusta um servo posicional por vez,
-sem depender dos outros subsistemas. Veja o [guia de ajuste de servos](../../../../../../../../../docs/servo-tuning.md).
 
 ## Referencial e coordenadas
 

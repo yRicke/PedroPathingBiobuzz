@@ -1,8 +1,8 @@
 # AutonomousSouthOutsideV3
 
 OpMode **AutonomousSouthOutsideV3**, no grupo **Autonomous**. Usa os 11
-trechos do Pedro Visualizer e preserva a mira Limelight, a selecao de alianca
-no INIT e as condicoes de liberacao de disparo do V2, descritas abaixo.
+trechos do Pedro Visualizer, com selecao de alianca no INIT e uma mirada
+breve pela Limelight antes de cada disparo, sem exigir confirmacao.
 
 ## Percurso e paradas
 
@@ -41,11 +41,12 @@ FLOWER_SERVO_SETTLE_MS reserva 500 ms para cada movimento dos servos;
 servos posicionais nao fornecem confirmacao fisica da chegada.
 
 O primeiro lancamento seleciona a CELL oposta; os outros dois selecionam
-a CELL plateia. Cada janela de disparo dura 3 s apos a prontidao persistir
-por 150 ms. A mira pode mudar o heading, mantendo X/Y fixos. Como no V2,
-perder visao, posicao, heading ou RPM interrompe a alimentacao durante a
-janela; nao conseguir prontidao em 3 s ignora aquele lancamento e continua
-o percurso. O aquecimento inicial e o tempo de mira antecedem a janela.
+a CELL plateia. Antes de cada disparo, tenta ajustar a mira por 500 ms
+(AIM_TIME_MS), mantendo X/Y fixos. Em seguida, conserva o heading medido
+e alimenta o lancador continuamente por 3 s, sem exigir confirmacao de
+visao, alinhamento ou RPM. Sem imagem, ainda dispara; perder visao ou RPM
+durante a janela nao interrompe a alimentacao. O aquecimento inicial de
+1,5 s e a mirada de 0,5 s antecedem a janela de disparo.
 
 A flywheel continua com RPM por distancia e o intake fica ligado durante
 os trechos e as esperas. Ao concluir o estacionamento, desliga intake,
@@ -59,7 +60,7 @@ AutonomousSouthOutsideV3Test simula o follower real com sensores e
 mecanismos substituidos por mocks e relogio controlado. Verifica os 11
 trechos, coordenadas das etapas, simetria, curvas, tres janelas de disparo,
 parada de coleta, ordem e tempo dos servos, selecao de CELL por alianca,
-perda de visao/RPM, timeout de mira e encerramento. FlowerCollectTest
+disparo sem confirmacao, continuidade sem visao/RPM e encerramento. FlowerCollectTest
 tambem cobre a inicializacao fechada sem comando intermediario de abertura.
 
 # AutonomousSouthOutsideV2

@@ -25,13 +25,11 @@ import java.util.function.LongSupplier;
 @Autonomous(name = "AutonomousSouthOutsideV3", group = "Autonomous")
 public class AutonomousSouthOutsideV3 extends LinearOpMode {
     private static final long SPIN_UP_MS = 1500;
-    private static final long AIM_TIMEOUT_MS = 3000;
-    private static final long READY_STABLE_MS = 150;
+    private static final long AIM_TIME_MS = 500;
     private static final long SHOOT_TIME_MS = 3000;
     private static final long FLOWER_COLLECT_MS = 3500;
     // Servos posicionais nao informam a chegada: reserva tempo para o movimento.
     private static final long FLOWER_SERVO_SETTLE_MS = 500;
-    private static final double RPM_TOLERANCE = 100;
 
     private static final int SECOND_SHOT_PATH = 3;
     private static final int PREP_FLOWER_PATH = 5;
@@ -83,8 +81,6 @@ public class AutonomousSouthOutsideV3 extends LinearOpMode {
     private boolean redAlliance;
     private long phaseStartedNanos;
     private long flowerOpenedNanos;
-    private long readySinceNanos;
-    private boolean wasReady;
     private String shotStatus = "Aguardando Play";
 
     @Override
@@ -151,7 +147,6 @@ public class AutonomousSouthOutsideV3 extends LinearOpMode {
         audienceCell = false;
         phase = Phase.WARMING;
         phaseStartedNanos = nanoClock.getAsLong();
-        wasReady = false;
         shotStatus = "Aquecendo para o lancamento inicial";
     }
 
@@ -189,29 +184,26 @@ public class AutonomousSouthOutsideV3 extends LinearOpMode {
                 }
                 break;
             case AIMING:
-            case SHOOTING:
                 drive.aimVisionHold(pathIndex < 0 ? start : paths[pathIndex].endPose(),
                         limelight.getObservation());
-                boolean ready = drive.isVisionAligned() && !follower.isBusy() && rpmReady();
-                if (ready && !wasReady) readySinceNanos = now;
-                wasReady = ready;
-                boolean stableReady = ready && elapsedMillis(now, readySinceNanos) >= READY_STABLE_MS;
-                if (phase == Phase.AIMING) {
-                    if (elapsedMillis(now, phaseStartedNanos) >= AIM_TIMEOUT_MS) {
-                        shotStatus = "Lancamento " + shotNumber + " ignorado: sem alinhamento/RPM";
-                        finishShot();
-                    } else if (stableReady) {
-                        phase = Phase.SHOOTING;
-                        phaseStartedNanos = now;
-                        shotStatus = "Lancamento " + shotNumber + " em hold por 3 s";
-                        feeding = true;
-                    }
-                } else if (elapsedMillis(now, phaseStartedNanos) >= SHOOT_TIME_MS) {
+                if (elapsedMillis(now, phaseStartedNanos) >= AIM_TIME_MS) {
+                    // Encerra a correcao visual e mantem o heading medido durante o disparo.
+                    Pose shotPose = pathIndex < 0 ? start : paths[pathIndex].endPose();
+                    follower.hold(new Pose(shotPose.x(), shotPose.y(), follower.pose().heading()));
+                    follower.update();
+                    phase = Phase.SHOOTING;
+                    phaseStartedNanos = now;
+                    shotStatus = "Lancamento " + shotNumber + " em hold por 3 s";
+                    feeding = true;
+                }
+                break;
+            case SHOOTING:
+                follower.update();
+                if (elapsedMillis(now, phaseStartedNanos) >= SHOOT_TIME_MS) {
                     shotStatus = "Lancamento " + shotNumber + " concluido";
                     finishShot();
                 } else {
-                    // Mantem as mesmas condicoes de liberacao e interrupcao do V2.
-                    feeding = stableReady;
+                    feeding = true;
                 }
                 break;
             case OPENING_FLOWER:
@@ -248,17 +240,7 @@ public class AutonomousSouthOutsideV3 extends LinearOpMode {
         shotNumber++;
         phase = Phase.AIMING;
         phaseStartedNanos = now;
-        wasReady = false;
-        shotStatus = "Alinhando e estabilizando RPM para o lancamento " + shotNumber;
-    }
-
-    private boolean rpmReady() {
-        double target = flywheel.getTargetRPM();
-        double first = flywheel.getRPM();
-        double second = flywheel.getSecondMotorRPM();
-        return Double.isFinite(target) && target > 0 && Double.isFinite(first) && Double.isFinite(second)
-                && Math.abs(first - target) <= RPM_TOLERANCE
-                && Math.abs(second - target) <= RPM_TOLERANCE;
+        shotStatus = "Mirada breve de 0,5 s para o lancamento " + shotNumber;
     }
 
     private void finishShot() {

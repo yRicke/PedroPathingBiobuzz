@@ -26,7 +26,8 @@ public class FlowerCollectTest {
     @Test public void startsOpenWithOppositeDirections() {
         verify(one).setDirection(Servo.Direction.FORWARD);
         verify(two).setDirection(Servo.Direction.REVERSE);
-        assertCommand(0, 0);
+        assertCommand(FlowerCollect.SERVO_ONE_OPEN_POSITION,
+                FlowerCollect.SERVO_TWO_OPEN_POSITION);
     }
 
     @Test public void canStartClosedWithoutCommandingOpen() {

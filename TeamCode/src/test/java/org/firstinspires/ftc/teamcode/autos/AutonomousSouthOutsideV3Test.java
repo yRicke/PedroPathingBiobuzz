@@ -249,55 +249,53 @@ public class AutonomousSouthOutsideV3Test {
     }
 
     @Test
-    public void waitsForVisionBothMotorsAndStableRpmBeforeInitialShot() {
+    public void aimsForHalfASecondThenShootsWithoutAlignmentOrRpmConfirmation() {
         tx = 6;
+        firstRpm = 0;
+        secondRpm = 0;
         auto.startAutonomous();
         tickMillis(1500);
-        for (int i = 0; i < 40; i++) tick();
+        tickMillis(499);
         assertTrue(shotStarts.isEmpty());
-        tx = 0;
-        secondRpm = 2000;
-        for (int i = 0; i < 30; i++) tick();
-        assertTrue(shotStarts.isEmpty());
-        secondRpm = 2670;
-        firstRpm = 2000;
-        for (int i = 0; i < 30; i++) tick();
-        assertTrue(shotStarts.isEmpty());
-        firstRpm = 2670;
-        for (int i = 0; i < 7; i++) tick();
-        assertTrue("Prontidao deve persistir por 150 ms", shotStarts.isEmpty());
-        runUntil(() -> feeding, 20);
+        tickMillis(1);
+        assertTrue(feeding && transferring);
+        assertEquals(Long.valueOf(TimeUnit.MILLISECONDS.toNanos(2000)), shotStarts.get(0));
         assertTrue(followed.isEmpty());
+        verify(flywheel, never()).getRPM();
+        verify(flywheel, never()).getSecondMotorRPM();
     }
 
     @Test
-    public void visionLossStopsFeedingImmediatelyAndRequiresConfirmationAgain() {
+    public void visionLossDoesNotInterruptFeedingOrChangeTheHeldHeading() {
         auto.startAutonomous();
         runUntil(() -> feeding, 120);
+        Pose held = follower.poseAt(0);
         visible = false;
         tick();
-        assertFalse(feeding || transferring);
+        assertTrue(feeding && transferring);
         assertTrue(follower.holding());
         assertTrue(followed.isEmpty());
         visible = true;
+        tx = 10;
         tick();
         tick();
-        assertFalse(feeding);
-        runUntil(() -> feeding, 20);
+        assertTrue(feeding && transferring);
+        assertPose(held, follower.poseAt(0));
+        finishShot(1, 0);
     }
 
     @Test
-    public void rpmLossStopsFeedingDuringTheShotWindow() {
+    public void rpmLossDoesNotInterruptTheThreeSecondShotWindow() {
         auto.startAutonomous();
         runUntil(() -> feeding, 120);
         secondRpm = Double.NaN;
         tick();
-        assertFalse(feeding || transferring);
+        assertTrue(feeding && transferring);
         assertTrue(follower.holding());
         secondRpm = 2670;
         for (int i = 0; i < 7; i++) tick();
-        assertFalse(feeding);
-        runUntil(() -> feeding, 10);
+        assertTrue(feeding && transferring);
+        finishShot(1, 0);
     }
 
     @Test
@@ -311,11 +309,15 @@ public class AutonomousSouthOutsideV3Test {
     }
 
     @Test
-    public void missingVisionSkipsAllThreeShotsButCompletesFlowerCollectionAndParking() {
+    public void missingVisionStillFiresAllThreeShotsAndCompletesFlowerCollectionAndParking() {
         visible = false;
         completeRoute();
-        assertTrue(shotStarts.isEmpty());
-        assertTrue(shotEnds.isEmpty());
+        assertEquals(Arrays.asList(0, 4, 10), shotPathCounts);
+        assertEquals(3, shotStarts.size());
+        assertEquals(3, shotEnds.size());
+        for (int i = 0; i < 3; i++) {
+            assertEquals(3000, millis(shotEnds.get(i) - shotStarts.get(i)));
+        }
         assertFalse(flowerOpen || feeding || transferring);
         verify(flowerCollect).setOpen();
         verify(flywheel, atLeastOnce()).stopMotors();

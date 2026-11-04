@@ -6,6 +6,7 @@ import com.pedropathing.follower.Follower;
 import com.pedropathing.math.Pose;
 import com.pedropathing.paths.Path;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 import org.firstinspires.ftc.teamcode.OpModeStorage;
@@ -22,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 
 /** Seis trechos, com mira Limelight e RPM por distancia nos disparos apos path1 e path4. */
+@Disabled
 @Autonomous(name = "AutonomousSouthOutsideV2", group = "Autonomous")
 public class AutonomousSouthOutsideV2 extends LinearOpMode {
     private static final long SPIN_UP_MS = 1500;

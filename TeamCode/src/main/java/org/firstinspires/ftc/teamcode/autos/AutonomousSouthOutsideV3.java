@@ -53,18 +53,16 @@ public class AutonomousSouthOutsideV3 extends LinearOpMode {
     private final Pose chegadinhaFrente1 = poseFactory.of(57.8, 20, 90);
     private final Pose prepColetaJardim = poseFactory.of(31, 10, 180);
     private final Pose coletaJardim = poseFactory.of(10, 10, 180);
-    // Os lancamentos 2 e 3 compartilham exatamente a mesma pose.
-    private final Pose lancamento = poseFactory.of(60, 133, 270);
+    private final Pose lancamento2 = poseFactory.of(60, 133, 270);
     private final Pose lancamentoControl1 = poseFactory.of(38.1594, 48.3839, 0);
     private final Pose lancamentoControl2 = poseFactory.of(6.5729, 108.8181, 0);
     private final Pose lancamentoControl3 = poseFactory.of(57.3303, 105.8968, 0);
-    // Avanca os mesmos 11 in do primeiro trecho, agora no sentido de 270 graus.
-    // Esta tambem e a pose de pre_lancamento_3.
-    private final Pose chegadinhaFrente2 = poseFactory.of(lancamento.x(),
-            lancamento.y() - (chegadinhaFrente1.y() - start.y()), 270);
-    // A preparacao e o retorno da flower compartilham esta pose.
+    private final Pose chegadinhaFrente2 = poseFactory.of(60, 122, 270);
     private final Pose prepColetaFlower = poseFactory.of(46.6, 120, 90);
     private final Pose coletaFlower = poseFactory.of(46.6, 128, 90);
+    private final Pose posFlower = poseFactory.of(46.6, 120, 90);
+    private final Pose prepLancamento3 = poseFactory.of(60, 122, 270);
+    private final Pose lancamento3 = poseFactory.of(60, 133, 270);
     private final Pose estacionamento = poseFactory.of(10, 120, 0);
     private final Pose estacionamentoControl1 = poseFactory.of(65.729, 114.1129, 0);
 
@@ -192,7 +190,8 @@ public class AutonomousSouthOutsideV3 extends LinearOpMode {
                 break;
             case AIMING:
             case SHOOTING:
-                drive.aimVisionHold(pathIndex < 0 ? start : lancamento, limelight.getObservation());
+                drive.aimVisionHold(pathIndex < 0 ? start : paths[pathIndex].endPose(),
+                        limelight.getObservation());
                 boolean ready = drive.isVisionAligned() && !follower.isBusy() && rpmReady();
                 if (ready && !wasReady) readySinceNanos = now;
                 wasReady = ready;
@@ -330,19 +329,19 @@ public class AutonomousSouthOutsideV3 extends LinearOpMode {
     public Path coletajardim() { return Paths.line(prepColetaJardim, coletaJardim).constant(coletaJardim); }
     public Path lancamento2() {
         return Paths.curve(coletaJardim, lancamentoControl1, lancamentoControl2,
-                lancamentoControl3, lancamento).linear(coletaJardim, lancamento);
+                lancamentoControl3, lancamento2).linear(coletaJardim, lancamento2);
     }
-    public Path chegadinhafrente2() { return Paths.line(lancamento, chegadinhaFrente2).constant(chegadinhaFrente2); }
+    public Path chegadinhafrente2() { return Paths.line(lancamento2, chegadinhaFrente2).constant(chegadinhaFrente2); }
     public Path prepcoletaflower() {
         return Paths.line(chegadinhaFrente2, prepColetaFlower).linear(chegadinhaFrente2, prepColetaFlower);
     }
     public Path coletaflower() { return Paths.line(prepColetaFlower, coletaFlower).constant(coletaFlower); }
-    public Path posflower() { return Paths.line(coletaFlower, prepColetaFlower).reverseTangent(); }
+    public Path posflower() { return Paths.line(coletaFlower, posFlower).reverseTangent(); }
     public Path preplancamento3() {
-        return Paths.line(prepColetaFlower, chegadinhaFrente2).linear(prepColetaFlower, chegadinhaFrente2);
+        return Paths.line(posFlower, prepLancamento3).linear(posFlower, prepLancamento3);
     }
-    public Path lancamento3() { return Paths.line(chegadinhaFrente2, lancamento).reverseTangent(); }
+    public Path lancamento3() { return Paths.line(prepLancamento3, lancamento3).reverseTangent(); }
     public Path estacionamento() {
-        return Paths.curve(lancamento, estacionamentoControl1, estacionamento).linear(lancamento, estacionamento);
+        return Paths.curve(lancamento3, estacionamentoControl1, estacionamento).linear(lancamento3, estacionamento);
     }
 }

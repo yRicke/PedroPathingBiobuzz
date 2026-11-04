@@ -23,10 +23,11 @@ As poses estao em polegadas e graus:
 | lancamento_3 | (60, 133, 270) | Mira e dispara por 3 s |
 | estacionamento | (10, 120, 0) | Mantem hold e desliga os mecanismos |
 
-Lancamentos 2 e 3 usam uma unica pose. A segunda chegadinha avanca 11 in
-no sentido de 270 graus, simetrica ao primeiro avanco de 11 in a 90 graus,
-e compartilha a pose com pre_lancamento_3. A preparacao e o retorno da
-flower tambem compartilham uma unica pose. Esses ajustes substituem as
+Cada etapa tem sua propria pose, editavel independentemente. Lancamentos
+2 e 3 mantem as mesmas coordenadas; a segunda chegadinha e pre_lancamento_3
+tambem, assim como a preparacao e o retorno da flower. A segunda chegadinha
+avanca 11 in a 270 graus, simetrica ao primeiro avanco de 11 in a 90 graus.
+Esses ajustes substituem as
 coordenadas divergentes do export original; os controles das duas curvas
 e as interpolacoes de heading foram preservados.
 
@@ -56,7 +57,7 @@ Cancelar antes do Play nao publica pose.
 
 AutonomousSouthOutsideV3Test simula o follower real com sensores e
 mecanismos substituidos por mocks e relogio controlado. Verifica os 11
-trechos, poses compartilhadas, simetria, curvas, tres janelas de disparo,
+trechos, coordenadas das etapas, simetria, curvas, tres janelas de disparo,
 parada de coleta, ordem e tempo dos servos, selecao de CELL por alianca,
 perda de visao/RPM, timeout de mira e encerramento. FlowerCollectTest
 tambem cobre a inicializacao fechada sem comando intermediario de abertura.

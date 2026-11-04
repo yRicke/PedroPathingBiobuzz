@@ -139,7 +139,7 @@ public class AutonomousSouthOutsideV3Test {
     }
 
     @Test
-    public void preservesElevenContinuousPathsSharedPosesAndSuppliedBezierControls() {
+    public void preservesElevenContinuousPathsCoordinatesAndSuppliedBezierControls() {
         Path[] paths = paths();
         double[][] endpoints = {{57.8, 20}, {31, 10}, {10, 10}, {60, 133}, {60, 122},
                 {46.6, 120}, {46.6, 128}, {46.6, 120}, {60, 122}, {60, 133}, {10, 120}};

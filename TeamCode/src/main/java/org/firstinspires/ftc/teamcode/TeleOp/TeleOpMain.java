@@ -14,6 +14,7 @@ import org.firstinspires.ftc.teamcode.subsystems.Limelight.Limelight;
 import org.firstinspires.ftc.teamcode.subsystems.Limelight.AprilTagObservation;
 import org.firstinspires.ftc.teamcode.subsystems.Transfer.Transfer;
 import org.firstinspires.ftc.teamcode.subsystems.Trigger.Trigger;
+import org.firstinspires.ftc.teamcode.subsystems.FlowerCollect.FlowerCollect;
 
 /** TeleOp unico com localizacao do Pedro e ajuste final de mira pela Limelight. */
 @TeleOp(name = "TeleOpMain", group = "TeleOpMode")
@@ -28,7 +29,7 @@ public class TeleOpMain extends LinearOpMode {
     private Flywheel flywheel;
     private Transfer transfer;
     private Trigger trigger;
-
+    private FlowerCollect flowerCollect;
     @Override
     public void runOpMode() {
         Follower follower = Constants.create(hardwareMap);
@@ -40,6 +41,7 @@ public class TeleOpMain extends LinearOpMode {
         trigger = new Trigger(hardwareMap, telemetry);
         trigger.setTriggerClosed();
         limelight = new Limelight(hardwareMap, telemetry);
+        flowerCollect = new FlowerCollect(hardwareMap,telemetry);
 
         try {
             Pose autonomousPose = OpModeStorage.consumeAutonomousPose();
@@ -90,12 +92,14 @@ public class TeleOpMain extends LinearOpMode {
                 flywheel.runByDistance(limelight.getDistanceMeters());
                 transfer.run(shootRequested, gamepad1.left_bumper);
                 trigger.run(shootRequested);
+                flowerCollect.run(gamepad1.b);
                 drive.sendTelemetry();
                 limelight.sendTelemetry();
                 intake.sendTelemetry();
                 flywheel.sendTelemetry();
                 transfer.sendTelemetry();
                 trigger.sendTelemetry();
+                flowerCollect.sendTelemetry();
                 telemetry.update();
                 idle();
             }

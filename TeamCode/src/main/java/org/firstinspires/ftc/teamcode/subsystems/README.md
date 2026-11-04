@@ -14,7 +14,7 @@ O TeleOp coordena entradas e chamadas dos subsistemas.
 | `Transfer/` | Alimentação dos elementos |
 | `Trigger/` | Abertura do disparo |
 | `DedinhoNervoso/` | Retenção/liberação pelo servo |
-| `FlowerCollect/` | Dois servos espelhados, posições independentes e TeleOp de ajuste |
+| `FlowerCollect/` | Dois servos espelhados com posições independentes |
 
 ## Flower Collect
 
@@ -27,28 +27,22 @@ provisoriamente. `run(true)` fecha, `run(false)` abre. `setPositions(...)` ou
 os métodos `setServoOnePosition(...)` e `setServoTwoPosition(...)` permitem
 ajustes independentes. Ainda não está integrado ao `TeleOpMain`.
 
-Selecione **Flower Collect Tuner**, grupo **FlowerCollect**, na Driver Station.
-No controle 1, **A** seleciona o servo 1 e **B** seleciona o servo 2. D-pad
-cima/baixo aumenta/diminui somente a posição selecionada; esquerda/direita
-diminui/aumenta o passo entre **0.001, 0.01 e 0.1**. Começa com servo 1 e passo
-0.001. Cada toque faz um ajuste; segurar não repete. A seleção mantém a posição
-do outro servo. A telemetria mostra o servo selecionado, o passo e as duas
-posições comandadas (não são medições físicas). Anote os valores e copie cada
-um para sua constante correspondente; o tuner não salva a calibração.
+O ajuste fica no **Servo Tuner Universal**, grupo **Tuning**, na pasta `TeleOp/`.
+O [guia de ajuste de servos](../../../../../../../../../docs/servo-tuning.md)
+explica seleção por nome/porta, passos, faixa PWM e modo posicional dos goBILDA.
+O tuner começa com PWM desligado e aciona somente o servo selecionado após A.
+Anote posição, sentido e faixa PWM de cada lado antes de copiar os valores para
+as quatro constantes. Para reproduzir a configuração atual do `FlowerCollect`,
+use a mesma faixa PWM do subsistema, FORWARD no primeiro e REVERSE no segundo.
+O subsistema mantém a faixa configurada pelo SDK/Robot Configuration; o tuner
+oferece explicitamente o padrão SDK de 600–2400 µs ou 500–2500 µs. Se ampliar a
+faixa no tuner, configure a mesma faixa no subsistema antes de reutilizar os valores.
 
-O goBILDA **2000-0025-0502** precisa estar no modo de posição, que é o padrão
-de fábrica. No Servo Programmer, selecione a chave **S** e pressione **P**;
-os LEDs piscam ao confirmar. O modo de rotação contínua controla velocidade e
-não serve para este tuner. Consulte a [ficha do servo](https://www.gobilda.com/2000-series-5-turn-dual-mode-servo-25-2-torque/)
-e as [instruções do programador](https://www.gobilda.com/servo-programmer-for-2000-series-dual-mode-servo/).
-
-Esse modelo pode percorrer até cinco voltas (1800°), dependendo da faixa PWM
-do controlador. O código mantém a faixa PWM padrão do SDK. **Antes do primeiro
-INIT, desacople os braços do mecanismo:** a inicialização comanda ambos para
-0 lógico, com sentidos opostos. Só depois alinhe os braços na abertura
-desejada, sem forçar batentes. Ajuste um lado por vez com passo 0.001. A posição
-fechada 1 é provisória e pode estar várias voltas distante; encontre o valor
-de cada lado antes de usar `setClosed()` no mecanismo montado.
+O goBILDA **2000-0025-0502** pode percorrer cinco voltas (1800°). **O construtor
+de `FlowerCollect` ainda comanda ambos para 0 lógico, com sentidos opostos.**
+As posições aberta 0 e fechada 1 são provisórias e podem estar várias voltas
+distantes. Calibre com o mecanismo desacoplado antes de usar o subsistema;
+anote os limites úteis de cada lado para evitar forçar os batentes.
 
 ## TeleOp principal
 

@@ -29,6 +29,20 @@ public class FlowerCollectTest {
         assertCommand(0, 0);
     }
 
+    @Test public void canStartClosedWithoutCommandingOpen() {
+        HardwareMap hardwareMap = mock(HardwareMap.class);
+        when(hardwareMap.get(Servo.class, "flowerCollect1")).thenReturn(one);
+        when(hardwareMap.get(Servo.class, "flowerCollect2")).thenReturn(two);
+        clearInvocations(one, two);
+
+        flowerCollect = new FlowerCollect(hardwareMap, mock(Telemetry.class), true);
+
+        assertCommand(FlowerCollect.SERVO_ONE_CLOSED_POSITION,
+                FlowerCollect.SERVO_TWO_CLOSED_POSITION);
+        verify(one, never()).setPosition(FlowerCollect.SERVO_ONE_OPEN_POSITION);
+        verify(two, never()).setPosition(FlowerCollect.SERVO_TWO_OPEN_POSITION);
+    }
+
     @Test public void independentPositionsDoNotDoubleReverseSecondServo() {
         clearInvocations(one, two);
         flowerCollect.setPositions(0.237, 0.412);

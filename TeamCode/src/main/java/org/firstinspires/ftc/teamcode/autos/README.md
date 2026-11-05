@@ -8,31 +8,38 @@ breve pela Limelight antes de cada disparo, sem exigir confirmacao.
 
 As poses estao em polegadas e graus:
 
-| Etapa | Pose final (X, Y, heading) | Acao ao chegar e parar |
+| Etapa | Pose final (X, Y, heading) | Acao |
 | --- | --- | --- |
-| Inicio | (57.8, 9, 90) | Aquece por 1,5 s, mira e dispara por 3 s antes de sair |
-| chegadinha_frente_1 | (57.8, 20, 90) | Segue o percurso |
-| prep_coleta_jardim | (31, 10, 180) | Segue o percurso |
-| coleta_jardim | (10, 10, 180) | Segue o percurso |
-| lancamento_2 | (60, 133, 270) | Mira e dispara por 3 s |
-| chegadinha_frente_2 | (60, 122, 270) | Segue o percurso |
-| prep_coleta_flower | (46.6, 120, 90) | Confirma o tempo reservado para abrir o coletor |
-| coleta_flower | (46.6, 128, 90) | Mantem hold por 3,5 s com intake ligado |
+| Inicio | (57.8, 9, 90) | Aquece por 1,5 s, mira e dispara por 3,5 s antes de sair |
+| chegadinha_frente_1 | (57.8, 20, 90) | Continua para o proximo trecho sem hold intermediario |
+| prep_coleta_jardim | (31, 13, 180) | Continua para o proximo trecho sem hold intermediario |
+| coleta_jardim | (14, 13, 180) | Continua para o proximo trecho sem hold intermediario |
+| lancamento_2 | (60, 145, 270) | Para, mira e dispara por 3,5 s |
+| chegadinha_frente_2 | (60, 122, 270) | Continua ate a preparacao da flower sem hold intermediario |
+| prep_coleta_flower | (50.6, 122, 90) | Para e confirma o tempo reservado para abrir o coletor |
+| coleta_flower | (46.6, 130, 90) | Mantem hold por 3,5 s com intake ligado |
 | pos_flower | (46.6, 120, 90) | Recolhe o coletor e espera 0,5 s |
-| pre_lancamento_3 | (60, 122, 270) | Segue o percurso |
-| lancamento_3 | (60, 133, 270) | Mira e dispara por 3 s |
+| pre_lancamento_3 | (60, 122, 270) | Continua ate o lancamento sem hold intermediario |
+| lancamento_3 | (60, 145, 270) | Para, mira e dispara por 3,5 s |
 | estacionamento | (10, 120, 0) | Mantem hold e desliga os mecanismos |
 
 Cada etapa tem sua propria pose, editavel independentemente. Lancamentos
 2 e 3 mantem as mesmas coordenadas; a segunda chegadinha e pre_lancamento_3
-tambem, assim como a preparacao e o retorno da flower. A segunda chegadinha
-avanca 11 in a 270 graus, simetrica ao primeiro avanco de 11 in a 90 graus.
-Esses ajustes substituem as
-coordenadas divergentes do export original; os controles das duas curvas
-e as interpolacoes de heading foram preservados.
+tambem. Os controles das duas curvas e as interpolacoes de heading foram
+preservados.
+
+Os trechos de transito sao concatenados com Paths.path em tres grupos:
+chegadinha_frente_1 ate lancamento_2, chegadinha_frente_2 ate
+prep_coleta_flower e pre_lancamento_3 ate lancamento_3. Dentro desses
+grupos, o proprio Pedro faz a transicao entre segmentos, sem esperar hold
+e velocidade zero em cada ponto intermediario. O auto so espera a parada
+ao final de cada grupo e nos trechos individuais coleta_flower, pos_flower
+e estacionamento. A telemetria continua identificando cada um dos 11
+trechos originais.
 
 O flower collector recebe a posicao fechada diretamente no construtor,
-inclusive antes do Play. Abre ao iniciar prep_coleta_flower. O auto somente
+inclusive antes do Play. Abre quando o Pedro entra no segmento
+prep_coleta_flower dentro do grupo. O auto somente
 inicia coleta_flower depois de chegar a preparacao e de transcorrerem pelo
 menos 500 ms desde a abertura. A espera de coleta de 3,5 s comeca quando
 o follower termina o trecho e confirma a parada. O coletor permanece
@@ -43,7 +50,7 @@ servos posicionais nao fornecem confirmacao fisica da chegada.
 O primeiro lancamento seleciona a CELL oposta; os outros dois selecionam
 a CELL plateia. Antes de cada disparo, tenta ajustar a mira por 500 ms
 (AIM_TIME_MS), mantendo X/Y fixos. Em seguida, conserva o heading medido
-e alimenta o lancador continuamente por 3 s, sem exigir confirmacao de
+e alimenta o lancador continuamente por 3,5 s, sem exigir confirmacao de
 visao, alinhamento ou RPM. Sem imagem, ainda dispara; perder visao ou RPM
 durante a janela nao interrompe a alimentacao. O aquecimento inicial de
 1,5 s e a mirada de 0,5 s antecedem a janela de disparo.
@@ -58,7 +65,8 @@ Cancelar antes do Play nao publica pose.
 
 AutonomousSouthOutsideV3Test simula o follower real com sensores e
 mecanismos substituidos por mocks e relogio controlado. Verifica os 11
-trechos, coordenadas das etapas, simetria, curvas, tres janelas de disparo,
+trechos, coordenadas das etapas, curvas, transicoes com velocidade diferente
+de zero e tres janelas de disparo de 3,5 s. Tambem cobre
 parada de coleta, ordem e tempo dos servos, selecao de CELL por alianca,
 disparo sem confirmacao, continuidade sem visao/RPM e encerramento. FlowerCollectTest
 tambem cobre a inicializacao fechada sem comando intermediario de abertura.

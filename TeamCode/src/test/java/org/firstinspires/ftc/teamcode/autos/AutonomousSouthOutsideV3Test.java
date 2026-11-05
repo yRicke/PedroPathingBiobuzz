@@ -9,6 +9,7 @@ import com.pedropathing.localization.MotionState;
 import com.pedropathing.math.Pose;
 import com.pedropathing.math.Velocity;
 import com.pedropathing.paths.Path;
+import com.pedropathing.paths.PathSegment;
 
 import org.firstinspires.ftc.teamcode.OpModeStorage;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
@@ -52,7 +53,7 @@ public class AutonomousSouthOutsideV3Test {
     private final List<Path> followed = new ArrayList<>();
     private final List<Long> shotStarts = new ArrayList<>();
     private final List<Long> shotEnds = new ArrayList<>();
-    private final List<Integer> shotPathCounts = new ArrayList<>();
+    private final List<Integer> shotGroupCounts = new ArrayList<>();
     private final List<Integer> shotTags = new ArrayList<>();
     private Pose pose = new Pose(57.8, 9, Math.PI / 2);
     private Velocity velocity = Velocity.zero();
@@ -76,11 +77,11 @@ public class AutonomousSouthOutsideV3Test {
         doAnswer(inv -> {
             assertFalse("Nao deve iniciar um trecho durante um disparo", feeding || transferring);
             int nextIndex = followed.size();
-            if (nextIndex == 6) {
+            if (nextIndex == 2) {
                 assertTrue("O coletor deve estar aberto antes de coletar", flowerOpen);
                 assertTrue(millis(clock.get() - openedAt) >= 500);
             }
-            if (nextIndex == 8) {
+            if (nextIndex == 4) {
                 assertFalse("O coletor deve estar recolhido antes de retornar ao lancamento", flowerOpen);
                 assertTrue(millis(clock.get() - closedAt) >= 500);
             }
@@ -94,7 +95,7 @@ public class AutonomousSouthOutsideV3Test {
                 assertFalse("O disparo exige robo parado", follower.isBusy());
                 assertFalse("O coletor deve estar fechado durante os disparos", flowerOpen);
                 shotStarts.add(clock.get());
-                shotPathCounts.add(followed.size());
+                shotGroupCounts.add(followed.size());
                 shotTags.add(selectedTag);
             } else if (!on && feeding) {
                 shotEnds.add(clock.get());
@@ -141,8 +142,8 @@ public class AutonomousSouthOutsideV3Test {
     @Test
     public void preservesElevenContinuousPathsCoordinatesAndSuppliedBezierControls() {
         Path[] paths = paths();
-        double[][] endpoints = {{57.8, 20}, {31, 10}, {10, 10}, {60, 133}, {60, 122},
-                {46.6, 120}, {46.6, 128}, {46.6, 120}, {60, 122}, {60, 133}, {10, 120}};
+        double[][] endpoints = {{57.8, 20}, {31, 13}, {14, 13}, {60, 145}, {60, 122},
+                {50.6, 122}, {46.6, 130}, {46.6, 120}, {60, 122}, {60, 145}, {10, 120}};
         assertXY(57.8, 9, paths[0].get(0));
         for (int i = 0; i < paths.length; i++) {
             assertXY(endpoints[i][0], endpoints[i][1], paths[i].endPose());
@@ -150,11 +151,8 @@ public class AutonomousSouthOutsideV3Test {
         }
         assertPose(paths[3].endPose(), paths[9].endPose());
         assertPose(paths[4].endPose(), paths[8].endPose());
-        assertPose(paths[5].endPose(), paths[7].endPose());
-        assertEquals(paths[0].endPose().y() - paths[0].get(0).y(),
-                paths[4].get(0).y() - paths[4].endPose().y(), 1e-6);
-        assertXY(30.7122625, 88.3144625, paths[3].get(0.5));
-        assertXY(50.3645, 120.30645, paths[10].get(0.5));
+        assertXY(30.9622625, 89.2519625, paths[3].get(0.5));
+        assertXY(50.3645, 123.30645, paths[10].get(0.5));
         assertAngle(90, paths[0].get(0.5).heading());
         assertAngle(135, paths[1].get(0.5).heading());
         assertAngle(180, paths[2].get(0.5).heading());
@@ -169,7 +167,7 @@ public class AutonomousSouthOutsideV3Test {
     }
 
     @Test
-    public void followsWholeRouteWithThreeSecondShotsAndThreeAndAHalfSecondFlowerHold() {
+    public void chainsTransitSegmentsAndKeepsThreeAndAHalfSecondShotsAndFlowerHold() {
         auto.startAutonomous();
         assertFalse(flowerOpen);
         tickMillis(1499);
@@ -180,9 +178,9 @@ public class AutonomousSouthOutsideV3Test {
         assertXY(57.8, 9, follower.poseAt(0));
         finishShot(1, 0);
 
-        arrive(auto.chegadinhafrente1(), 2);
-        arrive(auto.prepcoletajardim(), 3);
-        arrive(auto.coletajardim(), 4);
+        passThrough(auto.chegadinhafrente1(), 1, 1);
+        passThrough(auto.prepcoletajardim(), 2, 1);
+        passThrough(auto.coletajardim(), 3, 1);
         pose = auto.lancamento2().endPose();
         velocity = new Velocity(12, 0, 0);
         tick();
@@ -191,58 +189,92 @@ public class AutonomousSouthOutsideV3Test {
         assertEquals(1, shotStarts.size());
         velocity = Velocity.zero();
         runUntil(() -> shotStarts.size() == 2, 40);
-        assertXY(60, 133, follower.poseAt(0));
-        finishShot(5, 1);
+        assertXY(60, 145, follower.poseAt(0));
+        finishShot(2, 1);
 
-        arrive(auto.chegadinhafrente2(), 6);
+        assertFalse("O coletor permanece fechado ate entrar na preparacao", flowerOpen);
+        passThrough(auto.chegadinhafrente2(), 1, 2);
         assertTrue(flowerOpen);
-        arrive(auto.prepcoletaflower(), 7);
+        pose = auto.prepcoletaflower().endPose();
+        tick();
+        tick();
+        tickMillis(500);
+        assertEquals("A preparacao espera parar mesmo com os servos prontos", 2, followed.size());
+        velocity = Velocity.zero();
+        runUntil(() -> followed.size() == 3, 40);
         pose = auto.coletaflower().endPose();
         velocity = new Velocity(12, 0, 0);
         tick();
         tick();
         tickMillis(4000);
-        assertEquals("A coleta nao inicia a espera enquanto o robo se move", 7, followed.size());
+        assertEquals("A coleta nao inicia a espera enquanto o robo se move", 3, followed.size());
         velocity = Velocity.zero();
         runUntil(() -> follower.holding() && !follower.isBusy(), 10);
         long collectionStarted = clock.get();
-        assertXY(46.6, 128, follower.poseAt(0));
+        assertXY(46.6, 130, follower.poseAt(0));
         tickMillis(3499);
-        assertEquals(7, followed.size());
+        assertEquals(3, followed.size());
         assertTrue(flowerOpen);
         assertFalse(feeding || transferring);
         tickMillis(1);
-        assertEquals(8, followed.size());
+        assertEquals(4, followed.size());
         assertEquals(3500, millis(clock.get() - collectionStarted));
 
         pose = auto.posflower().endPose();
+        velocity = new Velocity(12, 0, 0);
+        tick();
+        tick();
+        assertTrue("O coletor so fecha depois que o retorno parar", flowerOpen);
+        assertEquals(4, followed.size());
+        velocity = Velocity.zero();
         runUntil(() -> !flowerOpen, 10);
-        assertEquals(8, followed.size());
+        assertEquals(4, followed.size());
         tickMillis(499);
-        assertEquals(8, followed.size());
+        assertEquals(4, followed.size());
         tickMillis(1);
-        assertEquals(9, followed.size());
-        arrive(auto.preplancamento3(), 10);
+        assertEquals(5, followed.size());
+        passThrough(auto.preplancamento3(), 1, 5);
         pose = auto.lancamento3().endPose();
+        tick();
+        tick();
+        assertTrue("O terceiro disparo tambem espera o robo parar", follower.isBusy());
+        assertEquals(2, shotStarts.size());
+        velocity = Velocity.zero();
         runUntil(() -> shotStarts.size() == 3, 40);
-        assertXY(60, 133, follower.poseAt(0));
-        finishShot(11, 2);
+        assertXY(60, 145, follower.poseAt(0));
+        finishShot(6, 2);
 
         pose = auto.estacionamento().endPose();
+        velocity = new Velocity(12, 0, 0);
+        tick();
+        tick();
+        assertTrue(follower.isBusy());
+        verify(intake, never()).offMotor();
+        velocity = Velocity.zero();
         for (int i = 0; i < 5; i++) tick();
         assertTrue(follower.holding());
         assertXY(10, 120, follower.poseAt(0));
-        assertEquals(Arrays.asList(0, 4, 10), shotPathCounts);
+        assertEquals(Arrays.asList(0, 1, 5), shotGroupCounts);
         assertEquals(Arrays.asList(42, 38, 38), shotTags);
         assertEquals(3, shotStarts.size());
         assertEquals(3, shotEnds.size());
         assertFalse(flowerOpen || feeding || transferring);
         Path[] expected = paths();
-        for (int i = 0; i < expected.length; i++) {
-            for (double t : new double[] {0, 0.25, 0.5, 0.75, 1}) {
-                assertPose(expected[i].get(t), followed.get(i).get(t));
+        int[] groupSizes = {4, 2, 1, 1, 2, 1};
+        int pathIndex = 0;
+        for (int i = 0; i < followed.size(); i++) {
+            List<PathSegment> segments = followed.get(i).getSegments();
+            assertEquals(groupSizes[i], segments.size());
+            for (PathSegment segment : segments) {
+                for (double t : new double[] {0, 0.25, 0.5, 0.75, 1}) {
+                    assertPose(expected[pathIndex].get(t),
+                            segment.curve.get(t).toPose(segment.heading(t)));
+                }
+                pathIndex++;
             }
         }
+        assertEquals(expected.length, pathIndex);
+        verify(flowerCollect).setOpen();
         verify(flywheel, atLeastOnce()).runByDistance(OptionalDouble.of(1.77));
         verify(flywheel, atLeastOnce()).stopMotors();
         verify(intake, atLeastOnce()).offMotor();
@@ -285,7 +317,7 @@ public class AutonomousSouthOutsideV3Test {
     }
 
     @Test
-    public void rpmLossDoesNotInterruptTheThreeSecondShotWindow() {
+    public void rpmLossDoesNotInterruptTheThreeAndAHalfSecondShotWindow() {
         auto.startAutonomous();
         runUntil(() -> feeding, 120);
         secondRpm = Double.NaN;
@@ -303,7 +335,7 @@ public class AutonomousSouthOutsideV3Test {
         inject("redAlliance", true);
         completeRoute();
         assertEquals(Arrays.asList(30, 34, 34), shotTags);
-        assertEquals(Arrays.asList(0, 4, 10), shotPathCounts);
+        assertEquals(Arrays.asList(0, 1, 5), shotGroupCounts);
         verify(limelight, atLeastOnce()).run(false, true, false, true);
         verify(limelight, atLeastOnce()).run(true, false, false, true);
     }
@@ -312,11 +344,11 @@ public class AutonomousSouthOutsideV3Test {
     public void missingVisionStillFiresAllThreeShotsAndCompletesFlowerCollectionAndParking() {
         visible = false;
         completeRoute();
-        assertEquals(Arrays.asList(0, 4, 10), shotPathCounts);
+        assertEquals(Arrays.asList(0, 1, 5), shotGroupCounts);
         assertEquals(3, shotStarts.size());
         assertEquals(3, shotEnds.size());
         for (int i = 0; i < 3; i++) {
-            assertEquals(3000, millis(shotEnds.get(i) - shotStarts.get(i)));
+            assertEquals(3500, millis(shotEnds.get(i) - shotStarts.get(i)));
         }
         assertFalse(flowerOpen || feeding || transferring);
         verify(flowerCollect).setOpen();
@@ -357,22 +389,30 @@ public class AutonomousSouthOutsideV3Test {
                 auto.posflower(), auto.preplancamento3(), auto.lancamento3(), auto.estacionamento()};
     }
 
-    private void finishShot(int nextPathCount, int shotIndex) {
-        runUntil(() -> followed.size() == nextPathCount, 160);
-        assertEquals(3000, millis(shotEnds.get(shotIndex) - shotStarts.get(shotIndex)));
+    private void finishShot(int nextGroupCount, int shotIndex) {
+        runUntil(() -> followed.size() == nextGroupCount, 200);
+        assertEquals(3500, millis(shotEnds.get(shotIndex) - shotStarts.get(shotIndex)));
     }
 
-    private void arrive(Path path, int nextPathCount) {
+    private void passThrough(Path path, int nextSegmentIndex, int groupCount) {
         pose = path.endPose();
-        runUntil(() -> followed.size() == nextPathCount, 40);
+        velocity = new Velocity(12, 0, 0);
+        tick();
+        assertTrue("A transicao deve continuar seguindo sem entrar em hold", follower.following());
+        assertFalse(follower.holding());
+        assertTrue("O robo ainda esta em movimento", follower.isBusy());
+        assertEquals(nextSegmentIndex, follower.pathIndex());
+        assertEquals("A transicao usa o mesmo comando follow", groupCount, followed.size());
     }
 
     private void completeRoute() {
         auto.startAutonomous();
         for (int i = 0; i < 1600; i++) {
-            if (follower.following()) pose = follower.currentPath().endPose();
+            if (follower.following() && follower.currentSegment() != null) {
+                pose = follower.currentCurve().get(1).toPose(follower.currentSegment().heading(1));
+            }
             tick();
-            if (followed.size() == 11 && follower.holding() && !follower.isBusy()) {
+            if (followed.size() == 6 && follower.holding() && !follower.isBusy()) {
                 tick();
                 assertXY(10, 120, follower.poseAt(0));
                 return;

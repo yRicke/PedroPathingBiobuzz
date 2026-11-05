@@ -18,6 +18,7 @@ import org.firstinspires.ftc.teamcode.subsystems.Limelight.Limelight;
 import org.firstinspires.ftc.teamcode.subsystems.Transfer.Transfer;
 import org.firstinspires.ftc.teamcode.subsystems.Trigger.Trigger;
 
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 
@@ -75,6 +76,8 @@ public class AutonomousSouthOutsideV3 extends LinearOpMode {
     private LongSupplier nanoClock = System::nanoTime;
     private Path[] paths;
     private int pathIndex = -1;
+    private int pathGroupStartIndex;
+    private int pathGroupEndIndex;
     private int shotNumber;
     private Phase phase = Phase.WARMING;
     private boolean audienceCell;
@@ -104,7 +107,7 @@ public class AutonomousSouthOutsideV3 extends LinearOpMode {
                 follower.update();
                 limelight.run(false, true, gamepad2.dpad_up, gamepad2.dpad_down);
                 redAlliance = limelight.isRedAlliance();
-                telemetry.addLine("V3: disparos de 3 s no inicio e nos lancamentos 2/3");
+                telemetry.addLine("V3: disparos de 3,5 s no inicio e nos lancamentos 2/3");
                 telemetry.addLine("Flower fechada no INIT; coleta parada por 3,5 s");
                 telemetry.addLine("G2 cima: AZUL / baixo: VERMELHA (antes do Play)");
                 flowerCollect.sendTelemetry();
@@ -166,6 +169,7 @@ public class AutonomousSouthOutsideV3 extends LinearOpMode {
                 break;
             case FOLLOWING:
                 follower.update();
+                updatePathIndex();
                 if (!follower.following() && !follower.isBusy()) {
                     if (pathIndex == SECOND_SHOT_PATH || pathIndex == THIRD_SHOT_PATH) {
                         beginShot(now);
@@ -193,7 +197,7 @@ public class AutonomousSouthOutsideV3 extends LinearOpMode {
                     follower.update();
                     phase = Phase.SHOOTING;
                     phaseStartedNanos = now;
-                    shotStatus = "Lancamento " + shotNumber + " em hold por 3 s";
+                    shotStatus = "Lancamento " + shotNumber + " em hold por 3,5 s";
                     feeding = true;
                 }
                 break;
@@ -253,11 +257,14 @@ public class AutonomousSouthOutsideV3 extends LinearOpMode {
     private void advancePath() {
         pathIndex++;
         if (pathIndex < paths.length) {
-            if (pathIndex == PREP_FLOWER_PATH) {
-                flowerCollect.setOpen();
-                flowerOpenedNanos = nanoClock.getAsLong();
+            pathGroupStartIndex = pathIndex;
+            pathGroupEndIndex = pathIndex;
+            // O Pedro troca os segmentos sem hold ate o proximo ponto de parada.
+            while (pathGroupEndIndex < paths.length - 1 && !requiresStop(pathGroupEndIndex)) {
+                pathGroupEndIndex++;
             }
-            follower.follow(paths[pathIndex]);
+            follower.follow(Paths.path(Arrays.copyOfRange(paths,
+                    pathGroupStartIndex, pathGroupEndIndex + 1)));
             phase = Phase.FOLLOWING;
         } else {
             pathIndex = paths.length - 1;
@@ -265,6 +272,24 @@ public class AutonomousSouthOutsideV3 extends LinearOpMode {
             flywheel.stopMotors();
             intake.offMotor();
         }
+    }
+
+    private static boolean requiresStop(int index) {
+        return index == SECOND_SHOT_PATH || index == PREP_FLOWER_PATH
+                || index == COLLECT_FLOWER_PATH || index == POST_FLOWER_PATH
+                || index == THIRD_SHOT_PATH;
+    }
+
+    private void updatePathIndex() {
+        // O tracker pode apontar alem do ultimo segmento um ciclo antes do hold.
+        int currentIndex = follower.following()
+                ? Math.min(pathGroupEndIndex, pathGroupStartIndex + follower.pathIndex())
+                : pathGroupEndIndex;
+        if (pathIndex < PREP_FLOWER_PATH && currentIndex >= PREP_FLOWER_PATH) {
+            flowerCollect.setOpen();
+            flowerOpenedNanos = nanoClock.getAsLong();
+        }
+        pathIndex = currentIndex;
     }
 
     private static long elapsedMillis(long now, long since) {

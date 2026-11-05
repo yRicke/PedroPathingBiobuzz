@@ -9,11 +9,11 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 public class FlowerCollect {
     public static final String SERVO_ONE_NAME = "flowerCollect1";
     public static final String SERVO_TWO_NAME = "flowerCollect2";
-    public static final double SERVO_ONE_OPEN_POSITION = 1 ;
+    public static final double SERVO_ONE_OPEN_POSITION = 1; ;
     public static final double SERVO_TWO_OPEN_POSITION = 1;
     // Provisorias: substituir separadamente pelos valores encontrados no tuner.
-    public static final double SERVO_ONE_CLOSED_POSITION = 0.17;
-    public static final double SERVO_TWO_CLOSED_POSITION = 0.17;
+    public static final double SERVO_ONE_CLOSED_POSITION = 0.20;
+    public static final double SERVO_TWO_CLOSED_POSITION = 0.20;
 
     private final Servo servoOne;
     private final Servo servoTwo;

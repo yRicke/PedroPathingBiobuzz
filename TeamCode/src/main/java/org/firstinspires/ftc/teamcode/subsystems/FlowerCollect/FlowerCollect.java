@@ -22,7 +22,7 @@ public class FlowerCollect {
     private double servoTwoPosition;
 
     public FlowerCollect(HardwareMap hardwareMap, Telemetry telemetry) {
-        this(hardwareMap, telemetry, false);
+        this(hardwareMap, telemetry, true);
     }
 
     /** Permite iniciar recolhido sem comandar uma abertura durante o INIT. */
@@ -34,7 +34,7 @@ public class FlowerCollect {
 
         );
         servoTwo.setDirection(Servo.Direction.FORWARD);
-        run(initiallyClosed);
+        run(!initiallyClosed);
     }
 
     public void run(boolean open) {

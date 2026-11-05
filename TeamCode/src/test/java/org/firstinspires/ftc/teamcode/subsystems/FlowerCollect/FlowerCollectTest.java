@@ -23,11 +23,11 @@ public class FlowerCollectTest {
         flowerCollect = new FlowerCollect(hardwareMap, mock(Telemetry.class));
     }
 
-    @Test public void startsOpenWithOppositeDirections() {
-        verify(one).setDirection(Servo.Direction.FORWARD);
-        verify(two).setDirection(Servo.Direction.REVERSE);
-        assertCommand(FlowerCollect.SERVO_ONE_OPEN_POSITION,
-                FlowerCollect.SERVO_TWO_OPEN_POSITION);
+    @Test public void startsClosedWithOppositeDirections() {
+        verify(one).setDirection(Servo.Direction.REVERSE);
+        verify(two).setDirection(Servo.Direction.FORWARD);
+        assertCommand(FlowerCollect.SERVO_ONE_CLOSED_POSITION,
+                FlowerCollect.SERVO_TWO_CLOSED_POSITION);
     }
 
     @Test public void canStartClosedWithoutCommandingOpen() {
@@ -91,12 +91,12 @@ public class FlowerCollectTest {
     @Test public void runSelectsOpenAndConfiguredClosedPositions() {
         clearInvocations(one, two);
         flowerCollect.run(true);
-        assertCommand(FlowerCollect.SERVO_ONE_CLOSED_POSITION,
-                FlowerCollect.SERVO_TWO_CLOSED_POSITION);
-        clearInvocations(one, two);
-        flowerCollect.run(false);
         assertCommand(FlowerCollect.SERVO_ONE_OPEN_POSITION,
                 FlowerCollect.SERVO_TWO_OPEN_POSITION);
+        clearInvocations(one, two);
+        flowerCollect.run(false);
+        assertCommand(FlowerCollect.SERVO_ONE_CLOSED_POSITION,
+                FlowerCollect.SERVO_TWO_CLOSED_POSITION);
     }
 
     private void assertCommand(double expectedOne, double expectedTwo) {

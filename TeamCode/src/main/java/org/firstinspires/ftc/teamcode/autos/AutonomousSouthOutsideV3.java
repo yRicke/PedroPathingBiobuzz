@@ -144,7 +144,7 @@ public class AutonomousSouthOutsideV3 extends LinearOpMode {
                 lancamento2(), chegadinhafrente2(), prepcoletaflower(), coletaflower(),
                 posflower(), preplancamento3(), lancamento3(), estacionamento()};
         setShooting(false);
-        flowerCollect.setOpen();
+        flowerCollect.setClosed();
         follower.holdEnd.set(true);
         follower.hold(start);
         pathIndex = -1;
@@ -293,7 +293,7 @@ public class AutonomousSouthOutsideV3 extends LinearOpMode {
                 ? Math.min(pathGroupEndIndex, pathGroupStartIndex + follower.pathIndex())
                 : pathGroupEndIndex;
         if (pathIndex < PREP_FLOWER_PATH && currentIndex >= PREP_FLOWER_PATH) {
-            flowerCollect.setClosed();
+            flowerCollect.setOpen();
             flowerOpenedNanos = nanoClock.getAsLong();
         }
         pathIndex = currentIndex;
@@ -326,7 +326,7 @@ public class AutonomousSouthOutsideV3 extends LinearOpMode {
                         flywheel.stopMotors();
                     } finally {
                         try {
-                            flowerCollect.setOpen();
+                            flowerCollect.setClosed();
                         } finally {
                             limelight.stop();
                         }

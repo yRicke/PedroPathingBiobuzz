@@ -12,8 +12,8 @@ public class FlowerCollect {
     public static final double SERVO_ONE_OPEN_POSITION = 1; ;
     public static final double SERVO_TWO_OPEN_POSITION = 1;
     // Provisorias: substituir separadamente pelos valores encontrados no tuner.
-    public static final double SERVO_ONE_CLOSED_POSITION = 0.20;
-    public static final double SERVO_TWO_CLOSED_POSITION = 0.20;
+    public static final double SERVO_ONE_CLOSED_POSITION = 0;
+    public static final double SERVO_TWO_CLOSED_POSITION = 0;
 
     private final Servo servoOne;
     private final Servo servoTwo;
@@ -30,14 +30,16 @@ public class FlowerCollect {
         this.telemetry = telemetry;
         servoOne = hardwareMap.get(Servo.class, SERVO_ONE_NAME);
         servoTwo = hardwareMap.get(Servo.class, SERVO_TWO_NAME);
-        servoOne.setDirection(Servo.Direction.FORWARD);
-        servoTwo.setDirection(Servo.Direction.REVERSE);
+        servoOne.setDirection(Servo.Direction.REVERSE
+
+        );
+        servoTwo.setDirection(Servo.Direction.FORWARD);
         run(initiallyClosed);
     }
 
-    public void run(boolean closed) {
-        if (closed) setClosed();
-        else setOpen();
+    public void run(boolean open) {
+        if (open) setOpen();
+        else setClosed();
     }
 
     public void setOpen() {

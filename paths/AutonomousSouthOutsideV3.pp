@@ -297,7 +297,7 @@
       "kind": "wait",
       "id": "v3-espera-aquecimento_mira_disparo_inicial",
       "name": "aquecimento_mira_disparo_inicial",
-      "durationMs": 5500,
+      "durationMs": 4000,
       "locked": false
     },
     {
@@ -320,7 +320,7 @@
       "kind": "wait",
       "id": "v3-espera-mira_disparo_2",
       "name": "mira_disparo_2",
-      "durationMs": 4000,
+      "durationMs": 2500,
       "locked": false
     },
     {
@@ -339,7 +339,7 @@
       "kind": "wait",
       "id": "v3-espera-coleta_flower_parada",
       "name": "coleta_flower_parada",
-      "durationMs": 3500,
+      "durationMs": 2000,
       "locked": false
     },
     {
@@ -365,7 +365,7 @@
       "kind": "wait",
       "id": "v3-espera-mira_disparo_3",
       "name": "mira_disparo_3",
-      "durationMs": 4000,
+      "durationMs": 2500,
       "locked": false
     },
     {

@@ -168,7 +168,7 @@ public class AutonomousSouthOutsideV3Test {
     }
 
     @Test
-    public void chainsTransitSegmentsAndKeepsThreeAndAHalfSecondShotsAndFlowerHold() {
+    public void chainsTransitSegmentsAndKeepsTwoSecondShotsAndFlowerHold() {
         auto.startAutonomous();
         assertFalse(flowerOpen);
         tickMillis(1499);
@@ -216,7 +216,7 @@ public class AutonomousSouthOutsideV3Test {
         runUntil(() -> follower.holding() && !follower.isBusy(), 10);
         long collectionStarted = clock.get();
         assertXY(46.6, 130, follower.poseAt(0));
-        tickMillis(3499);
+        tickMillis(1999);
         assertEquals(3, followed.size());
         assertTrue(flowerOpen);
         assertFalse(feeding || transferring);
@@ -224,7 +224,7 @@ public class AutonomousSouthOutsideV3Test {
         assertEquals(4, followed.size());
         assertEquals("O retorno da flower usa a frenagem original", 1.0,
                 Constants.foresightConfig.brakeAggression.get(), 1e-9);
-        assertEquals(3500, millis(clock.get() - collectionStarted));
+        assertEquals(2000, millis(clock.get() - collectionStarted));
 
         pose = auto.posflower().endPose();
         velocity = new Velocity(12, 0, 0);
@@ -338,7 +338,7 @@ public class AutonomousSouthOutsideV3Test {
     }
 
     @Test
-    public void rpmLossDoesNotInterruptTheThreeAndAHalfSecondShotWindow() {
+    public void rpmLossDoesNotInterruptTheTwoSecondShotWindow() {
         auto.startAutonomous();
         runUntil(() -> feeding, 120);
         secondRpm = Double.NaN;
@@ -369,7 +369,7 @@ public class AutonomousSouthOutsideV3Test {
         assertEquals(3, shotStarts.size());
         assertEquals(3, shotEnds.size());
         for (int i = 0; i < 3; i++) {
-            assertEquals(3500, millis(shotEnds.get(i) - shotStarts.get(i)));
+            assertEquals(2000, millis(shotEnds.get(i) - shotStarts.get(i)));
         }
         assertFalse(flowerOpen || feeding || transferring);
         verify(flowerCollect).setOpen();
@@ -412,7 +412,7 @@ public class AutonomousSouthOutsideV3Test {
 
     private void finishShot(int nextGroupCount, int shotIndex) {
         runUntil(() -> followed.size() == nextGroupCount, 200);
-        assertEquals(3500, millis(shotEnds.get(shotIndex) - shotStarts.get(shotIndex)));
+        assertEquals(2000, millis(shotEnds.get(shotIndex) - shotStarts.get(shotIndex)));
     }
 
     private void passThrough(Path path, int nextSegmentIndex, int groupCount) {

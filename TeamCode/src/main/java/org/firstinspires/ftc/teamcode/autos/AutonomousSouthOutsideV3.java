@@ -29,8 +29,8 @@ public class AutonomousSouthOutsideV3 extends LinearOpMode {
     private static final double TRANSIT_BRAKE_AGGRESSION = 1.05;
     private static final long SPIN_UP_MS = 1500;
     private static final long AIM_TIME_MS = 500;
-    private static final long SHOOT_TIME_MS = 3500;
-    private static final long FLOWER_COLLECT_MS = 3500;
+    private static final long SHOOT_TIME_MS = 2000;
+    private static final long FLOWER_COLLECT_MS = 2000;
     // Servos posicionais nao informam a chegada: reserva tempo para o movimento.
     private static final long FLOWER_SERVO_SETTLE_MS = 500;
 
@@ -109,8 +109,8 @@ public class AutonomousSouthOutsideV3 extends LinearOpMode {
                 follower.update();
                 limelight.run(false, true, gamepad2.dpad_up, gamepad2.dpad_down);
                 redAlliance = limelight.isRedAlliance();
-                telemetry.addLine("V3: disparos de 3,5 s no inicio e nos lancamentos 2/3");
-                telemetry.addLine("Flower fechada no INIT; coleta parada por 3,5 s");
+                telemetry.addLine("V3: disparos de 2 s no inicio e nos lancamentos 2/3");
+                telemetry.addLine("Flower fechada no INIT; coleta parada por 2 s");
                 telemetry.addLine("G2 cima: AZUL / baixo: VERMELHA (antes do Play)");
                 flowerCollect.sendTelemetry();
                 limelight.sendTelemetry();
@@ -199,7 +199,7 @@ public class AutonomousSouthOutsideV3 extends LinearOpMode {
                     follower.update();
                     phase = Phase.SHOOTING;
                     phaseStartedNanos = now;
-                    shotStatus = "Lancamento " + shotNumber + " em hold por 3,5 s";
+                    shotStatus = "Lancamento " + shotNumber + " em hold por 2 s";
                     feeding = true;
                 }
                 break;

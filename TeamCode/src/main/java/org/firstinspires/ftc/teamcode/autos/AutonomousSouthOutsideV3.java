@@ -60,7 +60,7 @@ public class AutonomousSouthOutsideV3 extends LinearOpMode {
     private final Pose lancamentoControl3 = poseFactory.of(57.3303, 105.8968, 0);
     private final Pose chegadinhaFrente2 = poseFactory.of(60, 122, 270);
     private final Pose prepColetaFlower = poseFactory.of(50.6, 122, 90);
-    private final Pose coletaFlower = poseFactory.of(46.6, 130, 90);
+    private final Pose coletaFlower = poseFactory.of(46.6, 132, 90);
     private final Pose posFlower = poseFactory.of(46.6, 120, 90);
     private final Pose prepLancamento3 = poseFactory.of(60, 122, 270);
     private final Pose lancamento3 = poseFactory.of(60, 145, 270);

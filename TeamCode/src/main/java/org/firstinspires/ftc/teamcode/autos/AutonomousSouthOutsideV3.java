@@ -25,6 +25,8 @@ import java.util.function.LongSupplier;
 /** Tres lancamentos em hold e coleta da flower no percurso do Pedro Visualizer. */
 @Autonomous(name = "AutonomousSouthOutsideV3", group = "Autonomous")
 public class AutonomousSouthOutsideV3 extends LinearOpMode {
+    // Ajuste pequeno nos deslocamentos; 1.0 restaura a frenagem padrao.
+    private static final double TRANSIT_BRAKE_AGGRESSION = 1.05;
     private static final long SPIN_UP_MS = 1500;
     private static final long AIM_TIME_MS = 500;
     private static final long SHOOT_TIME_MS = 3500;
@@ -263,8 +265,13 @@ public class AutonomousSouthOutsideV3 extends LinearOpMode {
             while (pathGroupEndIndex < paths.length - 1 && !requiresStop(pathGroupEndIndex)) {
                 pathGroupEndIndex++;
             }
-            follower.follow(Paths.path(Arrays.copyOfRange(paths,
-                    pathGroupStartIndex, pathGroupEndIndex + 1)));
+            Path pathGroup = Paths.path(Arrays.copyOfRange(paths,
+                    pathGroupStartIndex, pathGroupEndIndex + 1));
+            if (pathGroupEndIndex > pathGroupStartIndex) {
+                pathGroup = pathGroup.with(Constants.foresightConfig.brakeAggression
+                        .at(TRANSIT_BRAKE_AGGRESSION));
+            }
+            follower.follow(pathGroup);
             phase = Phase.FOLLOWING;
         } else {
             pathIndex = paths.length - 1;

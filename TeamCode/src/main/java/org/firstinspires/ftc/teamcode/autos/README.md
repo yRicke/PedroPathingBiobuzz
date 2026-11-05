@@ -37,6 +37,16 @@ ao final de cada grupo e nos trechos individuais coleta_flower, pos_flower
 e estacionamento. A telemetria continua identificando cada um dos 11
 trechos originais.
 
+Os tres grupos de deslocamento usam brakeAggression = 1.05, um ajuste
+experimental pequeno sobre o padrao 1.0. O modificador e temporario e
+restaura o valor anterior ao terminar o grupo ou receber Stop. Coleta da
+flower, retorno pos_flower e estacionamento usam a configuracao original.
+As tolerancias de chegada e a confirmacao de parada permanecem iguais.
+Valores maiores podem ganhar tempo, mas permitem mais ultrapassagem do
+alvo; 1.05 nao significa 5% menos tempo. Compare tempo e erro final na pista;
+se precisar de muita correcao, volte TRANSIT_BRAKE_AGGRESSION para 1.0.
+Referencia: [documentacao oficial do Pedro](https://pedropathing.com/docs/pathing/reference/pathconstraints).
+
 O flower collector recebe a posicao fechada diretamente no construtor,
 inclusive antes do Play. Abre quando o Pedro entra no segmento
 prep_coleta_flower dentro do grupo. O auto somente

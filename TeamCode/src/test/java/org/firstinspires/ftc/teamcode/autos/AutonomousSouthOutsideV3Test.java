@@ -136,6 +136,7 @@ public class AutonomousSouthOutsideV3Test {
 
     @After
     public void tearDown() {
+        if (follower != null) follower.stop();
         OpModeStorage.clearAutonomousPose();
     }
 
@@ -189,6 +190,7 @@ public class AutonomousSouthOutsideV3Test {
         assertEquals(1, shotStarts.size());
         velocity = Velocity.zero();
         runUntil(() -> shotStarts.size() == 2, 40);
+        assertEquals(1.0, Constants.foresightConfig.brakeAggression.get(), 1e-9);
         assertXY(60, 145, follower.poseAt(0));
         finishShot(2, 1);
 
@@ -202,6 +204,8 @@ public class AutonomousSouthOutsideV3Test {
         assertEquals("A preparacao espera parar mesmo com os servos prontos", 2, followed.size());
         velocity = Velocity.zero();
         runUntil(() -> followed.size() == 3, 40);
+        assertEquals("A coleta usa a frenagem original", 1.0,
+                Constants.foresightConfig.brakeAggression.get(), 1e-9);
         pose = auto.coletaflower().endPose();
         velocity = new Velocity(12, 0, 0);
         tick();
@@ -218,6 +222,8 @@ public class AutonomousSouthOutsideV3Test {
         assertFalse(feeding || transferring);
         tickMillis(1);
         assertEquals(4, followed.size());
+        assertEquals("O retorno da flower usa a frenagem original", 1.0,
+                Constants.foresightConfig.brakeAggression.get(), 1e-9);
         assertEquals(3500, millis(clock.get() - collectionStarted));
 
         pose = auto.posflower().endPose();
@@ -243,6 +249,8 @@ public class AutonomousSouthOutsideV3Test {
         runUntil(() -> shotStarts.size() == 3, 40);
         assertXY(60, 145, follower.poseAt(0));
         finishShot(6, 2);
+        assertEquals("O estacionamento usa a frenagem original", 1.0,
+                Constants.foresightConfig.brakeAggression.get(), 1e-9);
 
         pose = auto.estacionamento().endPose();
         velocity = new Velocity(12, 0, 0);
@@ -278,6 +286,19 @@ public class AutonomousSouthOutsideV3Test {
         verify(flywheel, atLeastOnce()).runByDistance(OptionalDouble.of(1.77));
         verify(flywheel, atLeastOnce()).stopMotors();
         verify(intake, atLeastOnce()).offMotor();
+    }
+
+    @Test
+    public void stoppingDuringTransitRestoresTheSharedBrakingConfiguration() {
+        double originalAggression = Constants.foresightConfig.brakeAggression.get();
+        auto.startAutonomous();
+        runUntil(() -> feeding, 120);
+        finishShot(1, 0);
+        assertEquals(1.05, Constants.foresightConfig.brakeAggression.get(), 1e-9);
+
+        auto.finishAutonomous(true);
+
+        assertEquals(originalAggression, Constants.foresightConfig.brakeAggression.get(), 1e-9);
     }
 
     @Test

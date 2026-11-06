@@ -1,7 +1,7 @@
 # AutoPrincipal e AutoSecundario
 
 OpModes **Auto_Principal** e **Auto_Secundario**, no grupo **Autonomous**.
-Usam os 10 trechos do Pedro Visualizer, com selecao de alianca no INIT e uma mirada
+Usam os 9 trechos do Pedro Visualizer, com selecao de alianca no INIT e uma mirada
 breve pela Limelight antes de cada disparo, sem exigir confirmacao.
 
 ## Configuracoes
@@ -32,8 +32,7 @@ As poses estao em polegadas e graus:
 | prep_coleta_flower | (50.6, 122, 90) | Curva direta desde lancamento_2; abre o coletor na saida e espera parar |
 | coleta_flower | (46.6, 131, 90) | Mantem hold por 2 s com intake ligado |
 | pos_flower | (46.6, 120, 90) | Recolhe o coletor e espera 0,5 s |
-| pre_lancamento_3 | (60, 122, 270) | Continua ate o lancamento sem hold intermediario |
-| lancamento_3 | (60, 147, 270) | Para, mira e dispara por 2 s |
+| lancamento_3 | (60, 147, -75.8483) | Curva direta desde pos_flower com tangente reversa; para, mira e dispara por 2 s |
 | estacionamento | (10, 120, 0) | Mantem hold e desliga os mecanismos |
 
 Cada etapa tem sua propria pose, editavel independentemente. Lancamentos
@@ -42,15 +41,19 @@ chegadinha_frente_2 por uma curva com controle em
 `(67.82870967741937, 116.66903225806453)` e heading linear de 270 a 90 graus.
 Os demais trechos mantem suas interpolacoes e controles.
 
-Os trechos de transito sao concatenados com Paths.path em dois grupos:
-chegadinha_frente_1 ate lancamento_2 e pre_lancamento_3 ate lancamento_3. Dentro desses
-grupos, o proprio Pedro faz a transicao entre segmentos, sem esperar hold
-e velocidade zero em cada ponto intermediario. O auto so espera a parada
+Os trechos de transito sao concatenados com Paths.path de
+chegadinha_frente_1 ate lancamento_2. Nesse grupo, o proprio Pedro faz a
+transicao entre segmentos, sem esperar hold e velocidade zero em cada
+ponto intermediario. O retorno ao lancamento_3 e uma curva direta desde
+pos_flower, com controle em `(67.4635, 117.3994)` e tangente reversa,
+substituindo pre_lancamento_3. O estacionamento continua iniciando com
+heading de 270 graus. O auto so espera a parada
 ao final de cada grupo e nos trechos individuais prep_coleta_flower,
-coleta_flower, pos_flower e estacionamento. A telemetria identifica cada
-um dos 10 trechos.
+coleta_flower, pos_flower, lancamento_3 e estacionamento. A telemetria identifica cada
+um dos 9 trechos.
 
-Os dois grupos e a aproximacao curva da flower usam brakeAggression = 1.05, um ajuste
+O grupo inicial e as curvas de aproximacao da flower e retorno ao lancamento_3
+usam brakeAggression = 1.05, um ajuste
 experimental pequeno sobre o padrao 1.0. O modificador e temporario e
 restaura o valor anterior ao terminar o grupo ou receber Stop. Coleta da
 flower, retorno pos_flower e estacionamento usam a configuracao original.
@@ -66,7 +69,7 @@ prep_coleta_flower, logo apos o segundo disparo. O auto somente
 inicia coleta_flower depois de chegar a preparacao e de transcorrerem pelo
 menos 500 ms desde a abertura. A espera de coleta de 2 s comeca quando
 o follower termina o trecho e confirma a parada. O coletor permanece
-aberto durante o retorno a pos_flower e fecha antes de pre_lancamento_3.
+aberto durante o retorno a pos_flower e fecha antes da curva ao lancamento_3.
 FLOWER_SERVO_SETTLE_MS reserva 500 ms para cada movimento dos servos;
 servos posicionais nao fornecem confirmacao fisica da chegada.
 
@@ -87,7 +90,7 @@ Cancelar antes do Play nao publica pose.
 ## Validacao automatizada do V3
 
 AutonomousSouthOutsideV3Test simula o follower real com sensores e
-mecanismos substituidos por mocks e relogio controlado. Verifica os 10
+mecanismos substituidos por mocks e relogio controlado. Verifica os 9
 trechos, coordenadas das etapas, curvas, transicoes com velocidade diferente
 de zero e tres janelas de disparo de 2 s. Tambem cobre
 parada de coleta, ordem e tempo dos servos, selecao de CELL por alianca,
@@ -110,13 +113,14 @@ O grupo `ate_lancamento_2` do codigo exportado estava vazio e nao e executado.
    desde a abertura dos servos.
 4. `posflower`: retorna ate `(46.6, 120, 90)` com tangente reversa,
    fecha o coletor e espera 0,5 s.
-5. `retornolancamento3`: concatena a reta ate `(60, 122, 270)` com heading
-   linear e a reta ate `(59.8174, 136.7026)` com tangente reversa. Ao parar,
+5. `retornolancamento3`: curva direta desde pos_flower ate
+   `(59.8174, 136.7026)`, com controle em `(68.0113, 117.3994)` e tangente
+   reversa (heading final de aproximadamente -66,9996 graus). Ao parar,
    mira por 0,5 s e dispara por 2 s.
 6. `estacionamento`: curva ate `(10, 120, 0)`, com controle em
    `(65.729, 114.1129)` e heading linear desde 270 graus, como no exportado.
 
-Sao seis segmentos em cinco movimentos. Ambos os disparos selecionam a
+Sao cinco segmentos em cinco movimentos. Ambos os disparos selecionam a
 CELL plateia, pois o robo inicia no mesmo lado dos lancamentos de retorno.
 A selecao de alianca no INIT, os tempos compartilhados, a confirmacao de
 parada, a RPM por distancia e o encerramento seguem os outros autonomos.

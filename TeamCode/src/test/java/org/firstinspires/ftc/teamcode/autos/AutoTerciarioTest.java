@@ -141,13 +141,13 @@ public class AutoTerciarioTest {
     }
 
     @Test
-    public void preservesSuppliedSixSegmentsInFiveMovementsAndSkipsTheEmptyGroup() {
+    public void preservesSuppliedFiveSegmentsWithDirectCurvedReturn() {
         Path[] paths = paths();
         assertEquals(5, paths.length);
         assertXY(59.6258, 136.8065, paths[0].get(0));
         double[][] ends = {{46.4006, 120.9045}, {46.6, 131}, {46.6, 120},
                 {59.8174, 136.7026}, {10, 120}};
-        int[] sizes = {1, 1, 1, 2, 1};
+        int[] sizes = {1, 1, 1, 1, 1};
         for (int i = 0; i < paths.length; i++) {
             assertEquals(sizes[i], paths[i].getSegments().size());
             assertXY(ends[i][0], ends[i][1], paths[i].endPose());
@@ -161,14 +161,13 @@ public class AutoTerciarioTest {
         assertAngle(90, paths[1].get(0.5).heading());
         assertAngle(90, paths[2].get(0.5).heading());
         List<PathSegment> returning = paths[3].getSegments();
+        assertEquals(1, returning.size());
         assertXY(46.6, 120, returning.get(0).curve.get(0).toPose(0));
-        assertXY(60, 122, returning.get(0).curve.get(1).toPose(0));
-        assertAngle(90, returning.get(0).heading(0));
-        // No limite t=1 a cadeia ja pode usar o heading do proximo segmento.
-        assertAngle(270, returning.get(0).heading(1 - 1e-8));
-        assertXY(60, 122, returning.get(1).curve.get(0).toPose(0));
-        double reverseHeading = Math.atan2(136.7026 - 122, 59.8174 - 60) + Math.PI;
-        assertAngle(Math.toDegrees(reverseHeading), returning.get(1).heading(0.5));
+        assertXY(59.8174, 136.7026, returning.get(0).curve.get(1).toPose(0));
+        assertXY(60.61, 122.87535, paths[3].get(0.5));
+        double reverseHeading = Math.atan2(136.7026 - 120, 59.8174 - 46.6) + Math.PI;
+        assertAngle(Math.toDegrees(reverseHeading), returning.get(0).heading(0.5));
+        assertAngle(-66.9996, paths[3].endPose().heading());
         // O exportado reinicia o heading do estacionamento em 270 graus.
         assertAngle(270, paths[4].get(0).heading());
         assertAngle(0, paths[4].endPose().heading());
@@ -229,13 +228,13 @@ public class AutoTerciarioTest {
         assertEquals(1.05, Constants.foresightConfig.brakeAggression.get(), 1e-9);
 
         Path returning = auto.retornolancamento3();
-        PathSegment first = returning.getSegments().get(0);
-        pose = first.curve.get(1).toPose(first.heading(1));
+        assertEquals(1, returning.getSegments().size());
+        pose = returning.get(0.5);
         velocity = new Velocity(12, 0, 0);
         tick();
         assertTrue(follower.following());
         assertFalse(follower.holding());
-        assertEquals(1, follower.pathIndex());
+        assertEquals(0, follower.pathIndex());
         assertEquals(4, followed.size());
         pose = returning.endPose();
         tick();

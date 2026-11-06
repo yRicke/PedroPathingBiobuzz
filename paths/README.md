@@ -5,13 +5,13 @@ correspondem aos percursos de `AutoPrincipal.java` e `AutoSecundario.java`, no f
 [Pedro Visualizer](https://visualizer.pedropathing.com/).
 
 [AutoTerciario.pp](AutoTerciario.pp) corresponde a `AutoTerciario.java`,
-com seis segmentos em cinco movimentos: preparacao da flower, coleta,
+com cinco segmentos em cinco movimentos: preparacao da flower, coleta,
 retorno curto, retorno ao lancamento e estacionamento. O grupo inicial
 vazio do codigo exportado foi omitido. A sequencia inclui o disparo inicial
 e o disparo depois da flower, alem das esperas de coleta e recolhimento.
 
 Importe o arquivo `.pp` no Visualizer e selecione o mapa BIOBUZZ nas
-configuracoes. Os 10 trechos mantem os nomes, coordenadas, controles Bezier
+configuracoes. Os 9 trechos do principal e secundario mantem os nomes, coordenadas, controles Bezier
 e interpolacoes de heading usados no codigo. Os grupos sao:
 
 - `ate_lancamento_2`: chegadinha inicial, preparacao/coleta do jardim e
@@ -19,7 +19,9 @@ e interpolacoes de heading usados no codigo. Os grupos sao:
 - `preparacao_flower`: curva direta do segundo lancamento ate a preparacao
   da flower, com controle em `(67.82870967741937, 116.66903225806453)` e
   heading linear de 270 a 90 graus. Substitui a segunda chegadinha.
-- `retorno_lancamento_3`: retorno apos a flower e terceiro lancamento.
+- `retorno_lancamento_3`: curva direta desde pos_flower, com tangente reversa
+  e controle em `(67.4635, 117.3994)` no principal/secundario, ou
+  `(68.0113, 117.3994)` no terciario. Substitui o pre_lancamento_3.
 
 Coleta da flower, pos_flower e estacionamento permanecem trechos individuais.
 As pausas fixas aparecem na sequencia: 4 s antes da saida inicial, 2,5 s em

@@ -141,20 +141,22 @@ public class AutonomousSouthOutsideV3Test {
     }
 
     @Test
-    public void preservesTenContinuousPathsAndCurvedFlowerApproach() {
+    public void preservesNinePathsWithDirectCurvedReturnToThirdShot() {
         Path[] paths = paths();
         double[][] endpoints = {{57.8, 20}, {31, 13}, {14, 13}, {60, 147},
-                {50.6, 122}, {46.6, 131}, {46.6, 120}, {60, 122}, {60, 147}, {10, 120}};
-        assertEquals(10, paths.length);
+                {50.6, 122}, {46.6, 131}, {46.6, 120}, {60, 147}, {10, 120}};
+        assertEquals(9, paths.length);
         assertXY(57.8, 9, paths[0].get(0));
         for (int i = 0; i < paths.length; i++) {
             assertXY(endpoints[i][0], endpoints[i][1], paths[i].endPose());
-            if (i > 0) assertPose(paths[i - 1].endPose(), paths[i].get(0));
+            if (i > 0) assertXY(endpoints[i - 1][0], endpoints[i - 1][1], paths[i].get(0));
         }
-        assertPose(paths[3].endPose(), paths[8].endPose());
+        assertXY(60, 147, paths[7].endPose());
+        assertEquals(1, paths[7].getSegments().size());
+        assertXY(60.38175, 125.4497, paths[7].get(0.5));
         assertXY(30.9622625, 89.3769625, paths[3].get(0.5));
         assertXY(61.56435483870968, 125.58451612903227, paths[4].get(0.5));
-        assertXY(50.3645, 123.80645, paths[9].get(0.5));
+        assertXY(50.3645, 123.80645, paths[8].get(0.5));
         assertAngle(90, paths[0].get(0.5).heading());
         assertAngle(135, paths[1].get(0.5).heading());
         assertAngle(180, paths[2].get(0.5).heading());
@@ -164,9 +166,12 @@ public class AutonomousSouthOutsideV3Test {
         assertAngle(90, paths[4].endPose().heading());
         assertAngle(90, paths[5].get(0.5).heading());
         assertAngle(90, paths[6].get(0.5).heading());
-        assertAngle(270, paths[8].get(0.5).heading());
-        assertAngle(270, paths[9].get(0).heading());
-        assertAngle(0, paths[9].endPose().heading());
+        double reverseHeading = Math.atan2(147 - 120, 60 - 46.6) + Math.PI;
+        assertAngle(Math.toDegrees(reverseHeading), paths[7].get(0.5).heading());
+        double finalReverseHeading = Math.atan2(147 - 117.3994, 60 - 67.4635) + Math.PI;
+        assertAngle(Math.toDegrees(finalReverseHeading), paths[7].endPose().heading());
+        assertAngle(270, paths[8].get(0).heading());
+        assertAngle(0, paths[8].endPose().heading());
     }
 
     @Test
@@ -241,7 +246,14 @@ public class AutonomousSouthOutsideV3Test {
         assertEquals(4, followed.size());
         tickMillis(1);
         assertEquals(5, followed.size());
-        passThrough(auto.preplancamento3(), 1, 5);
+        assertEquals(1.05, Constants.foresightConfig.brakeAggression.get(), 1e-9);
+        assertEquals(1, followed.get(4).getSegments().size());
+        pose = auto.lancamento3().get(0.5);
+        velocity = new Velocity(12, 0, 0);
+        tick();
+        assertTrue(follower.following());
+        assertFalse(follower.holding());
+        assertEquals(5, followed.size());
         pose = auto.lancamento3().endPose();
         tick();
         tick();
@@ -270,7 +282,7 @@ public class AutonomousSouthOutsideV3Test {
         assertEquals(3, shotEnds.size());
         assertFalse(flowerOpen || feeding || transferring);
         Path[] expected = paths();
-        int[] groupSizes = {4, 1, 1, 1, 2, 1};
+        int[] groupSizes = {4, 1, 1, 1, 1, 1};
         int pathIndex = 0;
         for (int i = 0; i < followed.size(); i++) {
             List<PathSegment> segments = followed.get(i).getSegments();
@@ -436,7 +448,7 @@ public class AutonomousSouthOutsideV3Test {
     private Path[] paths() {
         return new Path[] {auto.chegadinhafrente1(), auto.prepcoletajardim(), auto.coletajardim(),
                 auto.lancamento2(), auto.prepcoletaflower(), auto.coletaflower(),
-                auto.posflower(), auto.preplancamento3(), auto.lancamento3(), auto.estacionamento()};
+                auto.posflower(), auto.lancamento3(), auto.estacionamento()};
     }
 
     private void finishShot(int nextGroupCount, int shotIndex) {

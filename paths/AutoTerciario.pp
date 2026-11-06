@@ -100,34 +100,18 @@
       "segments": [
         {
           "kind": "atomic",
-          "id": "terciario-pre_lancamento_3",
-          "name": "pre_lancamento_3",
-          "endPoint": {
-            "x": 60,
-            "y": 122
-          },
-          "controlPoints": [],
-          "heading": {
-            "type": "linear",
-            "startDeg": 90,
-            "endDeg": 270
-          },
-          "color": "#4e79a7",
-          "locked": false,
-          "waitBeforeMs": 0,
-          "waitAfterMs": 0,
-          "waitBeforeName": "",
-          "waitAfterName": ""
-        },
-        {
-          "kind": "atomic",
           "id": "terciario-lancamento_3",
           "name": "lancamento_3",
           "endPoint": {
             "x": 59.8174,
             "y": 136.7026
           },
-          "controlPoints": [],
+          "controlPoints": [
+            {
+              "x": 68.0113,
+              "y": 117.3994
+            }
+          ],
           "heading": {
             "type": "tangential",
             "reverse": true
@@ -202,10 +186,6 @@
       "name": "recolher_flower",
       "durationMs": 500,
       "locked": false
-    },
-    {
-      "kind": "path",
-      "lineId": "terciario-pre_lancamento_3"
     },
     {
       "kind": "path",

@@ -31,11 +31,11 @@ public class AutoSecundario extends LinearOpMode {
     private static final int PREP_FLOWER_PATH = 4;
     private static final int COLLECT_FLOWER_PATH = 5;
     private static final int POST_FLOWER_PATH = 6;
-    private static final int THIRD_SHOT_PATH = 8;
+    private static final int THIRD_SHOT_PATH = 7;
     private static final String[] PATH_NAMES = {
             "chegadinha_frente_1", "prep_coleta_jardim", "coleta_jardim", "lancamento_2",
             "prep_coleta_flower", "coleta_flower", "pos_flower",
-            "pre_lancamento_3", "lancamento_3", "estacionamento"
+            "lancamento_3", "estacionamento"
     };
     private enum Phase {
         WARMING, FOLLOWING, AIMING, SHOOTING, OPENING_FLOWER, COLLECTING_FLOWER,
@@ -54,8 +54,9 @@ public class AutoSecundario extends LinearOpMode {
     private final Pose prepColetaFlowerControl = poseFactory.of(67.82870967741937, 116.66903225806453, 0);
     private final Pose coletaFlower = poseFactory.of(46.6, 131, 90);
     private final Pose posFlower = poseFactory.of(46.6, 120, 90);
-    private final Pose prepLancamento3 = poseFactory.of(60, 122, 270);
-    private final Pose lancamento3 = poseFactory.of(60, 147 , 270);
+    private final Pose lancamento3 = poseFactory.of(60, 147, -75.8483);
+    private final Pose lancamento3Control1 = poseFactory.of(67.4635, 117.3994, 0);
+    private final Pose estacionamentoStart = poseFactory.of(60, 147, 270);
     private final Pose estacionamento = poseFactory.of(10, 120, 0);
     private final Pose estacionamentoControl1 = poseFactory.of(65.729, 114.1129, 0);
 
@@ -134,7 +135,7 @@ public class AutoSecundario extends LinearOpMode {
     void startAutonomous() {
         paths = new Path[] {chegadinhafrente1(), prepcoletajardim(), coletajardim(),
                 lancamento2(), prepcoletaflower(), coletaflower(),
-                posflower(), preplancamento3(), lancamento3(), estacionamento()};
+                posflower(), lancamento3(), estacionamento()};
         setShooting(false);
         flowerCollect.setClosed();
         follower.holdEnd.set(true);
@@ -259,7 +260,8 @@ public class AutoSecundario extends LinearOpMode {
             }
             Path pathGroup = Paths.path(Arrays.copyOfRange(paths,
                     pathGroupStartIndex, pathGroupEndIndex + 1));
-            if (pathGroupEndIndex > pathGroupStartIndex || pathIndex == PREP_FLOWER_PATH) {
+            if (pathGroupEndIndex > pathGroupStartIndex || pathIndex == PREP_FLOWER_PATH
+                    || pathIndex == THIRD_SHOT_PATH) {
                 pathGroup = pathGroup.with(Constants.foresightConfig.brakeAggression
                         .at(TRANSIT_BRAKE_AGGRESSION));
             }
@@ -343,11 +345,11 @@ public class AutoSecundario extends LinearOpMode {
     }
     public Path coletaflower() { return Paths.line(prepColetaFlower, coletaFlower).constant(coletaFlower); }
     public Path posflower() { return Paths.line(coletaFlower, posFlower).reverseTangent(); }
-    public Path preplancamento3() {
-        return Paths.line(posFlower, prepLancamento3).linear(posFlower, prepLancamento3);
+    public Path lancamento3() {
+        return Paths.curve(posFlower, lancamento3Control1, lancamento3).reverseTangent();
     }
-    public Path lancamento3() { return Paths.line(prepLancamento3, lancamento3).reverseTangent(); }
     public Path estacionamento() {
-        return Paths.curve(lancamento3, estacionamentoControl1, estacionamento).linear(lancamento3, estacionamento);
+        return Paths.curve(estacionamentoStart, estacionamentoControl1, estacionamento)
+                .linear(estacionamentoStart, estacionamento);
     }
 }

@@ -108,8 +108,8 @@ Depois de mover o robô, espere a leitura estabilizar antes de anotar pares.
 **Refaça os pares antigos, inclusive os medidos da câmera ao adesivo.** A
 nova tabela usa distância da saída até a abertura, na calibração e no jogo.
 Os pares atuais ficam em `Flywheel`: 182 cm / 2560 RPM, 185 cm / 2570 RPM e
-205 cm / 2680 RPM. O alvo de RPM fica entre o menor e o maior `BASE_RPM*`,
-inclusive na calibração manual; zero continua desligando os motores.
+205 cm / 2680 RPM. O alvo automático por distância fica entre o menor e o maior
+`BASE_RPM*`. A calibração manual permite de zero a `MAX_RPM` (6000 RPM).
 
 ## 5. Particularidades do BIOBUZZ
 

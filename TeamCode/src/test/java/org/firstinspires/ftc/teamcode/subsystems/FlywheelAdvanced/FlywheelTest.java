@@ -58,23 +58,34 @@ public class FlywheelTest {
     @Test public void targetIsBoundedToConfiguredRpmLimit() {
         measuredRpm(Flywheel.MAX_RPM);
         flywheel.run(Flywheel.MAX_RPM + 1000);
-        assertPower(Flywheel.KS + Flywheel.KV * Flywheel.MAX_RPM);
+        assertEquals(Flywheel.MAX_RPM, flywheel.getTargetRPM(), 0);
+        assertPower(Math.min(1, Flywheel.KS + Flywheel.KV * Flywheel.MAX_RPM));
     }
 
-    @Test public void positiveTargetsAreAtLeastTheSmallestBaseRpm() {
-        measuredRpm(Flywheel.MIN_RPM);
-        flywheel.run(1);
-        assertEquals(Flywheel.MIN_RPM, flywheel.getTargetRPM(), 0);
-        assertPower(Flywheel.KS + Flywheel.KV * Flywheel.MIN_RPM);
+    @Test public void manualTargetsCanGoBelowAndAboveAutomaticBounds() {
+        for (double rpm : new double[] {1, 2200, 2800, 4000, 6000}) {
+            flywheel.run(rpm);
+            assertEquals(rpm, flywheel.getTargetRPM(), 0);
+        }
         flywheel.run(0);
         assertEquals(0, flywheel.getTargetRPM(), 0);
     }
 
+    @Test public void switchingBetweenManualAndAutomaticUsesTheCorrectBounds() {
+        flywheel.run(4000);
+        flywheel.runByDistance(java.util.OptionalDouble.of(4));
+        assertEquals(Flywheel.AUTO_MAX_RPM, flywheel.getTargetRPM(), 0);
+        flywheel.run(2200);
+        assertEquals(2200, flywheel.getTargetRPM(), 0);
+        flywheel.runByDistance(java.util.OptionalDouble.of(1));
+        assertEquals(Flywheel.AUTO_MIN_RPM, flywheel.getTargetRPM(), 0);
+    }
+
     @Test public void limitsFollowAllBaseRpmsAndCurrentCalibrationIsPreserved() {
         assertEquals(Math.min(Flywheel.BASE_RPM, Math.min(Flywheel.BASE_RPM_2, Flywheel.BASE_RPM_3)),
-                Flywheel.MIN_RPM, 0);
+                Flywheel.AUTO_MIN_RPM, 0);
         assertEquals(Math.max(Flywheel.BASE_RPM, Math.max(Flywheel.BASE_RPM_2, Flywheel.BASE_RPM_3)),
-                Flywheel.MAX_RPM, 0);
+                Flywheel.AUTO_MAX_RPM, 0);
         for (double[] pair : new double[][] {{1.0, 2560}, {1.82, 2560}, {1.85, 2570},
                 {1.95, 2625}, {2.05, 2680}, {4.0, 2680}}) {
             flywheel.stopMotors();
@@ -89,7 +100,7 @@ public class FlywheelTest {
         clearInvocations(one, two);
         flywheel.setGains(0.1, 0.0001, 0);
         flywheel.run(2000);
-        assertPower(0.1 + 0.0001 * Flywheel.MIN_RPM);
+        assertPower(0.3);
         clearInvocations(one, two);
         assertThrows(IllegalArgumentException.class, () -> flywheel.setGains(0, Double.NaN, 0));
         assertPower(0);

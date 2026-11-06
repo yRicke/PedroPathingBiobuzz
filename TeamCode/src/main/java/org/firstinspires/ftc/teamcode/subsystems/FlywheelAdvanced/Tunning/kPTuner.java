@@ -12,7 +12,7 @@ public class kPTuner extends OpMode {
     public static double kV = Flywheel.KV;
     public double kS = Flywheel.KS;
     public double kP = Flywheel.KP;
-    public double goalRPM = Flywheel.MAX_RPM;
+    public double goalRPM = 2800;
 
     double[] increments = {0.000001, 0.00001, 0.0001, 0.001, 0.01};
     int incrementIdx = 2;
@@ -31,10 +31,10 @@ public class kPTuner extends OpMode {
         }
 
         if (gamepad1.a) {
-            goalRPM = Flywheel.MAX_RPM;
+            goalRPM = 2800;
         }
         else if (gamepad1.b) {
-            goalRPM = Flywheel.MIN_RPM;
+            goalRPM = 2200;
         }
 
         double currentStep = increments[incrementIdx];

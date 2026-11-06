@@ -37,8 +37,9 @@ usa a referência 3D da saída das bolas até a abertura da CELL.
 
 O passo inicial é 10 RPM. Segurar D-pad/A/B não repete o comando a cada loop.
 RT e LB são momentâneos, como no TeleOpMain.
-A RPM ligada fica entre `Flywheel.MIN_RPM` e `Flywheel.MAX_RPM` (**2560–2680**
-atualmente), derivados do menor e maior `BASE_RPM*`. B desliga a flywheel
+A calibração permite de zero a `Flywheel.MAX_RPM` (**6000 RPM**).
+Somente o automático por distância fica entre `AUTO_MIN_RPM` e `AUTO_MAX_RPM`
+(**2560–2680 RPM**), derivados do menor e maior `BASE_RPM*`. B desliga a flywheel
 enviando zero. Essas constantes ficam em `Flywheel`; `PIPELINE_INDEX` e
 `UPSIDE_DOWN` ficam em `Limelight`. Ao parar o OpMode, a flywheel, o
 transfer e o intake são desligados, o trigger é fechado e a câmera é parada.
@@ -92,7 +93,8 @@ os valores na inicialização. Para mais pontos, adicione pares em
 - Fora da faixa: limita ao extremo e sinaliza que a posição não foi calibrada.
 - Falha breve de detecção: mantém a distância por até 200 ms desde a última pose válida.
 - Sem distância após esse prazo, câmera desconectada ou imagem antiga: solicita `BASE_RPM`.
-- O alvo positivo fica entre `MIN_RPM` e `MAX_RPM`; zero desliga os motores.
+- O alvo automático positivo fica entre `AUTO_MIN_RPM` e `AUTO_MAX_RPM`;
+  manual, calibração e tuners usam a faixa de zero a `MAX_RPM` (6000 RPM).
 
 A distância usa a média central de até 40 amostras do último segundo, seguida
 de suavização exponencial de 250 ms e banda morta de 1 cm. Isso reduz oscilações

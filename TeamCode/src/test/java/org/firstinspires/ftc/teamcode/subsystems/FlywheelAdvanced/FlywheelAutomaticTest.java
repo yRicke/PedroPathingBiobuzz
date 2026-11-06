@@ -64,12 +64,12 @@ public class FlywheelAutomaticTest {
                 new FlywheelRpmTable(2000, 6000, new double[][] {{100, 2000}, {200, 4000}}),
                 clock::get);
         bounded.runByDistance(OptionalDouble.of(0.5));
-        assertEquals(Flywheel.MIN_RPM, bounded.getTargetRPM(), 0);
+        assertEquals(Flywheel.AUTO_MIN_RPM, bounded.getTargetRPM(), 0);
         clock.set(100_000_000);
         bounded.runByDistance(OptionalDouble.of(3));
-        assertEquals(Flywheel.MAX_RPM, bounded.getTargetRPM(), 0);
+        assertEquals(Flywheel.AUTO_MAX_RPM, bounded.getTargetRPM(), 0);
         bounded.runByDistance(OptionalDouble.empty());
-        assertEquals(Flywheel.MIN_RPM, bounded.getTargetRPM(), 0);
+        assertEquals(Flywheel.AUTO_MIN_RPM, bounded.getTargetRPM(), 0);
         bounded.stopMotors();
         assertEquals(0, bounded.getTargetRPM(), 0);
     }

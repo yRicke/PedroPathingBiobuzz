@@ -6,11 +6,11 @@ breve pela Limelight antes de cada disparo, sem exigir confirmacao.
 
 ## Configuracoes
 
-Edite `AutonomousConstants.java` para ajustar os tempos em milissegundos,
-`TRANSIT_BRAKE_AGGRESSION` e as poses em polegadas e graus. Tempos, frenagem,
-indices de parada e nomes dos trechos sao compartilhados pelos dois OpModes.
-As poses ficam em `AutonomousConstants.Principal` e
-`AutonomousConstants.Secundario`, permitindo ajustar cada percurso separadamente.
+Edite `AutonomousConstants.java` para ajustar os tempos em milissegundos
+e `TRANSIT_BRAKE_AGGRESSION`, compartilhados pelos dois OpModes.
+As poses em polegadas e graus, os indices de parada e os nomes dos trechos
+ficam em `AutoPrincipal.java` e `AutoSecundario.java`, permitindo ajustar
+cada percurso separadamente.
 O principal usa tres controles Bezier em `lancamento_2`; o secundario usa dois.
 Os arquivos de referencia sao `paths/AutoPrincipal.pp` e
 `paths/AutoSecundario.pp.json`, respectivamente.

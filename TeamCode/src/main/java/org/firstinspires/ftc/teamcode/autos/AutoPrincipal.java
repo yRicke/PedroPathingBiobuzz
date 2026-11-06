@@ -1,9 +1,9 @@
 package org.firstinspires.ftc.teamcode.autos;
 
 import static org.firstinspires.ftc.teamcode.autos.AutonomousConstants.*;
-import static org.firstinspires.ftc.teamcode.autos.AutonomousConstants.Principal.*;
 
 import com.pedropathing.api.Paths;
+import com.pedropathing.api.PoseFactory;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.math.Pose;
 import com.pedropathing.paths.Path;
@@ -27,10 +27,38 @@ import java.util.function.LongSupplier;
 /** Tres lancamentos em hold e coleta da flower no percurso do Pedro Visualizer. */
 @Autonomous(name = "Auto_Principal", group = "Autonomous")
 public class AutoPrincipal extends LinearOpMode {
+    private static final int SECOND_SHOT_PATH = 3;
+    private static final int PREP_FLOWER_PATH = 5;
+    private static final int COLLECT_FLOWER_PATH = 6;
+    private static final int POST_FLOWER_PATH = 7;
+    private static final int THIRD_SHOT_PATH = 9;
+    private static final String[] PATH_NAMES = {
+            "chegadinha_frente_1", "prep_coleta_jardim", "coleta_jardim", "lancamento_2",
+            "chegadinha_frente_2", "prep_coleta_flower", "coleta_flower", "pos_flower",
+            "pre_lancamento_3", "lancamento_3", "estacionamento"
+    };
     private enum Phase {
         WARMING, FOLLOWING, AIMING, SHOOTING, OPENING_FLOWER, COLLECTING_FLOWER,
         CLOSING_FLOWER, DONE
     }
+
+    private final PoseFactory poseFactory = PoseFactory.degrees();
+    private final Pose start = poseFactory.of(57.8, 9, 90);
+    private final Pose chegadinhaFrente1 = poseFactory.of(57.8, 20, 90);
+    private final Pose prepColetaJardim = poseFactory.of(31, 13, 180);
+    private final Pose coletaJardim = poseFactory.of(14, 13, 180);
+    private final Pose lancamento2 = poseFactory.of(60, 147, 270);
+    private final Pose lancamentoControl1 = poseFactory.of(38.1594, 48.3839, 0);
+    private final Pose lancamentoControl2 = poseFactory.of(6.5729, 108.8181, 0);
+    private final Pose lancamentoControl3 = poseFactory.of(57.3303, 105.8968, 0);
+    private final Pose chegadinhaFrente2 = poseFactory.of(60, 122, 270);
+    private final Pose prepColetaFlower = poseFactory.of(50.6, 122, 90);
+    private final Pose coletaFlower = poseFactory.of(46.6, 131, 90);
+    private final Pose posFlower = poseFactory.of(46.6, 120, 90);
+    private final Pose prepLancamento3 = poseFactory.of(60, 122, 270);
+    private final Pose lancamento3 = poseFactory.of(60, 147 , 270);
+    private final Pose estacionamento = poseFactory.of(10, 120, 0);
+    private final Pose estacionamentoControl1 = poseFactory.of(65.729, 114.1129, 0);
 
     private Follower follower;
     private PedroDrive drive;
@@ -69,7 +97,7 @@ public class AutoPrincipal extends LinearOpMode {
         try {
             intake.offMotor();
             setShooting(false);
-            follower.setPose(START);
+            follower.setPose(start);
             do {
                 follower.update();
                 limelight.run(false, true, gamepad2.dpad_up, gamepad2.dpad_down);
@@ -90,7 +118,7 @@ public class AutoPrincipal extends LinearOpMode {
             while (opModeIsActive()) {
                 updateAutonomous();
                 telemetry.addData("Etapa", "%s | %s", phase,
-                        pathIndex < 0 ? "inicio" : pathName(pathIndex));
+                        pathIndex < 0 ? "inicio" : PATH_NAMES[pathIndex]);
                 telemetry.addData("Disparo", shotStatus);
                 drive.sendTelemetry();
                 flywheel.sendTelemetry();
@@ -111,7 +139,7 @@ public class AutoPrincipal extends LinearOpMode {
         setShooting(false);
         flowerCollect.setClosed();
         follower.holdEnd.set(true);
-        follower.hold(START);
+        follower.hold(start);
         pathIndex = -1;
         shotNumber = 0;
         audienceCell = false;
@@ -155,11 +183,11 @@ public class AutoPrincipal extends LinearOpMode {
                 }
                 break;
             case AIMING:
-                drive.aimVisionHold(pathIndex < 0 ? START : paths[pathIndex].endPose(),
+                drive.aimVisionHold(pathIndex < 0 ? start : paths[pathIndex].endPose(),
                         limelight.getObservation());
                 if (elapsedMillis(now, phaseStartedNanos) >= AIM_TIME_MS) {
                     // Encerra a correcao visual e mantem o heading medido durante o disparo.
-                    Pose shotPose = pathIndex < 0 ? START : paths[pathIndex].endPose();
+                    Pose shotPose = pathIndex < 0 ? start : paths[pathIndex].endPose();
                     follower.hold(new Pose(shotPose.x(), shotPose.y(), follower.pose().heading()));
                     follower.update();
                     phase = Phase.SHOOTING;
@@ -301,31 +329,26 @@ public class AutoPrincipal extends LinearOpMode {
         }
     }
 
-    public Path chegadinhafrente1() { return Paths.line(START, CHEGADINHA_FRENTE_1).tangent(); }
+    public Path chegadinhafrente1() { return Paths.line(start, chegadinhaFrente1).tangent(); }
     public Path prepcoletajardim() {
-        return Paths.line(CHEGADINHA_FRENTE_1, PREP_COLETA_JARDIM)
-                .linear(CHEGADINHA_FRENTE_1, PREP_COLETA_JARDIM);
+        return Paths.line(chegadinhaFrente1, prepColetaJardim).linear(chegadinhaFrente1, prepColetaJardim);
     }
-    public Path coletajardim() { return Paths.line(PREP_COLETA_JARDIM, COLETA_JARDIM).constant(COLETA_JARDIM); }
+    public Path coletajardim() { return Paths.line(prepColetaJardim, coletaJardim).constant(coletaJardim); }
     public Path lancamento2() {
-        return Paths.curve(COLETA_JARDIM, LANCAMENTO_CONTROL_1, LANCAMENTO_CONTROL_2,
-                LANCAMENTO_CONTROL_3, LANCAMENTO_2).linear(COLETA_JARDIM, LANCAMENTO_2);
+        return Paths.curve(coletaJardim, lancamentoControl1, lancamentoControl2,
+                lancamentoControl3, lancamento2).linear(coletaJardim, lancamento2);
     }
-    public Path chegadinhafrente2() {
-        return Paths.line(LANCAMENTO_2, CHEGADINHA_FRENTE_2).constant(CHEGADINHA_FRENTE_2);
-    }
+    public Path chegadinhafrente2() { return Paths.line(lancamento2, chegadinhaFrente2).constant(chegadinhaFrente2); }
     public Path prepcoletaflower() {
-        return Paths.line(CHEGADINHA_FRENTE_2, PREP_COLETA_FLOWER)
-                .linear(CHEGADINHA_FRENTE_2, PREP_COLETA_FLOWER);
+        return Paths.line(chegadinhaFrente2, prepColetaFlower).linear(chegadinhaFrente2, prepColetaFlower);
     }
-    public Path coletaflower() { return Paths.line(PREP_COLETA_FLOWER, COLETA_FLOWER).constant(COLETA_FLOWER); }
-    public Path posflower() { return Paths.line(COLETA_FLOWER, POS_FLOWER).reverseTangent(); }
+    public Path coletaflower() { return Paths.line(prepColetaFlower, coletaFlower).constant(coletaFlower); }
+    public Path posflower() { return Paths.line(coletaFlower, posFlower).reverseTangent(); }
     public Path preplancamento3() {
-        return Paths.line(POS_FLOWER, PREP_LANCAMENTO_3).linear(POS_FLOWER, PREP_LANCAMENTO_3);
+        return Paths.line(posFlower, prepLancamento3).linear(posFlower, prepLancamento3);
     }
-    public Path lancamento3() { return Paths.line(PREP_LANCAMENTO_3, LANCAMENTO_3).reverseTangent(); }
+    public Path lancamento3() { return Paths.line(prepLancamento3, lancamento3).reverseTangent(); }
     public Path estacionamento() {
-        return Paths.curve(LANCAMENTO_3, ESTACIONAMENTO_CONTROL_1, ESTACIONAMENTO)
-                .linear(LANCAMENTO_3, ESTACIONAMENTO);
+        return Paths.curve(lancamento3, estacionamentoControl1, estacionamento).linear(lancamento3, estacionamento);
     }
 }

@@ -54,7 +54,7 @@ public class AutonomousSouthOutsideV3 extends LinearOpMode {
     private final Pose chegadinhaFrente1 = poseFactory.of(57.8, 20, 90);
     private final Pose prepColetaJardim = poseFactory.of(31, 13, 180);
     private final Pose coletaJardim = poseFactory.of(14, 13, 180);
-    private final Pose lancamento2 = poseFactory.of(60, 145, 270);
+    private final Pose lancamento2 = poseFactory.of(60, 147, 270);
     private final Pose lancamentoControl1 = poseFactory.of(38.1594, 48.3839, 0);
     private final Pose lancamentoControl2 = poseFactory.of(6.5729, 108.8181, 0);
     private final Pose lancamentoControl3 = poseFactory.of(57.3303, 105.8968, 0);
@@ -63,7 +63,7 @@ public class AutonomousSouthOutsideV3 extends LinearOpMode {
     private final Pose coletaFlower = poseFactory.of(46.6, 131, 90);
     private final Pose posFlower = poseFactory.of(46.6, 120, 90);
     private final Pose prepLancamento3 = poseFactory.of(60, 122, 270);
-    private final Pose lancamento3 = poseFactory.of(60, 145, 270);
+    private final Pose lancamento3 = poseFactory.of(60, 147 , 270);
     private final Pose estacionamento = poseFactory.of(10, 120, 0);
     private final Pose estacionamentoControl1 = poseFactory.of(65.729, 114.1129, 0);
 

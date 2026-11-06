@@ -153,7 +153,7 @@ public class AutoSecundario extends LinearOpMode {
         limelight.run(audienceCell, !audienceCell, !redAlliance, redAlliance);
         boolean feeding = false;
         if (phase != Phase.DONE) {
-            flywheel.runByDistance(limelight.getDistanceMeters());
+            flywheel.run(FLYWHEEL_RPM);
             intake.onMotor();
         }
 

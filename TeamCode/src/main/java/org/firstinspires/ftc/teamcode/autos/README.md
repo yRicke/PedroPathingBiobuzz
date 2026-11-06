@@ -8,6 +8,8 @@ breve pela Limelight antes de cada disparo, sem exigir confirmacao.
 
 Edite `AutonomousConstants.java` para ajustar os tempos em milissegundos
 e `TRANSIT_BRAKE_AGGRESSION`, compartilhados pelo principal, secundario e terciario.
+`FLYWHEEL_RPM = 2560` define o alvo fixo da flywheel nos tres autonomos.
+O TeleOp continua usando RPM por distancia; a mira dos autonomos continua pela Limelight.
 As poses em polegadas e graus, os indices de parada e os nomes dos trechos
 ficam em `AutoPrincipal.java` e `AutoSecundario.java`, permitindo ajustar
 cada percurso separadamente.
@@ -81,7 +83,7 @@ visao, alinhamento ou RPM. Sem imagem, ainda dispara; perder visao ou RPM
 durante a janela nao interrompe a alimentacao. O aquecimento inicial de
 1,5 s e a mirada de 0,5 s antecedem a janela de disparo.
 
-A flywheel continua com RPM por distancia e o intake fica ligado durante
+A flywheel usa `AutonomousConstants.FLYWHEEL_RPM` como RPM fixa e o intake fica ligado durante
 os trechos e as esperas. Ao concluir o estacionamento, desliga intake,
 flywheel, transfer e trigger. No Stop, recolhe o coletor, encerra os
 mecanismos e a Limelight e salva a ultima pose medida para o TeleOp.
@@ -123,7 +125,7 @@ O grupo `ate_lancamento_2` do codigo exportado estava vazio e nao e executado.
 Sao cinco segmentos em cinco movimentos. Ambos os disparos selecionam a
 CELL plateia, pois o robo inicia no mesmo lado dos lancamentos de retorno.
 A selecao de alianca no INIT, os tempos compartilhados, a confirmacao de
-parada, a RPM por distancia e o encerramento seguem os outros autonomos.
+parada, a RPM fixa de `AutonomousConstants.FLYWHEEL_RPM` e o encerramento seguem os outros autonomos.
 `AutoTerciarioTest` cobre o percurso, os dois disparos, a coleta, a espera
 dos servos, a selecao da CELL e o Stop.
 

@@ -269,7 +269,8 @@ public class AutoTerciarioTest {
             }
         }
         verify(flowerCollect).setOpen();
-        verify(flywheel, atLeastOnce()).runByDistance(OptionalDouble.of(1.77));
+        verify(flywheel, atLeastOnce()).run(AutonomousConstants.FLYWHEEL_RPM);
+        verify(flywheel, never()).runByDistance(any());
         verify(flywheel, atLeastOnce()).stopMotors();
         verify(intake, atLeastOnce()).offMotor();
     }
@@ -304,6 +305,29 @@ public class AutoTerciarioTest {
         auto.finishAutonomous(true);
 
         assertEquals(originalAggression, Constants.foresightConfig.brakeAggression.get(), 1e-9);
+    }
+
+    @Test
+    public void fixedRpmIgnoresDistanceWhileLimelightStillAdjustsAim() {
+        tx = 6;
+        Pose initial = pose;
+        auto.startAutonomous();
+        tickMillis(1500);
+        when(limelight.getDistanceMeters()).thenReturn(OptionalDouble.of(0.5));
+        tick();
+        when(limelight.getDistanceMeters()).thenReturn(OptionalDouble.of(3));
+        tick();
+        when(limelight.getDistanceMeters()).thenReturn(OptionalDouble.empty());
+        tick();
+
+        assertTrue(follower.holding());
+        assertXY(initial.x(), initial.y(), follower.poseAt(0));
+        assertAngle(Math.toDegrees(initial.heading()) - tx, follower.poseAt(0).heading());
+        verify(limelight, atLeastOnce()).getObservation();
+        verify(limelight, never()).getDistanceMeters();
+        verify(flywheel, atLeastOnce()).run(2560);
+        verify(flywheel, never()).run(doubleThat(rpm -> rpm != 2560));
+        verify(flywheel, never()).runByDistance(any());
     }
 
     @Test

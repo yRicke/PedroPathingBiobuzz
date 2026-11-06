@@ -141,30 +141,32 @@ public class AutonomousSouthOutsideV3Test {
     }
 
     @Test
-    public void preservesElevenContinuousPathsCoordinatesAndSuppliedBezierControls() {
+    public void preservesTenContinuousPathsAndCurvedFlowerApproach() {
         Path[] paths = paths();
-        double[][] endpoints = {{57.8, 20}, {31, 13}, {14, 13}, {60, 145}, {60, 122},
-                {50.6, 122}, {46.6, 130}, {46.6, 120}, {60, 122}, {60, 145}, {10, 120}};
+        double[][] endpoints = {{57.8, 20}, {31, 13}, {14, 13}, {60, 147},
+                {50.6, 122}, {46.6, 131}, {46.6, 120}, {60, 122}, {60, 147}, {10, 120}};
+        assertEquals(10, paths.length);
         assertXY(57.8, 9, paths[0].get(0));
         for (int i = 0; i < paths.length; i++) {
             assertXY(endpoints[i][0], endpoints[i][1], paths[i].endPose());
             if (i > 0) assertPose(paths[i - 1].endPose(), paths[i].get(0));
         }
-        assertPose(paths[3].endPose(), paths[9].endPose());
-        assertPose(paths[4].endPose(), paths[8].endPose());
-        assertXY(30.9622625, 89.2519625, paths[3].get(0.5));
-        assertXY(50.3645, 123.30645, paths[10].get(0.5));
+        assertPose(paths[3].endPose(), paths[8].endPose());
+        assertXY(30.9622625, 89.3769625, paths[3].get(0.5));
+        assertXY(61.56435483870968, 125.58451612903227, paths[4].get(0.5));
+        assertXY(50.3645, 123.80645, paths[9].get(0.5));
         assertAngle(90, paths[0].get(0.5).heading());
         assertAngle(135, paths[1].get(0.5).heading());
         assertAngle(180, paths[2].get(0.5).heading());
         assertAngle(180, paths[3].get(0).heading());
         assertAngle(270, paths[3].endPose().heading());
-        assertAngle(270, paths[4].get(0.5).heading());
+        assertAngle(270, paths[4].get(0).heading());
+        assertAngle(90, paths[4].endPose().heading());
+        assertAngle(90, paths[5].get(0.5).heading());
         assertAngle(90, paths[6].get(0.5).heading());
-        assertAngle(90, paths[7].get(0.5).heading());
-        assertAngle(270, paths[9].get(0.5).heading());
-        assertAngle(270, paths[10].get(0).heading());
-        assertAngle(0, paths[10].endPose().heading());
+        assertAngle(270, paths[8].get(0.5).heading());
+        assertAngle(270, paths[9].get(0).heading());
+        assertAngle(0, paths[9].endPose().heading());
     }
 
     @Test
@@ -191,13 +193,13 @@ public class AutonomousSouthOutsideV3Test {
         velocity = Velocity.zero();
         runUntil(() -> shotStarts.size() == 2, 40);
         assertEquals(1.0, Constants.foresightConfig.brakeAggression.get(), 1e-9);
-        assertXY(60, 145, follower.poseAt(0));
+        assertXY(60, 147, follower.poseAt(0));
         finishShot(2, 1);
 
-        assertFalse("O coletor permanece fechado ate entrar na preparacao", flowerOpen);
-        passThrough(auto.chegadinhafrente2(), 1, 2);
-        assertTrue(flowerOpen);
+        assertTrue("O coletor abre no inicio da aproximacao curva", flowerOpen);
+        assertEquals(1.05, Constants.foresightConfig.brakeAggression.get(), 1e-9);
         pose = auto.prepcoletaflower().endPose();
+        velocity = new Velocity(12, 0, 0);
         tick();
         tick();
         tickMillis(500);
@@ -215,7 +217,7 @@ public class AutonomousSouthOutsideV3Test {
         velocity = Velocity.zero();
         runUntil(() -> follower.holding() && !follower.isBusy(), 10);
         long collectionStarted = clock.get();
-        assertXY(46.6, 130, follower.poseAt(0));
+        assertXY(46.6, 131, follower.poseAt(0));
         tickMillis(1999);
         assertEquals(3, followed.size());
         assertTrue(flowerOpen);
@@ -247,7 +249,7 @@ public class AutonomousSouthOutsideV3Test {
         assertEquals(2, shotStarts.size());
         velocity = Velocity.zero();
         runUntil(() -> shotStarts.size() == 3, 40);
-        assertXY(60, 145, follower.poseAt(0));
+        assertXY(60, 147, follower.poseAt(0));
         finishShot(6, 2);
         assertEquals("O estacionamento usa a frenagem original", 1.0,
                 Constants.foresightConfig.brakeAggression.get(), 1e-9);
@@ -268,7 +270,7 @@ public class AutonomousSouthOutsideV3Test {
         assertEquals(3, shotEnds.size());
         assertFalse(flowerOpen || feeding || transferring);
         Path[] expected = paths();
-        int[] groupSizes = {4, 2, 1, 1, 2, 1};
+        int[] groupSizes = {4, 1, 1, 1, 2, 1};
         int pathIndex = 0;
         for (int i = 0; i < followed.size(); i++) {
             List<PathSegment> segments = followed.get(i).getSegments();
@@ -286,6 +288,33 @@ public class AutonomousSouthOutsideV3Test {
         verify(flywheel, atLeastOnce()).runByDistance(OptionalDouble.of(1.77));
         verify(flywheel, atLeastOnce()).stopMotors();
         verify(intake, atLeastOnce()).offMotor();
+    }
+
+    @Test
+    public void directFlowerApproachOpensCollectorOnceAndWaitsForServoMovement() {
+        auto.startAutonomous();
+        for (int i = 0; i < 800 && followed.size() < 2; i++) {
+            if (follower.following() && follower.currentSegment() != null) {
+                pose = follower.currentCurve().get(1).toPose(follower.currentSegment().heading(1));
+            }
+            tick();
+        }
+        assertEquals(2, followed.size());
+        assertTrue("O coletor deve abrir ao iniciar a curva direta", flowerOpen);
+        verify(flowerCollect).setOpen();
+        assertEquals(1, followed.get(1).getSegments().size());
+        assertPose(auto.lancamento2().endPose(), followed.get(1).get(0));
+
+        pose = auto.prepcoletaflower().endPose();
+        runUntil(() -> follower.holding() && !follower.isBusy(), 10);
+        long elapsed = millis(clock.get() - openedAt);
+        assertTrue(elapsed < 500);
+        tickMillis(499 - elapsed);
+        assertEquals("Mesmo chegando cedo, deve esperar os servos", 2, followed.size());
+        tickMillis(1);
+        assertEquals(3, followed.size());
+        assertTrue(flowerOpen);
+        verify(flowerCollect).setOpen();
     }
 
     @Test
@@ -406,7 +435,7 @@ public class AutonomousSouthOutsideV3Test {
 
     private Path[] paths() {
         return new Path[] {auto.chegadinhafrente1(), auto.prepcoletajardim(), auto.coletajardim(),
-                auto.lancamento2(), auto.chegadinhafrente2(), auto.prepcoletaflower(), auto.coletaflower(),
+                auto.lancamento2(), auto.prepcoletaflower(), auto.coletaflower(),
                 auto.posflower(), auto.preplancamento3(), auto.lancamento3(), auto.estacionamento()};
     }
 

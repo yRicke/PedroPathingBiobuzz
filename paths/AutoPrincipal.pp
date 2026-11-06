@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "timestamp": "2026-11-05T00:48:15.298Z",
+  "timestamp": "2026-11-06T21:21:15.774Z",
   "startPoint": {
     "x": 57.8,
     "y": 9,
@@ -129,33 +129,18 @@
       "segments": [
         {
           "kind": "atomic",
-          "id": "v3-chegadinha_frente_2",
-          "name": "chegadinha_frente_2",
-          "endPoint": {
-            "x": 60,
-            "y": 122
-          },
-          "controlPoints": [],
-          "heading": {
-            "type": "constant",
-            "degrees": 270
-          },
-          "color": "#76b7b2",
-          "locked": false,
-          "waitBeforeMs": 0,
-          "waitAfterMs": 0,
-          "waitBeforeName": "",
-          "waitAfterName": ""
-        },
-        {
-          "kind": "atomic",
           "id": "v3-prep_coleta_flower",
           "name": "prep_coleta_flower",
           "endPoint": {
             "x": 50.6,
             "y": 122
           },
-          "controlPoints": [],
+          "controlPoints": [
+            {
+              "x": 67.82870967741937,
+              "y": 116.66903225806453
+            }
+          ],
           "heading": {
             "type": "linear",
             "startDeg": 270,
@@ -322,10 +307,6 @@
       "name": "mira_disparo_2",
       "durationMs": 2500,
       "locked": false
-    },
-    {
-      "kind": "path",
-      "lineId": "v3-chegadinha_frente_2"
     },
     {
       "kind": "path",

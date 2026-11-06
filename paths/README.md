@@ -1,16 +1,18 @@
 # Arquivos do Pedro Visualizer
 
-[AutonomousSouthOutsideV3.pp](AutonomousSouthOutsideV3.pp) corresponde ao
-percurso atual de `AutonomousSouthOutsideV3.java`, no formato 2.0.0 do
+[AutoPrincipal.pp](AutoPrincipal.pp) e [AutoSecundario.pp.json](AutoSecundario.pp.json)
+correspondem aos percursos de `AutoPrincipal.java` e `AutoSecundario.java`, no formato 2.0.0 do
 [Pedro Visualizer](https://visualizer.pedropathing.com/).
 
 Importe o arquivo `.pp` no Visualizer e selecione o mapa BIOBUZZ nas
-configuracoes. Os 11 trechos mantem os nomes, coordenadas, controles Bezier
+configuracoes. Os 10 trechos mantem os nomes, coordenadas, controles Bezier
 e interpolacoes de heading usados no codigo. Os grupos sao:
 
 - `ate_lancamento_2`: chegadinha inicial, preparacao/coleta do jardim e
   segundo lancamento.
-- `preparacao_flower`: saida do segundo lancamento e preparacao da flower.
+- `preparacao_flower`: curva direta do segundo lancamento ate a preparacao
+  da flower, com controle em `(67.82870967741937, 116.66903225806453)` e
+  heading linear de 270 a 90 graus. Substitui a segunda chegadinha.
 - `retorno_lancamento_3`: retorno apos a flower e terceiro lancamento.
 
 Coleta da flower, pos_flower e estacionamento permanecem trechos individuais.
@@ -26,7 +28,7 @@ O modificador `brakeAggression = 1.05`, a mira por Limelight e as acoes dos
 mecanismos continuam no Java, pois nao fazem parte do formato do Visualizer.
 As sobreposicoes dos gols do arquivo antigo, de DECODE, foram removidas.
 
-Os lancamentos 2 e 3 continuam em `(60, 145)`, exatamente como no codigo,
+Os lancamentos 2 e 3 continuam em `(60, 147)`, exatamente como no codigo,
 mesmo ultrapassando o limite de 141,5 in do campo do Visualizer. Essas
 coordenadas foram preservadas para voce poder revisa-las no editor.
 

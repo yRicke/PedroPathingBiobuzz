@@ -28,13 +28,13 @@ import java.util.function.LongSupplier;
 @Autonomous(name = "Auto_Secundario", group = "Autonomous")
 public class AutoSecundario extends LinearOpMode {
     private static final int SECOND_SHOT_PATH = 3;
-    private static final int PREP_FLOWER_PATH = 5;
-    private static final int COLLECT_FLOWER_PATH = 6;
-    private static final int POST_FLOWER_PATH = 7;
-    private static final int THIRD_SHOT_PATH = 9;
+    private static final int PREP_FLOWER_PATH = 4;
+    private static final int COLLECT_FLOWER_PATH = 5;
+    private static final int POST_FLOWER_PATH = 6;
+    private static final int THIRD_SHOT_PATH = 8;
     private static final String[] PATH_NAMES = {
             "chegadinha_frente_1", "prep_coleta_jardim", "coleta_jardim", "lancamento_2",
-            "chegadinha_frente_2", "prep_coleta_flower", "coleta_flower", "pos_flower",
+            "prep_coleta_flower", "coleta_flower", "pos_flower",
             "pre_lancamento_3", "lancamento_3", "estacionamento"
     };
     private enum Phase {
@@ -50,8 +50,8 @@ public class AutoSecundario extends LinearOpMode {
     private final Pose lancamento2 = poseFactory.of(60, 147, 270);
     private final Pose lancamentoControl1 = poseFactory.of(78.32714193548385, 1.825835483870963, 0);
     private final Pose lancamentoControl2 = poseFactory.of(56.41741612903226, 50.757454838709684, 0);
-    private final Pose chegadinhaFrente2 = poseFactory.of(60, 122, 270);
     private final Pose prepColetaFlower = poseFactory.of(50.6, 122, 90);
+    private final Pose prepColetaFlowerControl = poseFactory.of(67.82870967741937, 116.66903225806453, 0);
     private final Pose coletaFlower = poseFactory.of(46.6, 131, 90);
     private final Pose posFlower = poseFactory.of(46.6, 120, 90);
     private final Pose prepLancamento3 = poseFactory.of(60, 122, 270);
@@ -133,7 +133,7 @@ public class AutoSecundario extends LinearOpMode {
 
     void startAutonomous() {
         paths = new Path[] {chegadinhafrente1(), prepcoletajardim(), coletajardim(),
-                lancamento2(), chegadinhafrente2(), prepcoletaflower(), coletaflower(),
+                lancamento2(), prepcoletaflower(), coletaflower(),
                 posflower(), preplancamento3(), lancamento3(), estacionamento()};
         setShooting(false);
         flowerCollect.setClosed();
@@ -259,9 +259,13 @@ public class AutoSecundario extends LinearOpMode {
             }
             Path pathGroup = Paths.path(Arrays.copyOfRange(paths,
                     pathGroupStartIndex, pathGroupEndIndex + 1));
-            if (pathGroupEndIndex > pathGroupStartIndex) {
+            if (pathGroupEndIndex > pathGroupStartIndex || pathIndex == PREP_FLOWER_PATH) {
                 pathGroup = pathGroup.with(Constants.foresightConfig.brakeAggression
                         .at(TRANSIT_BRAKE_AGGRESSION));
+            }
+            if (pathIndex == PREP_FLOWER_PATH) {
+                flowerCollect.setOpen();
+                flowerOpenedNanos = nanoClock.getAsLong();
             }
             follower.follow(pathGroup);
             phase = Phase.FOLLOWING;
@@ -284,10 +288,6 @@ public class AutoSecundario extends LinearOpMode {
         int currentIndex = follower.following()
                 ? Math.min(pathGroupEndIndex, pathGroupStartIndex + follower.pathIndex())
                 : pathGroupEndIndex;
-        if (pathIndex < PREP_FLOWER_PATH && currentIndex >= PREP_FLOWER_PATH) {
-            flowerCollect.setOpen();
-            flowerOpenedNanos = nanoClock.getAsLong();
-        }
         pathIndex = currentIndex;
     }
 
@@ -337,9 +337,9 @@ public class AutoSecundario extends LinearOpMode {
         return Paths.curve(coletaJardim, lancamentoControl1, lancamentoControl2,
                 lancamento2).linear(coletaJardim, lancamento2);
     }
-    public Path chegadinhafrente2() { return Paths.line(lancamento2, chegadinhaFrente2).constant(chegadinhaFrente2); }
     public Path prepcoletaflower() {
-        return Paths.line(chegadinhaFrente2, prepColetaFlower).linear(chegadinhaFrente2, prepColetaFlower);
+        return Paths.curve(lancamento2, prepColetaFlowerControl, prepColetaFlower)
+                .linear(lancamento2, prepColetaFlower);
     }
     public Path coletaflower() { return Paths.line(prepColetaFlower, coletaFlower).constant(coletaFlower); }
     public Path posflower() { return Paths.line(coletaFlower, posFlower).reverseTangent(); }

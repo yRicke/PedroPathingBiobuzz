@@ -1,7 +1,7 @@
 # AutoPrincipal e AutoSecundario
 
 OpModes **Auto_Principal** e **Auto_Secundario**, no grupo **Autonomous**.
-Usam os 11 trechos do Pedro Visualizer, com selecao de alianca no INIT e uma mirada
+Usam os 10 trechos do Pedro Visualizer, com selecao de alianca no INIT e uma mirada
 breve pela Limelight antes de cada disparo, sem exigir confirmacao.
 
 ## Configuracoes
@@ -29,8 +29,7 @@ As poses estao em polegadas e graus:
 | prep_coleta_jardim | (31, 13, 180) | Continua para o proximo trecho sem hold intermediario |
 | coleta_jardim | (14, 13, 180) | Continua para o proximo trecho sem hold intermediario |
 | lancamento_2 | (60, 147, 270) | Para, mira e dispara por 2 s |
-| chegadinha_frente_2 | (60, 122, 270) | Continua ate a preparacao da flower sem hold intermediario |
-| prep_coleta_flower | (50.6, 122, 90) | Para e confirma o tempo reservado para abrir o coletor |
+| prep_coleta_flower | (50.6, 122, 90) | Curva direta desde lancamento_2; abre o coletor na saida e espera parar |
 | coleta_flower | (46.6, 131, 90) | Mantem hold por 2 s com intake ligado |
 | pos_flower | (46.6, 120, 90) | Recolhe o coletor e espera 0,5 s |
 | pre_lancamento_3 | (60, 122, 270) | Continua ate o lancamento sem hold intermediario |
@@ -38,20 +37,20 @@ As poses estao em polegadas e graus:
 | estacionamento | (10, 120, 0) | Mantem hold e desliga os mecanismos |
 
 Cada etapa tem sua propria pose, editavel independentemente. Lancamentos
-2 e 3 mantem as mesmas coordenadas; a segunda chegadinha e pre_lancamento_3
-tambem. Os controles das duas curvas e as interpolacoes de heading foram
-preservados.
+2 e 3 mantem as mesmas coordenadas. A aproximacao da flower substitui
+chegadinha_frente_2 por uma curva com controle em
+`(67.82870967741937, 116.66903225806453)` e heading linear de 270 a 90 graus.
+Os demais trechos mantem suas interpolacoes e controles.
 
-Os trechos de transito sao concatenados com Paths.path em tres grupos:
-chegadinha_frente_1 ate lancamento_2, chegadinha_frente_2 ate
-prep_coleta_flower e pre_lancamento_3 ate lancamento_3. Dentro desses
+Os trechos de transito sao concatenados com Paths.path em dois grupos:
+chegadinha_frente_1 ate lancamento_2 e pre_lancamento_3 ate lancamento_3. Dentro desses
 grupos, o proprio Pedro faz a transicao entre segmentos, sem esperar hold
 e velocidade zero em cada ponto intermediario. O auto so espera a parada
-ao final de cada grupo e nos trechos individuais coleta_flower, pos_flower
-e estacionamento. A telemetria continua identificando cada um dos 11
-trechos originais.
+ao final de cada grupo e nos trechos individuais prep_coleta_flower,
+coleta_flower, pos_flower e estacionamento. A telemetria identifica cada
+um dos 10 trechos.
 
-Os tres grupos de deslocamento usam brakeAggression = 1.05, um ajuste
+Os dois grupos e a aproximacao curva da flower usam brakeAggression = 1.05, um ajuste
 experimental pequeno sobre o padrao 1.0. O modificador e temporario e
 restaura o valor anterior ao terminar o grupo ou receber Stop. Coleta da
 flower, retorno pos_flower e estacionamento usam a configuracao original.
@@ -62,8 +61,8 @@ se precisar de muita correcao, volte TRANSIT_BRAKE_AGGRESSION para 1.0.
 Referencia: [documentacao oficial do Pedro](https://pedropathing.com/docs/pathing/reference/pathconstraints).
 
 O flower collector recebe a posicao fechada diretamente no construtor,
-inclusive antes do Play. Abre quando o Pedro entra no segmento
-prep_coleta_flower dentro do grupo. O auto somente
+inclusive antes do Play. Abre ao iniciar a curva direta
+prep_coleta_flower, logo apos o segundo disparo. O auto somente
 inicia coleta_flower depois de chegar a preparacao e de transcorrerem pelo
 menos 500 ms desde a abertura. A espera de coleta de 2 s comeca quando
 o follower termina o trecho e confirma a parada. O coletor permanece
@@ -88,7 +87,7 @@ Cancelar antes do Play nao publica pose.
 ## Validacao automatizada do V3
 
 AutonomousSouthOutsideV3Test simula o follower real com sensores e
-mecanismos substituidos por mocks e relogio controlado. Verifica os 11
+mecanismos substituidos por mocks e relogio controlado. Verifica os 10
 trechos, coordenadas das etapas, curvas, transicoes com velocidade diferente
 de zero e tres janelas de disparo de 2 s. Tambem cobre
 parada de coleta, ordem e tempo dos servos, selecao de CELL por alianca,

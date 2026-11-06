@@ -86,7 +86,7 @@
           "name": "lancamento_2",
           "endPoint": {
             "x": 60,
-            "y": 145
+            "y": 147
           },
           "controlPoints": [
             {
@@ -176,7 +176,7 @@
       "name": "coleta_flower",
       "endPoint": {
         "x": 46.6,
-        "y": 130
+        "y": 131
       },
       "controlPoints": [],
       "heading": {
@@ -248,7 +248,7 @@
           "name": "lancamento_3",
           "endPoint": {
             "x": 60,
-            "y": 145
+            "y": 147
           },
           "controlPoints": [],
           "heading": {

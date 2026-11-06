@@ -22,7 +22,7 @@ import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 
-/** Tres lancamentos em hold e coleta da flower no percurso do Pedro Visualizer. */
+/** Tres lancamentos em hold e coleta da flower no percurso de paths/AutoSecundario.pp.json. */
 @Autonomous(name = "Auto_Secundario", group = "Autonomous")
 public class AutoSecundario extends LinearOpMode {
     // Ajuste pequeno nos deslocamentos; 1.0 restaura a frenagem padrao.
@@ -55,9 +55,8 @@ public class AutoSecundario extends LinearOpMode {
     private final Pose prepColetaJardim = poseFactory.of(31, 13, 180);
     private final Pose coletaJardim = poseFactory.of(14, 13, 180);
     private final Pose lancamento2 = poseFactory.of(60, 147, 270);
-    private final Pose lancamentoControl1 = poseFactory.of(38.1594, 48.3839, 0);
-    private final Pose lancamentoControl2 = poseFactory.of(6.5729, 108.8181, 0);
-    private final Pose lancamentoControl3 = poseFactory.of(57.3303, 105.8968, 0);
+    private final Pose lancamentoControl1 = poseFactory.of(78.32714193548385, 1.825835483870963, 0);
+    private final Pose lancamentoControl2 = poseFactory.of(56.41741612903226, 50.757454838709684, 0);
     private final Pose chegadinhaFrente2 = poseFactory.of(60, 122, 270);
     private final Pose prepColetaFlower = poseFactory.of(50.6, 122, 90);
     private final Pose coletaFlower = poseFactory.of(46.6, 131, 90);
@@ -343,7 +342,7 @@ public class AutoSecundario extends LinearOpMode {
     public Path coletajardim() { return Paths.line(prepColetaJardim, coletaJardim).constant(coletaJardim); }
     public Path lancamento2() {
         return Paths.curve(coletaJardim, lancamentoControl1, lancamentoControl2,
-                lancamentoControl3, lancamento2).linear(coletaJardim, lancamento2);
+                lancamento2).linear(coletaJardim, lancamento2);
     }
     public Path chegadinhafrente2() { return Paths.line(lancamento2, chegadinhaFrente2).constant(chegadinhaFrente2); }
     public Path prepcoletaflower() {

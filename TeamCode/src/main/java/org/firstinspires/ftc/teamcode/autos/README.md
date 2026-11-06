@@ -1,8 +1,22 @@
-# AutonomousSouthOutsideV3
+# AutoPrincipal e AutoSecundario
 
-OpMode **AutonomousSouthOutsideV3**, no grupo **Autonomous**. Usa os 11
-trechos do Pedro Visualizer, com selecao de alianca no INIT e uma mirada
+OpModes **Auto_Principal** e **Auto_Secundario**, no grupo **Autonomous**.
+Usam os 11 trechos do Pedro Visualizer, com selecao de alianca no INIT e uma mirada
 breve pela Limelight antes de cada disparo, sem exigir confirmacao.
+
+## Configuracoes
+
+Edite `AutonomousConstants.java` para ajustar os tempos em milissegundos,
+`TRANSIT_BRAKE_AGGRESSION` e as poses em polegadas e graus. Tempos, frenagem,
+indices de parada e nomes dos trechos sao compartilhados pelos dois OpModes.
+As poses ficam em `AutonomousConstants.Principal` e
+`AutonomousConstants.Secundario`, permitindo ajustar cada percurso separadamente.
+O principal usa tres controles Bezier em `lancamento_2`; o secundario usa dois.
+Os arquivos de referencia sao `paths/AutoPrincipal.pp` e
+`paths/AutoSecundario.pp.json`, respectivamente.
+
+Os OpModes mantem a logica de execucao e o estado de cada partida. A
+configuracao do follower e do hardware continua em `pedro/Constants.java`.
 
 ## Percurso e paradas
 
@@ -14,13 +28,13 @@ As poses estao em polegadas e graus:
 | chegadinha_frente_1 | (57.8, 20, 90) | Continua para o proximo trecho sem hold intermediario |
 | prep_coleta_jardim | (31, 13, 180) | Continua para o proximo trecho sem hold intermediario |
 | coleta_jardim | (14, 13, 180) | Continua para o proximo trecho sem hold intermediario |
-| lancamento_2 | (60, 145, 270) | Para, mira e dispara por 2 s |
+| lancamento_2 | (60, 147, 270) | Para, mira e dispara por 2 s |
 | chegadinha_frente_2 | (60, 122, 270) | Continua ate a preparacao da flower sem hold intermediario |
 | prep_coleta_flower | (50.6, 122, 90) | Para e confirma o tempo reservado para abrir o coletor |
-| coleta_flower | (46.6, 130, 90) | Mantem hold por 2 s com intake ligado |
+| coleta_flower | (46.6, 131, 90) | Mantem hold por 2 s com intake ligado |
 | pos_flower | (46.6, 120, 90) | Recolhe o coletor e espera 0,5 s |
 | pre_lancamento_3 | (60, 122, 270) | Continua ate o lancamento sem hold intermediario |
-| lancamento_3 | (60, 145, 270) | Para, mira e dispara por 2 s |
+| lancamento_3 | (60, 147, 270) | Para, mira e dispara por 2 s |
 | estacionamento | (10, 120, 0) | Mantem hold e desliga os mecanismos |
 
 Cada etapa tem sua propria pose, editavel independentemente. Lancamentos

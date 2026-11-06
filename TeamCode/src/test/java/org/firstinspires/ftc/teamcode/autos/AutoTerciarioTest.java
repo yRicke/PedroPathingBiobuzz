@@ -175,7 +175,7 @@ public class AutoTerciarioTest {
 
     @Test
     public void firesTwiceAndCollectsBeforeReturningAndParking() {
-        auto.startAutonomous();
+        startAfterInitialDelay();
         assertFalse(flowerOpen);
         tickMillis(1499);
         assertTrue(followed.isEmpty());
@@ -251,7 +251,7 @@ public class AutoTerciarioTest {
         velocity = new Velocity(12, 0, 0);
         tick();
         tick();
-        verify(intake, never()).offMotor();
+        verify(intake, times(1)).offMotor();
         velocity = Velocity.zero();
         for (int i = 0; i < 5; i++) tick();
         assertTrue(follower.holding());
@@ -277,7 +277,7 @@ public class AutoTerciarioTest {
 
     @Test
     public void earlyArrivalStillWaitsHalfASecondForTheOpenServos() {
-        auto.startAutonomous();
+        startAfterInitialDelay();
         runUntil(() -> feeding, 120);
         finishShot(1, 0);
         assertTrue(flowerOpen);
@@ -297,7 +297,7 @@ public class AutoTerciarioTest {
     @Test
     public void stoppingDuringTransitRestoresTheSharedBrakingConfiguration() {
         double originalAggression = Constants.foresightConfig.brakeAggression.get();
-        auto.startAutonomous();
+        startAfterInitialDelay();
         runUntil(() -> feeding, 120);
         finishShot(1, 0);
         assertEquals(1.05, Constants.foresightConfig.brakeAggression.get(), 1e-9);
@@ -311,7 +311,7 @@ public class AutoTerciarioTest {
     public void fixedRpmIgnoresDistanceWhileLimelightStillAdjustsAim() {
         tx = 6;
         Pose initial = pose;
-        auto.startAutonomous();
+        startAfterInitialDelay();
         tickMillis(1500);
         when(limelight.getDistanceMeters()).thenReturn(OptionalDouble.of(0.5));
         tick();
@@ -335,13 +335,13 @@ public class AutoTerciarioTest {
         tx = 6;
         firstRpm = 0;
         secondRpm = 0;
-        auto.startAutonomous();
+        startAfterInitialDelay();
         tickMillis(1500);
         tickMillis(499);
         assertTrue(shotStarts.isEmpty());
         tickMillis(1);
         assertTrue(feeding && transferring);
-        assertEquals(Long.valueOf(TimeUnit.MILLISECONDS.toNanos(2000)), shotStarts.get(0));
+        assertEquals(Long.valueOf(TimeUnit.MILLISECONDS.toNanos(10000)), shotStarts.get(0));
         assertTrue(followed.isEmpty());
         verify(flywheel, never()).getRPM();
         verify(flywheel, never()).getSecondMotorRPM();
@@ -349,7 +349,7 @@ public class AutoTerciarioTest {
 
     @Test
     public void visionLossDoesNotInterruptFeedingOrChangeTheHeldHeading() {
-        auto.startAutonomous();
+        startAfterInitialDelay();
         runUntil(() -> feeding, 120);
         Pose held = follower.poseAt(0);
         visible = false;
@@ -368,7 +368,7 @@ public class AutoTerciarioTest {
 
     @Test
     public void rpmLossDoesNotInterruptTheTwoSecondShotWindow() {
-        auto.startAutonomous();
+        startAfterInitialDelay();
         runUntil(() -> feeding, 120);
         secondRpm = Double.NaN;
         tick();
@@ -432,6 +432,56 @@ public class AutoTerciarioTest {
         assertStopped();
     }
 
+    @Test
+    public void waitsEightSecondsBeforeWarmingAimingOrMoving() {
+        auto.startAutonomous();
+        tickMillis(7999);
+        assertTrue(follower.idle());
+        assertTrue(followed.isEmpty());
+        assertTrue(shotStarts.isEmpty());
+        assertFalse(flowerOpen || feeding || transferring);
+        verify(flywheel, never()).run(anyDouble());
+        verify(intake, never()).onMotor();
+        verify(limelight, never()).getObservation();
+
+        tickMillis(1);
+        assertTrue(follower.holding());
+        verify(flywheel).run(2560);
+        verify(intake).onMotor();
+        tickMillis(1499);
+        assertTrue(shotStarts.isEmpty());
+        tickMillis(1);
+        tickMillis(499);
+        assertTrue(shotStarts.isEmpty());
+        tickMillis(1);
+        assertEquals(Long.valueOf(TimeUnit.MILLISECONDS.toNanos(10000)), shotStarts.get(0));
+        assertTrue(followed.isEmpty());
+        tickMillis(1999);
+        assertTrue(followed.isEmpty());
+        tickMillis(1);
+        assertEquals(1, followed.size());
+    }
+
+    @Test
+    public void stopDuringInitialDelayDoesNotStartTheRoutine() {
+        auto.startAutonomous();
+        tickMillis(4000);
+        auto.finishAutonomous(true);
+        assertTrue(follower.idle());
+        assertTrue(followed.isEmpty());
+        assertTrue(shotStarts.isEmpty());
+        assertFalse(flowerOpen || feeding || transferring);
+        verify(flywheel, never()).run(anyDouble());
+        verify(intake, never()).onMotor();
+        verify(limelight).stop();
+        verify(flywheel, atLeastOnce()).stopMotors();
+    }
+
+    private void startAfterInitialDelay() {
+        auto.startAutonomous();
+        tickMillis(8000);
+    }
+
     private Path[] paths() {
         return new Path[] {auto.preparacaoflower(), auto.coletaflower(), auto.posflower(),
                 auto.retornolancamento3(), auto.estacionamento()};
@@ -443,7 +493,7 @@ public class AutoTerciarioTest {
     }
 
     private void completeRoute() {
-        auto.startAutonomous();
+        startAfterInitialDelay();
         for (int i = 0; i < 1600; i++) {
             if (follower.following() && follower.currentSegment() != null) {
                 pose = follower.currentCurve().get(1).toPose(follower.currentSegment().heading(1));

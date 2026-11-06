@@ -105,8 +105,9 @@ OpMode **Auto_Terciario**, no grupo **Autonomous**, com o percurso de
 `paths/AutoTerciario.pp`. As poses ficam no proprio `AutoTerciario.java`.
 O grupo `ate_lancamento_2` do codigo exportado estava vazio e nao e executado.
 
-1. Inicia em `(59.6258, 136.8065, 270)`, aquece por 1,5 s, mira por 0,5 s
-   e dispara por 2 s, mantendo hold.
+1. Apos o Play, aguarda 8 s com drive e mecanismos parados
+   (`TERTIARY_INITIAL_DELAY_MS`). Entao inicia em `(59.6258, 136.8065, 270)`,
+   aquece por 1,5 s, mira por 0,5 s e dispara por 2 s, mantendo hold.
 2. `preparacaoflower`: abre o coletor e segue a curva ate
    `(46.4006, 120.9045, 90)`, com controle em `(67.8287, 116.669)`.
    O heading varia linearmente de 270 a 90 graus.

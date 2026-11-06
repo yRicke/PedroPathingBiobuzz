@@ -35,7 +35,7 @@ public class AutoTerciario extends LinearOpMode {
             "retorno_lancamento_3", "estacionamento"
     };
     private enum Phase {
-        WARMING, FOLLOWING, AIMING, SHOOTING, OPENING_FLOWER, COLLECTING_FLOWER,
+        WAITING, WARMING, FOLLOWING, AIMING, SHOOTING, OPENING_FLOWER, COLLECTING_FLOWER,
         CLOSING_FLOWER, DONE
     }
 
@@ -63,7 +63,7 @@ public class AutoTerciario extends LinearOpMode {
     private Path[] paths;
     private int pathIndex = -1;
     private int shotNumber;
-    private Phase phase = Phase.WARMING;
+    private Phase phase = Phase.WAITING;
     private boolean redAlliance;
     private long phaseStartedNanos;
     private long flowerOpenedNanos;
@@ -91,6 +91,7 @@ public class AutoTerciario extends LinearOpMode {
                 limelight.run(true, false, gamepad2.dpad_up, gamepad2.dpad_down);
                 redAlliance = limelight.isRedAlliance();
                 telemetry.addLine("Terciario: disparos de 2 s no inicio e apos a flower (CELL plateia)");
+                telemetry.addData("Atraso apos Play (s)", TERTIARY_INITIAL_DELAY_MS / 1000.0);
                 telemetry.addLine("Flower fechada no INIT; coleta parada por 2 s");
                 telemetry.addLine("G2 cima: AZUL / baixo: VERMELHA (antes do Play)");
                 flowerCollect.sendTelemetry();
@@ -125,18 +126,27 @@ public class AutoTerciario extends LinearOpMode {
         paths = new Path[] {preparacaoflower(), coletaflower(), posflower(),
                 retornolancamento3(), estacionamento()};
         setShooting(false);
+        drive.stop();
+        flywheel.stopMotors();
+        intake.offMotor();
         flowerCollect.setClosed();
         follower.holdEnd.set(true);
-        follower.hold(start);
         pathIndex = -1;
         shotNumber = 0;
-        phase = Phase.WARMING;
+        phase = Phase.WAITING;
         phaseStartedNanos = nanoClock.getAsLong();
-        shotStatus = "Aquecendo para o lancamento inicial";
+        shotStatus = "Aguardando atraso inicial de 8 s";
     }
 
     void updateAutonomous() {
         long now = nanoClock.getAsLong();
+        if (phase == Phase.WAITING) {
+            if (elapsedMillis(now, phaseStartedNanos) < TERTIARY_INITIAL_DELAY_MS) return;
+            follower.hold(start);
+            phase = Phase.WARMING;
+            phaseStartedNanos = now;
+            shotStatus = "Aquecendo para o lancamento inicial";
+        }
         limelight.run(true, false, !redAlliance, redAlliance);
         boolean feeding = false;
         if (phase != Phase.DONE) {

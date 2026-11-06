@@ -156,6 +156,13 @@
   "sequence": [
     {
       "kind": "wait",
+      "id": "terciario-espera-atraso_inicial",
+      "name": "atraso_inicial",
+      "durationMs": 8000,
+      "locked": false
+    },
+    {
+      "kind": "wait",
       "id": "terciario-espera-aquecimento_mira_disparo_inicial",
       "name": "aquecimento_mira_disparo_inicial",
       "durationMs": 4000,

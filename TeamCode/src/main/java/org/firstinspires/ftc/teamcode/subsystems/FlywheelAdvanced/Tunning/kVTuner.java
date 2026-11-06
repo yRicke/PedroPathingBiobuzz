@@ -1,10 +1,12 @@
 package org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Tunning;
 
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Flywheel;
 
+@Disabled
 @TeleOp(name = "kV Tuner", group = "Flywheel")
 public class kVTuner extends OpMode {
     private Flywheel flywheel;

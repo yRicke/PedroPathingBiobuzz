@@ -4,6 +4,12 @@
 correspondem aos percursos de `AutoPrincipal.java` e `AutoSecundario.java`, no formato 2.0.0 do
 [Pedro Visualizer](https://visualizer.pedropathing.com/).
 
+[AutoTerciario.pp](AutoTerciario.pp) corresponde a `AutoTerciario.java`,
+com seis segmentos em cinco movimentos: preparacao da flower, coleta,
+retorno curto, retorno ao lancamento e estacionamento. O grupo inicial
+vazio do codigo exportado foi omitido. A sequencia inclui o disparo inicial
+e o disparo depois da flower, alem das esperas de coleta e recolhimento.
+
 Importe o arquivo `.pp` no Visualizer e selecione o mapa BIOBUZZ nas
 configuracoes. Os 10 trechos mantem os nomes, coordenadas, controles Bezier
 e interpolacoes de heading usados no codigo. Os grupos sao:

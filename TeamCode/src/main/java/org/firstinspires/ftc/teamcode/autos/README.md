@@ -7,7 +7,7 @@ breve pela Limelight antes de cada disparo, sem exigir confirmacao.
 ## Configuracoes
 
 Edite `AutonomousConstants.java` para ajustar os tempos em milissegundos
-e `TRANSIT_BRAKE_AGGRESSION`, compartilhados pelos dois OpModes.
+e `TRANSIT_BRAKE_AGGRESSION`, compartilhados pelo principal, secundario e terciario.
 As poses em polegadas e graus, os indices de parada e os nomes dos trechos
 ficam em `AutoPrincipal.java` e `AutoSecundario.java`, permitindo ajustar
 cada percurso separadamente.
@@ -93,6 +93,35 @@ de zero e tres janelas de disparo de 2 s. Tambem cobre
 parada de coleta, ordem e tempo dos servos, selecao de CELL por alianca,
 disparo sem confirmacao, continuidade sem visao/RPM e encerramento. FlowerCollectTest
 tambem cobre a inicializacao fechada sem comando intermediario de abertura.
+
+# AutoTerciario
+
+OpMode **Auto_Terciario**, no grupo **Autonomous**, com o percurso de
+`paths/AutoTerciario.pp`. As poses ficam no proprio `AutoTerciario.java`.
+O grupo `ate_lancamento_2` do codigo exportado estava vazio e nao e executado.
+
+1. Inicia em `(59.6258, 136.8065, 270)`, aquece por 1,5 s, mira por 0,5 s
+   e dispara por 2 s, mantendo hold.
+2. `preparacaoflower`: abre o coletor e segue a curva ate
+   `(46.4006, 120.9045, 90)`, com controle em `(67.8287, 116.669)`.
+   O heading varia linearmente de 270 a 90 graus.
+3. `coletaflower`: segue a reta ate `(46.6, 131, 90)` com heading constante
+   e coleta parada por 2 s. A coleta aguarda a parada e pelo menos 0,5 s
+   desde a abertura dos servos.
+4. `posflower`: retorna ate `(46.6, 120, 90)` com tangente reversa,
+   fecha o coletor e espera 0,5 s.
+5. `retornolancamento3`: concatena a reta ate `(60, 122, 270)` com heading
+   linear e a reta ate `(59.8174, 136.7026)` com tangente reversa. Ao parar,
+   mira por 0,5 s e dispara por 2 s.
+6. `estacionamento`: curva ate `(10, 120, 0)`, com controle em
+   `(65.729, 114.1129)` e heading linear desde 270 graus, como no exportado.
+
+Sao seis segmentos em cinco movimentos. Ambos os disparos selecionam a
+CELL plateia, pois o robo inicia no mesmo lado dos lancamentos de retorno.
+A selecao de alianca no INIT, os tempos compartilhados, a confirmacao de
+parada, a RPM por distancia e o encerramento seguem os outros autonomos.
+`AutoTerciarioTest` cobre o percurso, os dois disparos, a coleta, a espera
+dos servos, a selecao da CELL e o Stop.
 
 # AutonomousSouthOutsideV2
 

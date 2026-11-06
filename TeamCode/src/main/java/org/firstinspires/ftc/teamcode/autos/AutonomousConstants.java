@@ -1,6 +1,6 @@
 package org.firstinspires.ftc.teamcode.autos;
 
-/** Tempos e frenagem compartilhados pelos autonomos principal e secundario. */
+/** Tempos e frenagem compartilhados pelos autonomos. */
 public final class AutonomousConstants {
     // Ajuste pequeno nos deslocamentos; 1.0 restaura a frenagem padrao.
     public static final double TRANSIT_BRAKE_AGGRESSION = 1.05;

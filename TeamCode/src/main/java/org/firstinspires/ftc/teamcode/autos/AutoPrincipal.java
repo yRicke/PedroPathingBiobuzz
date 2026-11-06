@@ -23,8 +23,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 
 /** Tres lancamentos em hold e coleta da flower no percurso do Pedro Visualizer. */
-@Autonomous(name = "AutonomousSouthOutsideV3", group = "Autonomous")
-public class AutonomousSouthOutsideV3 extends LinearOpMode {
+@Autonomous(name = "Auto_Principal", group = "Autonomous")
+public class AutoPrincipal extends LinearOpMode {
     // Ajuste pequeno nos deslocamentos; 1.0 restaura a frenagem padrao.
     private static final double TRANSIT_BRAKE_AGGRESSION = 1.05;
     private static final long SPIN_UP_MS = 1500;

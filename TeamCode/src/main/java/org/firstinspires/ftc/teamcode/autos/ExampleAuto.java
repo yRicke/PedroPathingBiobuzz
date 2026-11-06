@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.autos;
 
 import com.pedropathing.api.Paths;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 
@@ -15,6 +16,7 @@ import static com.pedropathing.api.Paths.*;
 import com.pedropathing.paths.Path;
 
 @Autonomous
+@Disabled
 public class ExampleAuto extends OpMode {
 
     private Follower follower; // Add this

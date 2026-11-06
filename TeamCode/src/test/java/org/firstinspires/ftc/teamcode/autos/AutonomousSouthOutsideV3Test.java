@@ -49,7 +49,7 @@ public class AutonomousSouthOutsideV3Test {
     private final Trigger trigger = mock(Trigger.class);
     private final Limelight limelight = mock(Limelight.class);
     private final FlowerCollect flowerCollect = mock(FlowerCollect.class);
-    private final AutonomousSouthOutsideV3 auto = new AutonomousSouthOutsideV3();
+    private final AutoPrincipal auto = new AutoPrincipal();
     private final List<Path> followed = new ArrayList<>();
     private final List<Long> shotStarts = new ArrayList<>();
     private final List<Long> shotEnds = new ArrayList<>();
@@ -456,7 +456,7 @@ public class AutonomousSouthOutsideV3Test {
     }
 
     private void inject(String name, Object value) throws Exception {
-        Field field = AutonomousSouthOutsideV3.class.getDeclaredField(name);
+        Field field = AutoPrincipal.class.getDeclaredField(name);
         field.setAccessible(true);
         field.set(auto, value);
     }

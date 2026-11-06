@@ -24,7 +24,7 @@ public class FlywheelTest {
         verify(one).setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         verify(two).setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         verify(one).setDirection(DcMotorSimple.Direction.REVERSE);
-        verify(two).setDirection(DcMotorSimple.Direction.FORWARD);
+        verify(two).setDirection(DcMotorSimple.Direction.REVERSE);
         assertPower(0);
     }
 
@@ -34,9 +34,9 @@ public class FlywheelTest {
     }
 
     @Test public void atTargetUsesFeedforwardAndOverspeedNeverReverses() {
-        measuredRpm(2720);
-        flywheel.run(2720);
-        assertPower(Flywheel.KS + Flywheel.KV * 2720);
+        measuredRpm(2620);
+        flywheel.run(2620);
+        assertPower(Flywheel.KS + Flywheel.KV * 2620);
         clearInvocations(one, two);
         measuredRpm(3100);
         flywheel.run(2720);
@@ -61,13 +61,35 @@ public class FlywheelTest {
         assertPower(Flywheel.KS + Flywheel.KV * Flywheel.MAX_RPM);
     }
 
+    @Test public void positiveTargetsAreAtLeastTheSmallestBaseRpm() {
+        measuredRpm(Flywheel.MIN_RPM);
+        flywheel.run(1);
+        assertEquals(Flywheel.MIN_RPM, flywheel.getTargetRPM(), 0);
+        assertPower(Flywheel.KS + Flywheel.KV * Flywheel.MIN_RPM);
+        flywheel.run(0);
+        assertEquals(0, flywheel.getTargetRPM(), 0);
+    }
+
+    @Test public void limitsFollowAllBaseRpmsAndCurrentCalibrationIsPreserved() {
+        assertEquals(Math.min(Flywheel.BASE_RPM, Math.min(Flywheel.BASE_RPM_2, Flywheel.BASE_RPM_3)),
+                Flywheel.MIN_RPM, 0);
+        assertEquals(Math.max(Flywheel.BASE_RPM, Math.max(Flywheel.BASE_RPM_2, Flywheel.BASE_RPM_3)),
+                Flywheel.MAX_RPM, 0);
+        for (double[] pair : new double[][] {{1.0, 2560}, {1.82, 2560}, {1.85, 2570},
+                {1.95, 2625}, {2.05, 2680}, {4.0, 2680}}) {
+            flywheel.stopMotors();
+            flywheel.runByDistance(java.util.OptionalDouble.of(pair[0]));
+            assertEquals(pair[1], flywheel.getTargetRPM(), 1e-9);
+        }
+    }
+
     @Test public void manualPowerAndTunerGainsUseTheSameLimits() {
         flywheel.setMotorPower(-0.2);
         assertPower(0);
         clearInvocations(one, two);
         flywheel.setGains(0.1, 0.0001, 0);
         flywheel.run(2000);
-        assertPower(0.3);
+        assertPower(0.1 + 0.0001 * Flywheel.MIN_RPM);
         clearInvocations(one, two);
         assertThrows(IllegalArgumentException.class, () -> flywheel.setGains(0, Double.NaN, 0));
         assertPower(0);

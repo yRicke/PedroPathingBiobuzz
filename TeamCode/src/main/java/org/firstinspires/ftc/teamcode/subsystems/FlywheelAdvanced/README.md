@@ -8,14 +8,16 @@ seu estado. As configurações ficam no início de `Flywheel.java`.
 | `MOTOR_ONE_NAME`, `MOTOR_TWO_NAME` | Nomes no Robot Controller |
 | `TICKS_PER_REVOLUTION`, `GEAR_RATIO` | Conversão do encoder para RPM |
 | `KS`, `KV`, `KP` | Feedforward e proporcional |
-| `MAX_RPM` | Limite configurado do launcher |
+| `MIN_RPM`, `MAX_RPM` | Menor e maior valor entre `BASE_RPM`, `BASE_RPM_2` e `BASE_RPM_3` |
 | `BASE_RPM`, `BASE_DISTANCE_CM` | Primeiro par por distância 3D da saída até a abertura; RPM base também é usada sem leitura |
 | `BASE_RPM_2/3`, `BASE_DISTANCE_2/3_CM` | Pares adicionais |
 | `SETPOINT_UPDATE_MS`, `SETPOINT_DEADBAND_RPM` | Estabilização da RPM automática |
 
-As três distâncias estão em zero para invalidar os pares da referência antiga
-(câmera → adesivo). Recalibre usando `Distancia abertura filtrada (cm)` e
-preencha os novos pares. Até lá, o automático usa a RPM base e indica "Sem pares".
+Os pares atuais são 182 cm / 2560 RPM, 185 cm / 2570 RPM e 205 cm / 2680 RPM.
+Todo alvo positivo, automático ou manual, fica entre **2560 e 2680 RPM**.
+Os limites acompanham as três RPMs base quando elas forem alteradas. Zero
+continua desligando os motores; valores inválidos também desligam.
+Recalibre usando `Distancia abertura filtrada (cm)` ao mudar a montagem.
 
 ## Uso
 
@@ -42,7 +44,7 @@ de atualização são métodos internos da própria `Flywheel`.
 ## Ajustes do controlador
 
 Os OpModes de `Tunning/` usam D-pad esquerda/direita para o passo e cima/baixo
-para o ganho. A/B escolhem 2800/2200 RPM nos tuners de kV/kP. Os ganhos iniciam
+para o ganho. A/B escolhem `MAX_RPM`/`MIN_RPM` nos tuners de kV/kP. Os ganhos iniciam
 com as constantes da própria `Flywheel`.
 
 1. `kS Tuner`: aplica potência diretamente para medir o atrito estático.

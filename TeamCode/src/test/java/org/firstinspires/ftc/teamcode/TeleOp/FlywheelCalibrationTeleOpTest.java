@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.TeleOp;
 import org.junit.Test;
 import org.junit.Before;
 import static org.mockito.Mockito.*;
+import org.firstinspires.ftc.teamcode.subsystems.FlywheelAdvanced.Flywheel;
 
 import static org.junit.Assert.*;
 
@@ -11,7 +12,17 @@ public class FlywheelCalibrationTeleOpTest {
 
     @Before public void setup() {
         controls = mock(FlywheelCalibrationTeleOp.class, CALLS_REAL_METHODS);
-        controls.resetCalibrationControls(2720, 6000);
+        controls.resetCalibrationControls(2720, 0, 6000);
+    }
+
+    @Test
+    public void calibrationRespectsBaseRpmExtremesAndStillTurnsOff() {
+        controls.resetCalibrationControls(Flywheel.BASE_RPM, Flywheel.MIN_RPM, Flywheel.MAX_RPM);
+        for (int i = 0; i < 100; i++) click(false, true, false, false);
+        assertEquals(Flywheel.MIN_RPM, controls.getCalibrationRpm(), 0);
+        for (int i = 0; i < 100; i++) click(true, false, false, false);
+        assertEquals(Flywheel.MAX_RPM, controls.getCalibrationRpm(), 0);
+        assertEquals(0, controls.getCommandedRpm(), 0);
     }
 
     @Test

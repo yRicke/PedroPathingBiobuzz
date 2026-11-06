@@ -37,6 +37,9 @@ public class Limelight {
     public static final double MAX_OPENING_DISAGREEMENT_METERS = 0.12;
     public static final long DISTANCE_WINDOW_MS = 1000;
     public static final int DISTANCE_MAX_SAMPLES = 40;
+    public static final long DISTANCE_SMOOTHING_MS = 250;
+    public static final double DISTANCE_DEADBAND_METERS = 0.01;
+    public static final long DISTANCE_HOLD_MS = 200;
     // BIOBUZZ, manual secao 9.9 / figuras 9-15 a 9-17.
     public static final int RED_AUDIENCE_FIRST_TAG = 34;
     public static final int RED_OPPOSITE_FIRST_TAG = 30;
@@ -60,6 +63,10 @@ public class Limelight {
     private int distanceHive;
     private double lastDistanceTimestamp = Double.NaN;
     private long lastDistanceSampleNanos;
+    private long lastValidDistanceNanos;
+    private long lastSmoothedDistanceNanos;
+    private double smoothedDistanceMeters;
+    private boolean freshFrame;
     private boolean redAlliance;
     private boolean audienceCell;
     private int selectedFirstTagId = BLUE_OPPOSITE_FIRST_TAG;
@@ -121,6 +128,7 @@ public class Limelight {
     }
 
     private void readFrame(long now) {
+        freshFrame = false;
         if (camera == null || !camera.isRunning() || !camera.isConnected()) {
             clearFrame("Desconectada");
             return;
@@ -163,6 +171,7 @@ public class Limelight {
             decodedTimestamp = timestamp;
             decodedHive = selectedFirstTagId;
         }
+        freshFrame = true;
     }
 
     private void decodeFrame(LLResult result, double timestamp, double imageAgeSeconds) {
@@ -297,14 +306,21 @@ public class Limelight {
     }
 
     private void filterDistance(long now) {
-        if (!rawDistanceMeters.isPresent() || !Double.isFinite(lastFrameTimestamp)
-                || lastFrameTimestamp < 0) {
-            clearDistanceFilter();
-            return;
-        }
         if (distanceHive != selectedFirstTagId || lastFrameTimestamp < lastDistanceTimestamp) {
             clearDistanceFilter();
             distanceHive = selectedFirstTagId;
+        }
+        if (!rawDistanceMeters.isPresent() || !Double.isFinite(lastFrameTimestamp)
+                || lastFrameTimestamp < 0) {
+            // Uma falha breve de deteccao nao deve reiniciar a RPM. A mira nao e retida.
+            if (freshFrame && distanceMeters.isPresent()
+                    && now - lastValidDistanceNanos <= TimeUnit.MILLISECONDS.toNanos(DISTANCE_HOLD_MS)) {
+                distanceStatus = "Mantendo distancia: falha breve de deteccao";
+                return;
+            }
+            distanceStatus = status;
+            clearDistanceFilter();
+            return;
         }
         boolean changed = false;
         while (distanceCount > 0 && now - distanceSampleTimes[distanceHead] >= WINDOW_NANOS) {
@@ -312,8 +328,10 @@ public class Limelight {
             distanceCount--;
             changed = true;
         }
+        if (distanceCount == 0) distanceMeters = OptionalDouble.empty();
         if (lastFrameTimestamp != lastDistanceTimestamp) {
             lastDistanceTimestamp = lastFrameTimestamp;
+            lastValidDistanceNanos = now;
             if (distanceCount == 0 || now - lastDistanceSampleNanos >= SAMPLE_INTERVAL_NANOS) {
                 if (distanceCount == DISTANCE_MAX_SAMPLES) {
                     distanceHead = (distanceHead + 1) % DISTANCE_MAX_SAMPLES;
@@ -327,7 +345,29 @@ public class Limelight {
                 changed = true;
             }
         }
-        if (changed) distanceMeters = trimmedMean();
+        if (changed) stabilizeDistance(now);
+    }
+
+    private void stabilizeDistance(long now) {
+        OptionalDouble mean = trimmedMean();
+        if (!mean.isPresent()) {
+            distanceMeters = OptionalDouble.empty();
+            return;
+        }
+        if (!distanceMeters.isPresent()) {
+            smoothedDistanceMeters = mean.getAsDouble();
+            distanceMeters = mean;
+        } else {
+            // Alpha depende do tempo, mantendo a resposta igual em diferentes taxas de loop.
+            double alpha = -Math.expm1(-(double) (now - lastSmoothedDistanceNanos)
+                    / TimeUnit.MILLISECONDS.toNanos(DISTANCE_SMOOTHING_MS));
+            smoothedDistanceMeters += alpha * (mean.getAsDouble() - smoothedDistanceMeters);
+            if (Math.abs(smoothedDistanceMeters - distanceMeters.getAsDouble())
+                    >= DISTANCE_DEADBAND_METERS) {
+                distanceMeters = OptionalDouble.of(smoothedDistanceMeters);
+            }
+        }
+        lastSmoothedDistanceNanos = now;
     }
 
     private OptionalDouble trimmedMean() {
@@ -349,6 +389,8 @@ public class Limelight {
         distanceMeters = OptionalDouble.empty();
         lastDistanceTimestamp = Double.NaN;
         lastDistanceSampleNanos = 0;
+        lastValidDistanceNanos = lastSmoothedDistanceNanos = 0;
+        smoothedDistanceMeters = 0;
     }
 
     private static boolean isHive(int firstTagId) {

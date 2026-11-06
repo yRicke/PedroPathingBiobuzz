@@ -77,7 +77,9 @@ o filtrado e a potencia de giro comandada.
 O disparo continua sendo comandado pelo piloto no RT. A selecao da CELL
 adequada e manual. A RPM usa a distancia 3D da saida das bolas ate a abertura
 medida pela Limelight, com a geometria da camera ja configurada. Os pares
-precisam ser recalibrados nessa referencia; sem pares ou leitura, usa BASE_RPM.
+ficam em Flywheel e limitam o alvo ao menor/maior BASE_RPM (2560-2680 RPM hoje).
+A leitura usa media central, suavizacao e banda morta de 1 cm; falhas breves de
+deteccao preservam a distancia por ate 200 ms. Sem pares ou leitura, usa BASE_RPM.
 
 ## Pose do autonomo
 

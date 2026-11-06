@@ -7,12 +7,12 @@
 2. Confira a pipeline 8, aliança e CELL mostradas (azul 42–45 inicialmente).
    No gamepad 2, D-pad cima/baixo seleciona azul/vermelha e esquerda/direita
    seleciona CELL plateia/oposta. Aguarde `Distancia abertura (cm)` válida.
-3. A RPM desejada começa em `Flywheel.BASE_RPM` (**2670** atualmente), com
+3. A RPM desejada começa em `Flywheel.BASE_RPM` (**2570** atualmente), com
    todos os mecanismos desligados. No gamepad 1, B alterna a flywheel.
    A alterna o intake, LB inverte intake/transfer e RT dispara, como no
    TeleOpMain. Ajuste a RPM e o passo pelo D-pad.
 4. Aguarde a RPM medida se aproximar da desejada e a distância estabilizar
-   depois de mover o robô (a janela do filtro é de um segundo).
+   depois de mover o robô (janela de um segundo mais suavização de 250 ms).
 5. Com a flywheel na RPM desejada, segure RT para acionar transfer e trigger.
    Soltar RT desliga a alimentação e fecha o trigger. A liga/desliga o intake;
    LB inverte intake e transfer enquanto pressionado e tem prioridade no transfer.
@@ -37,7 +37,9 @@ usa a referência 3D da saída das bolas até a abertura da CELL.
 
 O passo inicial é 10 RPM. Segurar D-pad/A/B não repete o comando a cada loop.
 RT e LB são momentâneos, como no TeleOpMain.
-A RPM fica entre zero e `Flywheel.MAX_RPM` (6000 inicialmente; configure conforme o launcher). `BASE_RPM` e `MAX_RPM` ficam em `Flywheel`; `PIPELINE_INDEX` e
+A RPM ligada fica entre `Flywheel.MIN_RPM` e `Flywheel.MAX_RPM` (**2560–2680**
+atualmente), derivados do menor e maior `BASE_RPM*`. B desliga a flywheel
+enviando zero. Essas constantes ficam em `Flywheel`; `PIPELINE_INDEX` e
 `UPSIDE_DOWN` ficam em `Limelight`. Ao parar o OpMode, a flywheel, o
 transfer e o intake são desligados, o trigger é fechado e a câmera é parada.
 
@@ -64,9 +66,8 @@ O ângulo de saída das bolas informado é 70 graus acima da horizontal.
 Faça a calibração com esse ajuste mecânico; a tabela registra o comportamento
 dos disparos reais. Alterar esse ângulo exige revalidar os pares.
 
-**Os pares anteriores foram desativados com distância zero em `Flywheel`.**
-Refaça os pares obtidos por `tdist`/POI ou da câmera até o centro do adesivo.
-Até cadastrar os novos, o modo automático usa `BASE_RPM` e indica "Sem pares".
+Os pares atuais são 182 cm / 2560 RPM, 185 cm / 2570 RPM e 205 cm / 2680 RPM.
+Refaça pares obtidos por `tdist`/POI ou da câmera até o centro do adesivo.
 Calibração e modo automático usam a mesma referência calculada em Java, sem
 depender da tag principal. Veja [a geometria da mira](aim-geometry.md).
 
@@ -85,12 +86,17 @@ par validado, sem duplicar distâncias. A tabela aceita qualquer ordem e copia
 os valores na inicialização. Para mais pontos, adicione pares em
 `Flywheel.createRpmTable()` e gere o programa novamente.
 
-- Sem pares: usa `BASE_RPM` (2670 atualmente).
+- Sem pares: usa `BASE_RPM` (2570 atualmente).
 - Um par: mantém a RPM desse par; não existe curva medida ainda.
 - Dois ou mais: interpola entre os pontos vizinhos.
 - Fora da faixa: limita ao extremo e sinaliza que a posição não foi calibrada.
-- Sem distância 3D válida: volta imediatamente ao pedido de `BASE_RPM`.
-- `BASE_RPM` zero: desliga a RPM automática.
+- Falha breve de detecção: mantém a distância por até 200 ms desde a última pose válida.
+- Sem distância após esse prazo, câmera desconectada ou imagem antiga: solicita `BASE_RPM`.
+- O alvo positivo fica entre `MIN_RPM` e `MAX_RPM`; zero desliga os motores.
+
+A distância usa a média central de até 40 amostras do último segundo, seguida
+de suavização exponencial de 250 ms e banda morta de 1 cm. Isso reduz oscilações
+e picos, com atraso na resposta ao movimento. A mira não mantém alvo perdido.
 
 O controlador automático aplica banda morta de 10 RPM e intervalo mínimo de
 100 ms, configurados em `Flywheel`. A malha dos motores continua sendo

@@ -91,16 +91,25 @@ tags, a geometria oficial em `AimGeometry` e as constantes `CAMERA_*` no Java.
 Não é necessário alterar robotspace no painel. Mantenha o tamanho das tags
 e a geometria do adesivo corretos.
 
-Tags de outras CELLS são ignoradas e podem aparecer na mesma imagem. A
-distância fica indisponível quando não há pose 3D válida de uma tag da CELL
-selecionada; nesse caso a flywheel solicita `BASE_RPM`. Confira a seleção e
-o status da distância antes de anotar pares.
+Tags de outras CELLS são ignoradas e podem aparecer na mesma imagem. O filtro
+usa até 40 frames únicos no último segundo, descarta os 25% menores e maiores
+valores e calcula a média central. Essa média passa por suavização exponencial
+com constante de tempo de 250 ms; a distância publicada só muda quando acumula
+pelo menos 1 cm de diferença. A distância instantânea continua na telemetria.
+
+Uma falha de detecção em imagens recentes mantém a distância e o histórico por
+até 200 ms desde o último frame com pose válida. A mira perde o alvo imediatamente;
+somente a distância é preservada. Sem recuperação, a distância fica indisponível
+e a flywheel solicita `BASE_RPM`. Trocar de CELL/aliança, reiniciar o timestamp,
+desconectar a câmera ou receber imagem antiga/congelada limpa o filtro imediatamente.
+As constantes `DISTANCE_*` no início de `Limelight.java` ajustam esse comportamento.
+Depois de mover o robô, espere a leitura estabilizar antes de anotar pares.
 
 **Refaça os pares antigos, inclusive os medidos da câmera ao adesivo.** A
 nova tabela usa distância da saída até a abertura, na calibração e no jogo.
-Os três pares antigos foram desativados com distância zero em `Flywheel`.
-Enquanto não houver novos pares, o automático usa `BASE_RPM` e informa
-"Sem pares: RPM base". Os controles de RPM manual da calibração continuam disponíveis.
+Os pares atuais ficam em `Flywheel`: 182 cm / 2560 RPM, 185 cm / 2570 RPM e
+205 cm / 2680 RPM. O alvo de RPM fica entre o menor e o maior `BASE_RPM*`,
+inclusive na calibração manual; zero continua desligando os motores.
 
 ## 5. Particularidades do BIOBUZZ
 
@@ -129,8 +138,9 @@ em 28/10/2026:
 
 As poses individuais agora precisam concordar antes da média: o maior grupo
 deve reunir a maioria dos IDs distintos e concordar em até 12 cm. Uma única
-tag válida continua utilizável. Sem maioria entre várias tags, a leitura
-fica indisponível e o status informa a discordância. A telemetria mostra
+tag válida continua utilizável. Sem maioria entre várias tags, a pose do frame
+fica indisponível; a distância anterior só persiste durante os 200 ms descritos acima.
+O status informa a discordância. A telemetria mostra
 `Poses de tags rejeitadas` e `Idade da imagem na leitura (ms)`. A idade inclui
 captura, processamento, parsing e transporte, com limite total de 300 ms.
 O controle usa essa idade para recuperar o heading da captura.

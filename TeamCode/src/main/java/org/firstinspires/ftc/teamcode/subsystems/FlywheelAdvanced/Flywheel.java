@@ -20,15 +20,16 @@ public class Flywheel {
     public static final double KS = 0.078;
     public static final double KV = 0.00015849;
     public static final double KP = 0.00169;
-    public static final double MAX_RPM = 6000;
     public static final double BASE_RPM = 2570;
-    // Nova referencia: saida das bolas -> abertura. Zero invalida os pares do adesivo.
-    // Preencher com as leituras do Flywheel Calibration - 3D apos recalibrar.
+    // Referencia: saida das bolas -> abertura, medida no Flywheel Calibration - 3D.
+    // Distancia zero desativa o par correspondente.
     public static final double BASE_DISTANCE_CM = 185;
     public static final double BASE_RPM_2 = 2560;
     public static final double BASE_DISTANCE_2_CM = 182;
     public static final double BASE_RPM_3 = 2680;
     public static final double BASE_DISTANCE_3_CM = 205;
+    public static final double MIN_RPM = Math.min(BASE_RPM, Math.min(BASE_RPM_2, BASE_RPM_3));
+    public static final double MAX_RPM = Math.max(BASE_RPM, Math.max(BASE_RPM_2, BASE_RPM_3));
     public static final long SETPOINT_UPDATE_MS = 100;
     public static final double SETPOINT_DEADBAND_RPM = 10;
 
@@ -65,7 +66,8 @@ public class Flywheel {
         if (!Double.isFinite(TICKS_PER_REVOLUTION)
                 || TICKS_PER_REVOLUTION <= 0
                 || !Double.isFinite(GEAR_RATIO) || GEAR_RATIO <= 0
-                || !Double.isFinite(MAX_RPM) || MAX_RPM <= 0) {
+                || !Double.isFinite(MIN_RPM) || MIN_RPM <= 0
+                || !Double.isFinite(MAX_RPM) || MAX_RPM < MIN_RPM) {
             stopMotors();
             throw new IllegalArgumentException("Configuracao mecanica da flywheel invalida");
         }
@@ -122,7 +124,7 @@ public class Flywheel {
     public void runByDistance(OptionalDouble distanceMeters) {
         long now = nanoClock.getAsLong();
         FlywheelRpmTable.Mode nextMode = rpmTable.getMode(distanceMeters);
-        requestedAutoRpm = rpmTable.calculate(distanceMeters);
+        requestedAutoRpm = boundRpm(rpmTable.calculate(distanceMeters));
         boolean lostDistance = nextMode == FlywheelRpmTable.Mode.NO_DISTANCE && automaticMode != nextMode;
         if (!autoInitialized || requestedAutoRpm == 0 || lostDistance
                 || (now - lastAutoUpdateNanos >= TimeUnit.MILLISECONDS.toNanos(SETPOINT_UPDATE_MS)
@@ -148,9 +150,13 @@ public class Flywheel {
             stopMotorOutput();
             return;
         }
-        targetRpm = Math.min(rpm, MAX_RPM);
+        targetRpm = boundRpm(rpm);
         double power = kS + kV * targetRpm + kP * (targetRpm - currentRpm);
         setMotorPower(power);
+    }
+
+    private static double boundRpm(double rpm) {
+        return Double.isFinite(rpm) && rpm > 0 ? Math.max(MIN_RPM, Math.min(rpm, MAX_RPM)) : 0;
     }
 
     /** Pares {distancia 3D da saida ate a abertura em cm, RPM}; zero desativa o par. */
@@ -175,6 +181,7 @@ public class Flywheel {
         if (telemetry == null) return;
         double currentRpm = getRPM();
         telemetry.addData("Flywheel RPM alvo", targetRpm);
+        telemetry.addData("Flywheel limites RPM", "%.0f - %.0f", MIN_RPM, MAX_RPM);
         telemetry.addData("Flywheel RPM medido", currentRpm);
         telemetry.addData("Flywheel RPM motor 2", getSecondMotorRPM());
         telemetry.addData("Flywheel erro RPM", targetRpm - currentRpm);

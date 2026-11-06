@@ -15,6 +15,7 @@ import java.util.OptionalDouble;
 @TeleOp(name = "Flywheel Calibration - 3D", group = "Flywheel")
 public class FlywheelCalibrationTeleOp extends LinearOpMode {
     private static final int[] STEPS_TENTHS = {1, 10, 100, 1000, 10000};
+    private int minTenths;
     private int maxTenths;
     private int targetTenths;
     private int stepIndex = 2;
@@ -23,12 +24,13 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
     private boolean previousUp, previousDown, previousLeft, previousRight;
     private boolean previousFlywheel, previousIntake;
 
-    void resetCalibrationControls(double initialRpm, double maxRpm) {
-        if (!Double.isFinite(initialRpm) || !Double.isFinite(maxRpm)
-                || initialRpm < 0 || maxRpm <= 0 || initialRpm > maxRpm
+    void resetCalibrationControls(double initialRpm, double minRpm, double maxRpm) {
+        if (!Double.isFinite(initialRpm) || !Double.isFinite(minRpm) || !Double.isFinite(maxRpm)
+                || minRpm < 0 || initialRpm < minRpm || maxRpm <= 0 || initialRpm > maxRpm
                 || maxRpm > Integer.MAX_VALUE / 10.0) {
             throw new IllegalArgumentException("Limites de RPM invalidos");
         }
+        minTenths = (int) Math.round(minRpm * 10);
         maxTenths = (int) Math.round(maxRpm * 10);
         targetTenths = (int) Math.round(initialRpm * 10);
         stepIndex = 2;
@@ -52,7 +54,7 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
                         (long) targetTenths + STEPS_TENTHS[stepIndex]);
             }
             if (down && !previousDown) {
-                targetTenths = Math.max(0, targetTenths - STEPS_TENTHS[stepIndex]);
+                targetTenths = Math.max(minTenths, targetTenths - STEPS_TENTHS[stepIndex]);
             }
         }
         if (flywheel && !previousFlywheel) flywheelEnabled = !flywheelEnabled;
@@ -80,7 +82,7 @@ public class FlywheelCalibrationTeleOp extends LinearOpMode {
 
     @Override
     public void runOpMode() {
-        resetCalibrationControls(Flywheel.BASE_RPM, Flywheel.MAX_RPM);
+        resetCalibrationControls(Flywheel.BASE_RPM, Flywheel.MIN_RPM, Flywheel.MAX_RPM);
         Flywheel flywheel = new Flywheel(hardwareMap, telemetry);
         Transfer transfer = new Transfer(hardwareMap, telemetry);
         Trigger trigger = new Trigger(hardwareMap, telemetry);

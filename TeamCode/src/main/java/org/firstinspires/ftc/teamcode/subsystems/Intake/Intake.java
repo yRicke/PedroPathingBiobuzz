@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.subsystems.Intake;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
@@ -19,7 +20,7 @@ public class Intake {
     public Intake(HardwareMap hardwareMap, Telemetry telemetry) {
         this.telemetry = telemetry;
         intakeMotor = hardwareMap.get(DcMotorEx.class, "intake_motor");
-        intakeMotor.setDirection(DcMotor.Direction.REVERSE);
+        intakeMotor.setDirection(DcMotor.Direction.FORWARD);
     }
 
     // On alterna o intake; eject inverte enquanto pressionado.
@@ -39,18 +40,17 @@ public class Intake {
     }
 
     public void onMotor(){
-        intakeMotor.setPower(-intakeMaxPower);
+        intakeMotor.setPower(intakeMaxPower);
     }
     public void offMotor(){
         intakeMotor.setPower(0);
     }
     public void eject(){
-        intakeMotor.setPower(intakeMaxPower);
+        intakeMotor.setPower(-0.7);
     }
 
     public void run(boolean on){
         intakeMotor.setPower(intakeMaxPower);
-
     }
 
 

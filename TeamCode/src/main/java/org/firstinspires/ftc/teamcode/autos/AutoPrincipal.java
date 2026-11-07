@@ -46,7 +46,7 @@ public class AutoPrincipal extends LinearOpMode {
     private final Pose start = poseFactory.of(57.8, 9, 90);
     private final Pose chegadinhaFrente1 = poseFactory.of(57.8, 20, 90);
     private final Pose prepColetaJardim = poseFactory.of(31, 13, 180);
-    private final Pose coletaJardim = poseFactory.of(14, 13, 180);
+    private final Pose coletaJardim = poseFactory.of(14, 15, 180);
     private final Pose lancamento2 = poseFactory.of(60, 147, 270);
     private final Pose lancamentoControl1 = poseFactory.of(38.1594, 48.3839, 0);
     private final Pose lancamentoControl2 = poseFactory.of(6.5729, 108.8181, 0);
@@ -55,7 +55,7 @@ public class AutoPrincipal extends LinearOpMode {
     private final Pose prepColetaFlowerControl = poseFactory.of(67.82870967741937, 116.66903225806453, 0);
     private final Pose coletaFlower = poseFactory.of(46.6, 131, 90);
     private final Pose posFlower = poseFactory.of(46.6, 120, 90);
-    private final Pose lancamento3 = poseFactory.of(60, 147, -75.8483);
+    private final Pose lancamento3 = poseFactory.of(60, 147, 270);
     private final Pose lancamento3Control1 = poseFactory.of(67.4635, 117.3994, 0);
     private final Pose estacionamentoStart = poseFactory.of(60, 147, 270);
     private final Pose estacionamento = poseFactory.of(10, 120, 0);

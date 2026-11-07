@@ -150,7 +150,7 @@ public class AutoTerciario extends LinearOpMode {
         limelight.run(true, false, !redAlliance, redAlliance);
         boolean feeding = false;
         if (phase != Phase.DONE) {
-            flywheel.run(FLYWHEEL_RPM);
+            flywheel.runByDistance(limelight.getDistanceMeters());
             intake.onMotor();
         }
 

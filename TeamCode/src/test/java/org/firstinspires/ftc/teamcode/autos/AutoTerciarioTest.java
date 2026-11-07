@@ -24,6 +24,7 @@ import org.firstinspires.ftc.teamcode.subsystems.Trigger.Trigger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.InOrder;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -269,8 +270,7 @@ public class AutoTerciarioTest {
             }
         }
         verify(flowerCollect).setOpen();
-        verify(flywheel, atLeastOnce()).run(AutonomousConstants.FLYWHEEL_RPM);
-        verify(flywheel, never()).runByDistance(any());
+        verify(flywheel, atLeastOnce()).runByDistance(OptionalDouble.of(1.77));
         verify(flywheel, atLeastOnce()).stopMotors();
         verify(intake, atLeastOnce()).offMotor();
     }
@@ -308,7 +308,7 @@ public class AutoTerciarioTest {
     }
 
     @Test
-    public void fixedRpmIgnoresDistanceWhileLimelightStillAdjustsAim() {
+    public void updatesRpmByDistanceWhileLimelightAdjustsAim() {
         tx = 6;
         Pose initial = pose;
         startAfterInitialDelay();
@@ -324,10 +324,11 @@ public class AutoTerciarioTest {
         assertXY(initial.x(), initial.y(), follower.poseAt(0));
         assertAngle(Math.toDegrees(initial.heading()) - tx, follower.poseAt(0).heading());
         verify(limelight, atLeastOnce()).getObservation();
-        verify(limelight, never()).getDistanceMeters();
-        verify(flywheel, atLeastOnce()).run(2560);
-        verify(flywheel, never()).run(doubleThat(rpm -> rpm != 2560));
-        verify(flywheel, never()).runByDistance(any());
+        InOrder distanceUpdates = inOrder(flywheel);
+        distanceUpdates.verify(flywheel).runByDistance(OptionalDouble.of(0.5));
+        distanceUpdates.verify(flywheel).runByDistance(OptionalDouble.of(3));
+        distanceUpdates.verify(flywheel).runByDistance(OptionalDouble.empty());
+        verify(flywheel, never()).run(anyDouble());
     }
 
     @Test
@@ -440,13 +441,13 @@ public class AutoTerciarioTest {
         assertTrue(followed.isEmpty());
         assertTrue(shotStarts.isEmpty());
         assertFalse(flowerOpen || feeding || transferring);
-        verify(flywheel, never()).run(anyDouble());
+        verify(flywheel, never()).runByDistance(any());
         verify(intake, never()).onMotor();
         verify(limelight, never()).getObservation();
 
         tickMillis(1);
         assertTrue(follower.holding());
-        verify(flywheel).run(2560);
+        verify(flywheel).runByDistance(OptionalDouble.of(1.77));
         verify(intake).onMotor();
         tickMillis(1499);
         assertTrue(shotStarts.isEmpty());
@@ -471,7 +472,7 @@ public class AutoTerciarioTest {
         assertTrue(followed.isEmpty());
         assertTrue(shotStarts.isEmpty());
         assertFalse(flowerOpen || feeding || transferring);
-        verify(flywheel, never()).run(anyDouble());
+        verify(flywheel, never()).runByDistance(any());
         verify(intake, never()).onMotor();
         verify(limelight).stop();
         verify(flywheel, atLeastOnce()).stopMotors();

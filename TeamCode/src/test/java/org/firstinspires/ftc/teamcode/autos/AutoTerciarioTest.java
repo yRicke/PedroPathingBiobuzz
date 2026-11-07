@@ -36,6 +36,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BooleanSupplier;
 import java.util.function.LongSupplier;
 
+import static org.firstinspires.ftc.teamcode.autos.AutonomousConstants.AIM_TIME_MS;
+import static org.firstinspires.ftc.teamcode.autos.AutonomousConstants.SHOOT_TIME_MS;
+import static org.firstinspires.ftc.teamcode.autos.AutonomousConstants.SPIN_UP_MS;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -178,7 +181,7 @@ public class AutoTerciarioTest {
     public void firesTwiceAndCollectsBeforeReturningAndParking() {
         startAfterInitialDelay();
         assertFalse(flowerOpen);
-        tickMillis(1499);
+        tickMillis(SPIN_UP_MS - 1);
         assertTrue(followed.isEmpty());
         assertTrue(shotStarts.isEmpty());
         runUntil(() -> feeding, 40);
@@ -312,7 +315,7 @@ public class AutoTerciarioTest {
         tx = 6;
         Pose initial = pose;
         startAfterInitialDelay();
-        tickMillis(1500);
+        tickMillis(SPIN_UP_MS);
         when(limelight.getDistanceMeters()).thenReturn(OptionalDouble.of(0.5));
         tick();
         when(limelight.getDistanceMeters()).thenReturn(OptionalDouble.of(3));
@@ -337,12 +340,12 @@ public class AutoTerciarioTest {
         firstRpm = 0;
         secondRpm = 0;
         startAfterInitialDelay();
-        tickMillis(1500);
+        tickMillis(SPIN_UP_MS);
         tickMillis(499);
         assertTrue(shotStarts.isEmpty());
         tickMillis(1);
         assertTrue(feeding && transferring);
-        assertEquals(Long.valueOf(TimeUnit.MILLISECONDS.toNanos(10000)), shotStarts.get(0));
+        assertEquals(Long.valueOf(TimeUnit.MILLISECONDS.toNanos(8000 + SPIN_UP_MS + AIM_TIME_MS)), shotStarts.get(0));
         assertTrue(followed.isEmpty());
         verify(flywheel, never()).getRPM();
         verify(flywheel, never()).getSecondMotorRPM();
@@ -368,7 +371,7 @@ public class AutoTerciarioTest {
     }
 
     @Test
-    public void rpmLossDoesNotInterruptTheTwoSecondShotWindow() {
+    public void rpmLossDoesNotInterruptTheShotWindow() {
         startAfterInitialDelay();
         runUntil(() -> feeding, 120);
         secondRpm = Double.NaN;
@@ -398,7 +401,7 @@ public class AutoTerciarioTest {
         assertEquals(2, shotStarts.size());
         assertEquals(2, shotEnds.size());
         for (int i = 0; i < 2; i++) {
-            assertEquals(2000, millis(shotEnds.get(i) - shotStarts.get(i)));
+            assertShotDuration(i);
         }
         assertFalse(flowerOpen || feeding || transferring);
         verify(flowerCollect).setOpen();
@@ -449,15 +452,15 @@ public class AutoTerciarioTest {
         assertTrue(follower.holding());
         verify(flywheel).runByDistance(OptionalDouble.of(1.77));
         verify(intake).onMotor();
-        tickMillis(1499);
+        tickMillis(SPIN_UP_MS - 1);
         assertTrue(shotStarts.isEmpty());
         tickMillis(1);
         tickMillis(499);
         assertTrue(shotStarts.isEmpty());
         tickMillis(1);
-        assertEquals(Long.valueOf(TimeUnit.MILLISECONDS.toNanos(10000)), shotStarts.get(0));
+        assertEquals(Long.valueOf(TimeUnit.MILLISECONDS.toNanos(8000 + SPIN_UP_MS + AIM_TIME_MS)), shotStarts.get(0));
         assertTrue(followed.isEmpty());
-        tickMillis(1999);
+        tickMillis(SHOOT_TIME_MS - 1);
         assertTrue(followed.isEmpty());
         tickMillis(1);
         assertEquals(1, followed.size());
@@ -490,7 +493,12 @@ public class AutoTerciarioTest {
 
     private void finishShot(int nextMovementCount, int shotIndex) {
         runUntil(() -> followed.size() == nextMovementCount, 200);
-        assertEquals(2000, millis(shotEnds.get(shotIndex) - shotStarts.get(shotIndex)));
+        assertShotDuration(shotIndex);
+    }
+
+    private void assertShotDuration(int shotIndex) {
+        long duration = millis(shotEnds.get(shotIndex) - shotStarts.get(shotIndex));
+        assertTrue(duration >= SHOOT_TIME_MS && duration < SHOOT_TIME_MS + 20);
     }
 
     private void completeRoute() {

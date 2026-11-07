@@ -46,7 +46,7 @@ public class AutoPrincipal extends LinearOpMode {
     private final Pose start = poseFactory.of(57.8, 9, 90);
     private final Pose chegadinhaFrente1 = poseFactory.of(57.8, 20, 90);
     private final Pose prepColetaJardim = poseFactory.of(31, 13, 180);
-    private final Pose coletaJardim = poseFactory.of(14, 13, 180);
+    private final Pose coletaJardim = poseFactory.of(14, 15, 180);
     private final Pose lancamento2 = poseFactory.of(60, 147, 270);
     private final Pose lancamentoControl1 = poseFactory.of(38.1594, 48.3839, 0);
     private final Pose lancamentoControl2 = poseFactory.of(6.5729, 108.8181, 0);
@@ -55,7 +55,7 @@ public class AutoPrincipal extends LinearOpMode {
     private final Pose prepColetaFlowerControl = poseFactory.of(67.82870967741937, 116.66903225806453, 0);
     private final Pose coletaFlower = poseFactory.of(46.6, 131, 90);
     private final Pose posFlower = poseFactory.of(46.6, 120, 90);
-    private final Pose lancamento3 = poseFactory.of(60, 147, -75.8483);
+    private final Pose lancamento3 = poseFactory.of(60, 147, 270);
     private final Pose lancamento3Control1 = poseFactory.of(67.4635, 117.3994, 0);
     private final Pose estacionamentoStart = poseFactory.of(60, 147, 270);
     private final Pose estacionamento = poseFactory.of(10, 120, 0);
@@ -103,7 +103,7 @@ public class AutoPrincipal extends LinearOpMode {
                 follower.update();
                 limelight.run(false, true, gamepad2.dpad_up, gamepad2.dpad_down);
                 redAlliance = limelight.isRedAlliance();
-                telemetry.addLine("V3: disparos de 2 s no inicio e nos lancamentos 2/3");
+                telemetry.addLine("V3: disparos no inicio e nos lancamentos 2/3");
                 telemetry.addLine("Flower fechada no INIT; coleta parada por 2 s");
                 telemetry.addLine("G2 cima: AZUL / baixo: VERMELHA (antes do Play)");
                 flowerCollect.sendTelemetry();
@@ -193,7 +193,7 @@ public class AutoPrincipal extends LinearOpMode {
                     follower.update();
                     phase = Phase.SHOOTING;
                     phaseStartedNanos = now;
-                    shotStatus = "Lancamento " + shotNumber + " em hold por 2 s";
+                    shotStatus = "Lancamento " + shotNumber + " em hold por " + SHOOT_TIME_MS + " ms";
                     feeding = true;
                 }
                 break;

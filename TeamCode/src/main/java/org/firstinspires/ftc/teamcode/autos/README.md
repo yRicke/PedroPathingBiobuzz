@@ -24,15 +24,15 @@ As poses estao em polegadas e graus:
 
 | Etapa | Pose final (X, Y, heading) | Acao |
 | --- | --- | --- |
-| Inicio | (57.8, 9, 90) | Aquece por 1,5 s, mira e dispara por 2 s antes de sair |
+| Inicio | (57.8, 9, 90) | Aquece por 1,25 s, mira e dispara por 1,75 s antes de sair |
 | chegadinha_frente_1 | (57.8, 20, 90) | Continua para o proximo trecho sem hold intermediario |
 | prep_coleta_jardim | (31, 13, 180) | Continua para o proximo trecho sem hold intermediario |
-| coleta_jardim | (14, 13, 180) | Continua para o proximo trecho sem hold intermediario |
-| lancamento_2 | (60, 147, 270) | Para, mira e dispara por 2 s |
+| coleta_jardim | (14, 15, 180) no principal e (14, 13, 180) no secundario | Continua para o proximo trecho sem hold intermediario |
+| lancamento_2 | (60, 147, 270) | Para, mira e dispara por 1,75 s |
 | prep_coleta_flower | (50.6, 122, 90) | Curva direta desde lancamento_2; abre o coletor na saida e espera parar |
 | coleta_flower | (46.6, 131, 90) | Mantem hold por 2 s com intake ligado |
 | pos_flower | (46.6, 120, 90) | Recolhe o coletor e espera 0,5 s |
-| lancamento_3 | (60, 147, -75.8483) | Curva direta desde pos_flower com tangente reversa; para, mira e dispara por 2 s |
+| lancamento_3 | (60, 147, -75.8483) | Curva direta desde pos_flower com tangente reversa; para, mira e dispara por 1,75 s |
 | estacionamento | (10, 120, 0) | Mantem hold e desliga os mecanismos |
 
 Cada etapa tem sua propria pose, editavel independentemente. Lancamentos
@@ -76,10 +76,10 @@ servos posicionais nao fornecem confirmacao fisica da chegada.
 O primeiro lancamento seleciona a CELL oposta; os outros dois selecionam
 a CELL plateia. Antes de cada disparo, tenta ajustar a mira por 500 ms
 (AIM_TIME_MS), mantendo X/Y fixos. Em seguida, conserva o heading medido
-e alimenta o lancador continuamente por 2 s, sem exigir confirmacao de
+e alimenta o lancador continuamente por 1,75 s, sem exigir confirmacao de
 visao, alinhamento ou RPM. Sem imagem, ainda dispara; perder visao ou RPM
 durante a janela nao interrompe a alimentacao. O aquecimento inicial de
-1,5 s e a mirada de 0,5 s antecedem a janela de disparo.
+1,25 s e a mirada de 0,5 s antecedem a janela de disparo.
 
 A flywheel ajusta o RPM pela distancia da Limelight, usando a mesma tabela
 do TeleOp. O intake fica ligado durante os trechos e as esperas. Ao concluir o estacionamento, desliga intake,
@@ -92,7 +92,7 @@ Cancelar antes do Play nao publica pose.
 AutonomousSouthOutsideV3Test simula o follower real com sensores e
 mecanismos substituidos por mocks e relogio controlado. Verifica os 9
 trechos, coordenadas das etapas, curvas, transicoes com velocidade diferente
-de zero e tres janelas de disparo de 2 s. Tambem cobre
+de zero e tres janelas de disparo de 1,75 s. Tambem cobre
 parada de coleta, ordem e tempo dos servos, selecao de CELL por alianca,
 disparo sem confirmacao, continuidade sem visao/RPM e encerramento. FlowerCollectTest
 tambem cobre a inicializacao fechada sem comando intermediario de abertura.
@@ -105,7 +105,7 @@ O grupo `ate_lancamento_2` do codigo exportado estava vazio e nao e executado.
 
 1. Apos o Play, aguarda 8 s com drive e mecanismos parados
    (`TERTIARY_INITIAL_DELAY_MS`). Entao inicia em `(59.6258, 136.8065, 270)`,
-   aquece por 1,5 s, mira por 0,5 s e dispara por 2 s, mantendo hold.
+   aquece por 1,25 s, mira por 0,5 s e dispara por 1,75 s, mantendo hold.
 2. `preparacaoflower`: abre o coletor e segue a curva ate
    `(46.4006, 120.9045, 90)`, com controle em `(67.8287, 116.669)`.
    O heading varia linearmente de 270 a 90 graus.
@@ -117,7 +117,7 @@ O grupo `ate_lancamento_2` do codigo exportado estava vazio e nao e executado.
 5. `retornolancamento3`: curva direta desde pos_flower ate
    `(59.8174, 136.7026)`, com controle em `(68.0113, 117.3994)` e tangente
    reversa (heading final de aproximadamente -66,9996 graus). Ao parar,
-   mira por 0,5 s e dispara por 2 s.
+   mira por 0,5 s e dispara por 1,75 s.
 6. `estacionamento`: curva ate `(10, 120, 0)`, com controle em
    `(65.729, 114.1129)` e heading linear desde 270 graus, como no exportado.
 

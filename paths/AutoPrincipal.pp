@@ -66,7 +66,7 @@
           "name": "coleta_jardim",
           "endPoint": {
             "x": 14,
-            "y": 13
+            "y": 15
           },
           "controlPoints": [],
           "heading": {
@@ -266,7 +266,7 @@
       "kind": "wait",
       "id": "v3-espera-aquecimento_mira_disparo_inicial",
       "name": "aquecimento_mira_disparo_inicial",
-      "durationMs": 4000,
+      "durationMs": 3500,
       "locked": false
     },
     {
@@ -289,7 +289,7 @@
       "kind": "wait",
       "id": "v3-espera-mira_disparo_2",
       "name": "mira_disparo_2",
-      "durationMs": 2500,
+      "durationMs": 2250,
       "locked": false
     },
     {
@@ -326,7 +326,7 @@
       "kind": "wait",
       "id": "v3-espera-mira_disparo_3",
       "name": "mira_disparo_3",
-      "durationMs": 2500,
+      "durationMs": 2250,
       "locked": false
     },
     {

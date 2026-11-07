@@ -90,7 +90,7 @@ public class AutoTerciario extends LinearOpMode {
                 follower.update();
                 limelight.run(true, false, gamepad2.dpad_up, gamepad2.dpad_down);
                 redAlliance = limelight.isRedAlliance();
-                telemetry.addLine("Terciario: disparos de 2 s no inicio e apos a flower (CELL plateia)");
+                telemetry.addLine("Terciario: disparos no inicio e apos a flower (CELL plateia)");
                 telemetry.addData("Atraso apos Play (s)", TERTIARY_INITIAL_DELAY_MS / 1000.0);
                 telemetry.addLine("Flower fechada no INIT; coleta parada por 2 s");
                 telemetry.addLine("G2 cima: AZUL / baixo: VERMELHA (antes do Play)");
@@ -188,7 +188,7 @@ public class AutoTerciario extends LinearOpMode {
                     follower.update();
                     phase = Phase.SHOOTING;
                     phaseStartedNanos = now;
-                    shotStatus = "Lancamento " + shotNumber + " em hold por 2 s";
+                    shotStatus = "Lancamento " + shotNumber + " em hold por " + SHOOT_TIME_MS + " ms";
                     feeding = true;
                 }
                 break;

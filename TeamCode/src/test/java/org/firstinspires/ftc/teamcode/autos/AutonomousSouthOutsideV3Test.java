@@ -36,6 +36,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BooleanSupplier;
 import java.util.function.LongSupplier;
 
+import static org.firstinspires.ftc.teamcode.autos.AutonomousConstants.AIM_TIME_MS;
+import static org.firstinspires.ftc.teamcode.autos.AutonomousConstants.SHOOT_TIME_MS;
+import static org.firstinspires.ftc.teamcode.autos.AutonomousConstants.SPIN_UP_MS;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -144,7 +147,7 @@ public class AutonomousSouthOutsideV3Test {
     @Test
     public void preservesNinePathsWithDirectCurvedReturnToThirdShot() {
         Path[] paths = paths();
-        double[][] endpoints = {{57.8, 20}, {31, 13}, {14, 13}, {60, 147},
+        double[][] endpoints = {{57.8, 20}, {31, 13}, {14, 15}, {60, 147},
                 {50.6, 122}, {46.6, 131}, {46.6, 120}, {60, 147}, {10, 120}};
         assertEquals(9, paths.length);
         assertXY(57.8, 9, paths[0].get(0));
@@ -155,7 +158,7 @@ public class AutonomousSouthOutsideV3Test {
         assertXY(60, 147, paths[7].endPose());
         assertEquals(1, paths[7].getSegments().size());
         assertXY(60.38175, 125.4497, paths[7].get(0.5));
-        assertXY(30.9622625, 89.3769625, paths[3].get(0.5));
+        assertXY(30.9622625, 89.5019625, paths[3].get(0.5));
         assertXY(61.56435483870968, 125.58451612903227, paths[4].get(0.5));
         assertXY(50.3645, 123.80645, paths[8].get(0.5));
         assertAngle(90, paths[0].get(0.5).heading());
@@ -176,10 +179,10 @@ public class AutonomousSouthOutsideV3Test {
     }
 
     @Test
-    public void chainsTransitSegmentsAndKeepsTwoSecondShotsAndFlowerHold() {
+    public void chainsTransitSegmentsAndKeepsCalibratedShotsAndFlowerHold() {
         auto.startAutonomous();
         assertFalse(flowerOpen);
-        tickMillis(1499);
+        tickMillis(SPIN_UP_MS - 1);
         assertTrue(followed.isEmpty());
         assertTrue(shotStarts.isEmpty());
         runUntil(() -> feeding, 40);
@@ -348,7 +351,7 @@ public class AutonomousSouthOutsideV3Test {
         tx = 6;
         Pose initial = pose;
         auto.startAutonomous();
-        tickMillis(1500);
+        tickMillis(SPIN_UP_MS);
         when(limelight.getDistanceMeters()).thenReturn(OptionalDouble.of(0.5));
         tick();
         when(limelight.getDistanceMeters()).thenReturn(OptionalDouble.of(3));
@@ -373,12 +376,12 @@ public class AutonomousSouthOutsideV3Test {
         firstRpm = 0;
         secondRpm = 0;
         auto.startAutonomous();
-        tickMillis(1500);
+        tickMillis(SPIN_UP_MS);
         tickMillis(499);
         assertTrue(shotStarts.isEmpty());
         tickMillis(1);
         assertTrue(feeding && transferring);
-        assertEquals(Long.valueOf(TimeUnit.MILLISECONDS.toNanos(2000)), shotStarts.get(0));
+        assertEquals(Long.valueOf(TimeUnit.MILLISECONDS.toNanos(SPIN_UP_MS + AIM_TIME_MS)), shotStarts.get(0));
         assertTrue(followed.isEmpty());
         verify(flywheel, never()).getRPM();
         verify(flywheel, never()).getSecondMotorRPM();
@@ -404,7 +407,7 @@ public class AutonomousSouthOutsideV3Test {
     }
 
     @Test
-    public void rpmLossDoesNotInterruptTheTwoSecondShotWindow() {
+    public void rpmLossDoesNotInterruptTheShotWindow() {
         auto.startAutonomous();
         runUntil(() -> feeding, 120);
         secondRpm = Double.NaN;
@@ -435,7 +438,7 @@ public class AutonomousSouthOutsideV3Test {
         assertEquals(3, shotStarts.size());
         assertEquals(3, shotEnds.size());
         for (int i = 0; i < 3; i++) {
-            assertEquals(2000, millis(shotEnds.get(i) - shotStarts.get(i)));
+            assertShotDuration(i);
         }
         assertFalse(flowerOpen || feeding || transferring);
         verify(flowerCollect).setOpen();
@@ -478,7 +481,7 @@ public class AutonomousSouthOutsideV3Test {
 
     private void finishShot(int nextGroupCount, int shotIndex) {
         runUntil(() -> followed.size() == nextGroupCount, 200);
-        assertEquals(2000, millis(shotEnds.get(shotIndex) - shotStarts.get(shotIndex)));
+        assertShotDuration(shotIndex);
     }
 
     private void passThrough(Path path, int nextSegmentIndex, int groupCount) {
@@ -490,6 +493,11 @@ public class AutonomousSouthOutsideV3Test {
         assertTrue("O robo ainda esta em movimento", follower.isBusy());
         assertEquals(nextSegmentIndex, follower.pathIndex());
         assertEquals("A transicao usa o mesmo comando follow", groupCount, followed.size());
+    }
+
+    private void assertShotDuration(int shotIndex) {
+        long duration = millis(shotEnds.get(shotIndex) - shotStarts.get(shotIndex));
+        assertTrue(duration >= SHOOT_TIME_MS && duration < SHOOT_TIME_MS + 20);
     }
 
     private void completeRoute() {

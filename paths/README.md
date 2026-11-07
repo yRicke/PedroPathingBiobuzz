@@ -24,7 +24,7 @@ e interpolacoes de heading usados no codigo. Os grupos sao:
   `(68.0113, 117.3994)` no terciario. Substitui o pre_lancamento_3.
 
 Coleta da flower, pos_flower e estacionamento permanecem trechos individuais.
-As pausas fixas aparecem na sequencia: 4 s antes da saida inicial, 2,5 s em
+As pausas fixas aparecem na sequencia: 3,5 s antes da saida inicial, 2,25 s em
 cada lancamento seguinte, 2 s na coleta da flower e 0,5 s para recolher o
 coletor. A espera restante para abrir os servos e as condicoes de parada
 dependem da execucao do robo e nao sao reproduzidas pela simulacao.

@@ -165,7 +165,7 @@
       "kind": "wait",
       "id": "terciario-espera-aquecimento_mira_disparo_inicial",
       "name": "aquecimento_mira_disparo_inicial",
-      "durationMs": 4000,
+      "durationMs": 3500,
       "locked": false
     },
     {
@@ -202,7 +202,7 @@
       "kind": "wait",
       "id": "terciario-espera-mira_disparo_retorno",
       "name": "mira_disparo_retorno",
-      "durationMs": 2500,
+      "durationMs": 2250,
       "locked": false
     },
     {

@@ -17,8 +17,8 @@ import org.firstinspires.ftc.teamcode.subsystems.Trigger.Trigger;
 import org.firstinspires.ftc.teamcode.subsystems.FlowerCollect.FlowerCollect;
 
 /** TeleOp unico com localizacao do Pedro e ajuste final de mira pela Limelight. */
-@TeleOp(name = "TeleOpMain", group = "TeleOpMode")
-public class TeleOpMain extends LinearOpMode {
+@TeleOp(name = "TeleOpFieldCentric", group = "TeleOpMode")
+public class TeleOpFieldCentric extends LinearOpMode {
     // Referencial adotado para a alianca atual: X/Y em polegadas, heading em radianos.
     private static final Pose INITIAL_POSE = new Pose(8.4, 35.2, Math.toRadians(0));
     private static final Pose RESET_POSE = new Pose(8.4, 35.2, Math.toRadians(0));

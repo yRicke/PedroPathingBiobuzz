@@ -17,12 +17,10 @@ import org.firstinspires.ftc.teamcode.subsystems.Limelight.Limelight;
 import org.firstinspires.ftc.teamcode.subsystems.Transfer.Transfer;
 import org.firstinspires.ftc.teamcode.subsystems.Trigger.Trigger;
 
-/** TeleOp unico com localizacao do Pedro e ajuste final de mira pela Limelight. */
+
 @TeleOp(name = "TeleOpDrive", group = "TeleOpMode")
 public class TeleOpDrive extends LinearOpMode {
     // Referencial adotado para a alianca atual: X/Y em polegadas, heading em radianos.
-    private static final Pose INITIAL_POSE = new Pose(8.4, 35.2, Math.toRadians(0));
-    private static final Pose RESET_POSE = new Pose(8.4, 35.2, Math.toRadians(0));
 
 
     private Drive drive;
@@ -32,13 +30,10 @@ public class TeleOpDrive extends LinearOpMode {
     private Transfer transfer;
     private Trigger trigger;
     private FlowerCollect flowerCollect;
-//<<<<<<< HEAD
 
-//=======
-//>>>>>>> d06ca30eaecb8a46b87eb487276679374d961ce3
     @Override
     public void runOpMode() {
-        Follower follower = Constants.create(hardwareMap);
+
         drive = new Drive(hardwareMap,telemetry);
         intake = new Intake(hardwareMap, telemetry);
         flywheel = new Flywheel(hardwareMap, telemetry);
@@ -67,7 +62,8 @@ public class TeleOpDrive extends LinearOpMode {
                 boolean shootRequested = gamepad1.right_trigger > 0;
                 
                
-                drive.run(gamepad1.left_stick_x,gamepad1.left_stick_y,gamepad1.right_stick_x,gamepad1.left_bumper,0);
+                drive.run(-gamepad1.left_stick_y, gamepad1.left_stick_x,
+                        gamepad1.right_stick_x, gamepad1.left_trigger > 0,0);
                 
                 intake.run(gamepad1.a, gamepad1.left_bumper);
                 flywheel.runByDistance(limelight.getDistanceMeters());

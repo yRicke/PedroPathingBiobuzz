@@ -41,11 +41,11 @@ public class AutoTerciario extends LinearOpMode {
 
     private final PoseFactory poseFactory = PoseFactory.degrees();
     private final Pose start = poseFactory.of(59.6258, 136.8065, 270);
-    private final Pose prepColetaFlower = poseFactory.of(46.4006, 120.9045, 90);
+    private final Pose prepColetaFlower = poseFactory.of(46.4006, 110.9045, 90);
     private final Pose prepColetaFlowerControl1 = poseFactory.of(67.8287, 116.669, 0);
-    private final Pose coletaFlower = poseFactory.of(46.6, 128, 90);
-    private final Pose posFlower = poseFactory.of(46.6, 120, 90);
-    private final Pose lancamento3 = poseFactory.of(59.8174, 136.7026, -66.9996);
+    private final Pose coletaFlower = poseFactory.of(46.6, 120, 90);
+    private final Pose posFlower = poseFactory.of(46.6, 110, 90);
+    private final Pose lancamento3 = poseFactory.of(59.8174, 130.7026, 200 );
     private final Pose lancamento3Control1 = poseFactory.of(68.0113, 117.3994, 0);
     private final Pose estacionamentoStart = poseFactory.of(59.8174, 136.7026, 270);
     private final Pose estacionamento = poseFactory.of(10, 120, 0);

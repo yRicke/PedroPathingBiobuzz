@@ -43,23 +43,25 @@ public class AutoSecundario extends LinearOpMode {
     }
 
     private final PoseFactory poseFactory = PoseFactory.degrees();
-    private final Pose start = poseFactory.of(57.8, 9, 90);
-    private final Pose chegadinhaFrente1 = poseFactory.of(57.8, 20, 90);
-    private final Pose prepColetaJardim = poseFactory.of(31, 13, 180);
-    private final Pose coletaJardim = poseFactory.of(14, 13, 180);
-    private final Pose lancamento2 = poseFactory.of(60, 147, 270);
-    private final Pose lancamentoControl1 = poseFactory.of(78.32714193548385, 1.825835483870963, 0);
-    private final Pose lancamentoControl2 = poseFactory.of(56.41741612903226, 50.757454838709684, 0);
-    private final Pose prepColetaFlower = poseFactory.of(50.6, 122, 90);
-    private final Pose prepColetaFlowerControl = poseFactory.of(67.82870967741937, 116.66903225806453, 0);
-    private final Pose coletaFlower = poseFactory.of(46.6, 131, 90);
-    private final Pose posFlower = poseFactory.of(46.6, 120, 90);
-    private final Pose lancamento3 = poseFactory.of(60, 147, -75.8483);
-    private final Pose lancamento3Control1 = poseFactory.of(67.4635, 117.3994, 0);
-    private final Pose estacionamentoStart = poseFactory.of(60, 147, 270);
-    private final Pose estacionamento = poseFactory.of(10, 120, 0);
-    private final Pose estacionamentoControl1 = poseFactory.of(65.729, 114.1129, 0);
 
+    private final Pose start = poseFactory.of(60.4876, 8.9058, 90);
+    private final Pose point1 = poseFactory.of(60.2141, 21.4266, 180);
+    private final Pose point2Start = poseFactory.of(60.2141, 21.4266, 180);
+    private final Pose point2 = poseFactory.of(40.6033, 13.1963, 180);
+    private final Pose point3Start = poseFactory.of(40.6033, 13.1963, 180);
+    private final Pose point3 = poseFactory.of(15.0925, 13.6014, 180);
+    private final Pose point4Start = poseFactory.of(15.0925, 13.6014, 180);
+    private final Pose point4 = poseFactory.of(21.1567, 126.6408, -36);
+    private final Pose point4Control1 = poseFactory.of(141.5, 94.0755, 0);
+    private final Pose point5Start = poseFactory.of(61.2219, 140.4565, -90);
+    private final Pose point5 = poseFactory.of(48.3601, 116.8377, 90);
+    private final Pose point6Start = poseFactory.of(48.3601, 116.8377, 90);
+    private final Pose point6 = poseFactory.of(48.5646, 128.8933, 90);
+    private final Pose point7 = poseFactory.of(48.6154, 111.25, 90.1559);
+    private final Pose point8Start = poseFactory.of(46.6154, 111.25, -90);
+    private final Pose point8 = poseFactory.of(21.1567, 126.6408, -36);
+    //private final Pose point9 = poseFactory.of(60.4364, 119.4291, 89.4008);
+    //private final Pose point10 = poseFactory.of(8.6851, 119.4314, -0.0025);
     private Follower follower;
     private PedroDrive drive;
     private Intake intake;
@@ -133,9 +135,8 @@ public class AutoSecundario extends LinearOpMode {
     }
 
     void startAutonomous() {
-        paths = new Path[] {chegadinhafrente1(), prepcoletajardim(), coletajardim(),
-                lancamento2(), prepcoletaflower(), coletaflower(),
-                posflower(), lancamento3(), estacionamento()};
+        paths = new Path[] {path1(),path2(),path3(),path4(),path5(),path6(),
+        path7(),path8()};
         setShooting(false);
         flowerCollect.setClosed();
         follower.holdEnd.set(true);
@@ -330,26 +331,43 @@ public class AutoSecundario extends LinearOpMode {
         }
     }
 
-    public Path chegadinhafrente1() { return Paths.line(start, chegadinhaFrente1).tangent(); }
-    public Path prepcoletajardim() {
-        return Paths.line(chegadinhaFrente1, prepColetaJardim).linear(chegadinhaFrente1, prepColetaJardim);
+    public Path path1() {
+        return Paths.line(start, point1).linear(start, point1);
     }
-    public Path coletajardim() { return Paths.line(prepColetaJardim, coletaJardim).constant(coletaJardim); }
-    public Path lancamento2() {
-        return Paths.curve(coletaJardim, lancamentoControl1, lancamentoControl2,
-                lancamento2).linear(coletaJardim, lancamento2);
+
+    public Path path2() {
+        return Paths.line(point2Start, point2).linear(point2Start, point2);
     }
-    public Path prepcoletaflower() {
-        return Paths.curve(lancamento2, prepColetaFlowerControl, prepColetaFlower)
-                .linear(lancamento2, prepColetaFlower);
+
+    public Path path3() {
+        return Paths.line(point3Start, point3).linear(point3Start, point3);
     }
-    public Path coletaflower() { return Paths.line(prepColetaFlower, coletaFlower).constant(coletaFlower); }
-    public Path posflower() { return Paths.line(coletaFlower, posFlower).reverseTangent(); }
-    public Path lancamento3() {
-        return Paths.curve(posFlower, lancamento3Control1, lancamento3).reverseTangent();
+
+    public Path path4() {
+        return Paths.curve(point4Start, point4Control1, point4).linear(point4Start, point4);
     }
-    public Path estacionamento() {
-        return Paths.curve(estacionamentoStart, estacionamentoControl1, estacionamento)
-                .linear(estacionamentoStart, estacionamento);
+
+    public Path path5() {
+        return Paths.line(point5Start, point5).linear(point5Start, point5);
     }
+
+    public Path path6() {
+        return Paths.line(point6Start, point6).linear(point6Start, point6);
+    }
+
+    public Path path7() {
+        return Paths.line(point6, point7).reverseTangent();
+    }
+
+    public Path path8() {
+        return Paths.line(point8Start, point8).linear(point8Start, point8);
+    }
+
+    //public Path path9() {
+    //    return Paths.line(point8, point9).reverseTangent();
+    //}
+
+   // public Path path10() {
+   //     return Paths.line(point9, point10).reverseTangent();
+   // }
 }

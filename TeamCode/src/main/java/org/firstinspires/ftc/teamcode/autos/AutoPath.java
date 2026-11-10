@@ -21,26 +21,20 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 
 @Autonomous(name = "AutoPath", group = "Autonomous")
-@Disabled
+
 public class AutoPath extends LinearOpMode {
 
     private Follower follower;
 
     private final PoseFactory poseFactory = PoseFactory.degrees();
 
-    private final Pose start = poseFactory.of(56, 8, 90);
-    private final Pose path1 = poseFactory.of(8.4178, 29.1432, 270);
-    private final Pose point2 = poseFactory.of(8.4185, 8.3935, 270);
-    private final Pose point3 = poseFactory.of(57.3377, 127.1916, 270);
-    private final Pose point3Control1 = poseFactory.of(33.9725, 29.7519, 0);
-    private final Pose point3Control2 = poseFactory.of(16.094, 117.2188, 0);
-    private final Pose point4 = poseFactory.of(2.3025, 105.9985, 270);
+    private final Pose start = poseFactory.of(34.707, 133.4141, -90);
+    private final Pose point1 = poseFactory.of(11.5827, 117.8106, 0);
 
     // Autonomous routine
     public Command autoRoutine() {
         return sequential(
-                follow(follower, path1()),
-                follow(follower, path2())
+                follow(follower, path1())
         );
     }
 
@@ -95,19 +89,7 @@ public class AutoPath extends LinearOpMode {
     }
 
     public Path path1() {
-        return Paths.line(start, path1).linear(start, path1);
-    }
-
-    public Path path2() {
-        return Paths.line(path1, point2).constant(point2);
-    }
-
-    public Path path3() {
-        return Paths.curve(point2, point3Control1, point3Control2, point3).constant(point3);
-    }
-
-    public Path path4() {
-        return Paths.line(point3, point4).constant(point4);
+        return Paths.line(start, point1).linear(start, point1);
     }
 }
 

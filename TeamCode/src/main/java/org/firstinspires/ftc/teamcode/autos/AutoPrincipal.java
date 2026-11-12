@@ -53,7 +53,7 @@ public class AutoPrincipal extends LinearOpMode {
     private final Pose lancamentoControl3 = poseFactory.of(57.3303, 105.8968, 0);
     private final Pose prepColetaFlower = poseFactory.of(50.6, 122, 90);
     private final Pose prepColetaFlowerControl = poseFactory.of(67.82870967741937, 116.66903225806453, 0);
-    private final Pose coletaFlower = poseFactory.of(46.6, 131, 90);
+    private final Pose coletaFlower = poseFactory.of(46.6, 128.5, 90);
     private final Pose posFlower = poseFactory.of(46.6, 120, 90);
     private final Pose lancamento3 = poseFactory.of(60, 147, 270);
     private final Pose lancamento3Control1 = poseFactory.of(67.4635, 117.3994, 0);

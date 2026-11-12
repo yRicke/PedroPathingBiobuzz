@@ -223,8 +223,8 @@
             }
           ],
           "heading": {
-            "type": "tangential",
-            "reverse": true
+            "type": "constant",
+            "degrees": 270
           }
         }
       ]

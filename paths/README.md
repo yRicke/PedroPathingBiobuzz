@@ -11,15 +11,15 @@ vazio do codigo exportado foi omitido. A sequencia inclui o disparo inicial
 e o disparo depois da flower, alem das esperas de coleta e recolhimento.
 
 Importe o arquivo `.pp` no Visualizer e selecione o mapa BIOBUZZ nas
-configuracoes. Os 9 trechos do principal e secundario mantem os nomes, coordenadas, controles Bezier
-e interpolacoes de heading usados no codigo. Os grupos sao:
+configuracoes. Os arquivos do principal e do secundario incluem os grupos abaixo.
+O codigo atual do secundario e do terciario usa coordenadas diferentes das exportadas.
 
 - `ate_lancamento_2`: chegadinha inicial, preparacao/coleta do jardim e
   segundo lancamento.
 - `preparacao_flower`: curva direta do segundo lancamento ate a preparacao
   da flower, com controle em `(67.82870967741937, 116.66903225806453)` e
   heading linear de 270 a 90 graus. Substitui a segunda chegadinha.
-- `retorno_lancamento_3`: curva direta desde pos_flower, com tangente reversa
+- `retorno_lancamento_3`: curva direta desde pos_flower, com heading constante de 270 graus
   e controle em `(67.4635, 117.3994)` no principal/secundario, ou
   `(68.0113, 117.3994)` no terciario. Substitui o pre_lancamento_3.
 
@@ -36,9 +36,8 @@ O modificador `brakeAggression = 1.05`, a mira por Limelight e as acoes dos
 mecanismos continuam no Java, pois nao fazem parte do formato do Visualizer.
 As sobreposicoes dos gols do arquivo antigo, de DECODE, foram removidas.
 
-Os lancamentos 2 e 3 continuam em `(60, 147)`, exatamente como no codigo,
-mesmo ultrapassando o limite de 141,5 in do campo do Visualizer. Essas
-coordenadas foram preservadas para voce poder revisa-las no editor.
+Nos arquivos do principal e do secundario, os lancamentos 2 e 3 ficam em
+`(60, 147)` e ultrapassam o limite de 141,5 in do campo do Visualizer.
 
 Editar ou exportar este arquivo no Visualizer nao atualiza automaticamente
 o OpMode. Ao trazer as alteracoes de volta, preserve a rotina de disparos,

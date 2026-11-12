@@ -32,11 +32,11 @@ As poses estao em polegadas e graus:
 | prep_coleta_flower | (50.6, 122, 90) | Curva direta desde lancamento_2; abre o coletor na saida e espera parar |
 | coleta_flower | (46.6, 131, 90) | Mantem hold por 2 s com intake ligado |
 | pos_flower | (46.6, 120, 90) | Recolhe o coletor e espera 0,5 s |
-| lancamento_3 | (60, 147, -75.8483) | Curva direta desde pos_flower com tangente reversa; para, mira e dispara por 1,75 s |
+| lancamento_3 | (60, 147, 270) no principal e (21.1567, 126.6408, 270) no secundario | Heading constante durante o trecho. Ao parar, mira e dispara por 1,75 s |
 | estacionamento | (10, 120, 0) | Mantem hold e desliga os mecanismos |
 
-Cada etapa tem sua propria pose, editavel independentemente. Lancamentos
-2 e 3 mantem as mesmas coordenadas. A aproximacao da flower substitui
+Cada etapa tem sua propria pose, editavel independentemente.
+A aproximacao da flower no principal substitui
 chegadinha_frente_2 por uma curva com controle em
 `(67.82870967741937, 116.66903225806453)` e heading linear de 270 a 90 graus.
 Os demais trechos mantem suas interpolacoes e controles.
@@ -44,9 +44,9 @@ Os demais trechos mantem suas interpolacoes e controles.
 Os trechos de transito sao concatenados com Paths.path de
 chegadinha_frente_1 ate lancamento_2. Nesse grupo, o proprio Pedro faz a
 transicao entre segmentos, sem esperar hold e velocidade zero em cada
-ponto intermediario. O retorno ao lancamento_3 e uma curva direta desde
-pos_flower, com controle em `(67.4635, 117.3994)` e tangente reversa,
-substituindo pre_lancamento_3. O estacionamento continua iniciando com
+ponto intermediario. O principal chega ao lancamento_3 em uma curva direta
+com controle em `(67.4635, 117.3994)`. O secundario usa a reta `path8()`.
+O estacionamento do principal inicia com
 heading de 270 graus. O auto so espera a parada
 ao final de cada grupo e nos trechos individuais prep_coleta_flower,
 coleta_flower, pos_flower, lancamento_3 e estacionamento. A telemetria identifica cada
@@ -115,8 +115,8 @@ O grupo `ate_lancamento_2` do codigo exportado estava vazio e nao e executado.
 4. `posflower`: retorna ate `(46.6, 120, 90)` com tangente reversa,
    fecha o coletor e espera 0,5 s.
 5. `retornolancamento3`: curva direta desde pos_flower ate
-   `(59.8174, 136.7026)`, com controle em `(68.0113, 117.3994)` e tangente
-   reversa (heading final de aproximadamente -66,9996 graus). Ao parar,
+   `(59.8174, 130.7026)`, com controle em `(68.0113, 117.3994)` e heading
+   constante de 270 graus. Ao parar,
    mira por 0,5 s e dispara por 1,75 s.
 6. `estacionamento`: curva ate `(10, 120, 0)`, com controle em
    `(65.729, 114.1129)` e heading linear desde 270 graus, como no exportado.

@@ -149,16 +149,16 @@ public class AutoTerciarioTest {
         Path[] paths = paths();
         assertEquals(5, paths.length);
         assertXY(59.6258, 136.8065, paths[0].get(0));
-        double[][] ends = {{46.4006, 120.9045}, {46.6, 131}, {46.6, 120},
-                {59.8174, 136.7026}, {10, 120}};
+        double[][] ends = {{46.4006, 110.9045}, {46.6, 120}, {46.6, 110},
+                {59.8174, 130.7026}, {10, 120}};
         int[] sizes = {1, 1, 1, 1, 1};
         for (int i = 0; i < paths.length; i++) {
             assertEquals(sizes[i], paths[i].getSegments().size());
             assertXY(ends[i][0], ends[i][1], paths[i].endPose());
-            if (i > 0) assertXY(ends[i - 1][0], ends[i - 1][1], paths[i].get(0));
+            if (i > 0 && i < 4) assertXY(ends[i - 1][0], ends[i - 1][1], paths[i].get(0));
         }
-        // Amostras calculadas a partir dos controles fornecidos no exportado.
-        assertXY(60.42095, 122.76225, paths[0].get(0.5));
+        // Amostras calculadas a partir dos controles e poses do OpMode.
+        assertXY(60.42095, 120.26225, paths[0].get(0.5));
         assertXY(50.31885, 121.2321, paths[4].get(0.5));
         assertAngle(270, paths[0].get(0).heading());
         assertAngle(90, paths[0].endPose().heading());
@@ -166,13 +166,13 @@ public class AutoTerciarioTest {
         assertAngle(90, paths[2].get(0.5).heading());
         List<PathSegment> returning = paths[3].getSegments();
         assertEquals(1, returning.size());
-        assertXY(46.6, 120, returning.get(0).curve.get(0).toPose(0));
-        assertXY(59.8174, 136.7026, returning.get(0).curve.get(1).toPose(0));
-        assertXY(60.61, 122.87535, paths[3].get(0.5));
-        double reverseHeading = Math.atan2(136.7026 - 120, 59.8174 - 46.6) + Math.PI;
-        assertAngle(Math.toDegrees(reverseHeading), returning.get(0).heading(0.5));
-        assertAngle(-66.9996, paths[3].endPose().heading());
-        // O exportado reinicia o heading do estacionamento em 270 graus.
+        assertXY(46.6, 110, returning.get(0).curve.get(0).toPose(0));
+        assertXY(59.8174, 130.7026, returning.get(0).curve.get(1).toPose(0));
+        assertXY(60.61, 118.87535, paths[3].get(0.5));
+        assertAngle(270, paths[3].get(0).heading());
+        assertAngle(270, paths[3].get(0.5).heading());
+        assertAngle(270, paths[3].endPose().heading());
+        assertXY(59.8174, 136.7026, paths[4].get(0));
         assertAngle(270, paths[4].get(0).heading());
         assertAngle(0, paths[4].endPose().heading());
     }
@@ -210,7 +210,7 @@ public class AutoTerciarioTest {
         assertEquals("A espera de coleta so comeca parado", 2, followed.size());
         velocity = Velocity.zero();
         runUntil(() -> follower.holding() && !follower.isBusy(), 10);
-        assertXY(46.6, 131, follower.poseAt(0));
+        assertXY(46.6, 120, follower.poseAt(0));
         tickMillis(1999);
         assertEquals(2, followed.size());
         assertTrue(flowerOpen);
@@ -247,7 +247,7 @@ public class AutoTerciarioTest {
         assertEquals(1, shotStarts.size());
         velocity = Velocity.zero();
         runUntil(() -> shotStarts.size() == 2, 40);
-        assertXY(59.8174, 136.7026, follower.poseAt(0));
+        assertXY(59.8174, 130.7026, follower.poseAt(0));
         finishShot(5, 1);
         assertEquals(1.0, Constants.foresightConfig.brakeAggression.get(), 1e-9);
 

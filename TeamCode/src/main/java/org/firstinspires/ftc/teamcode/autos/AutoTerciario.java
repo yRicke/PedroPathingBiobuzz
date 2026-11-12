@@ -45,7 +45,7 @@ public class AutoTerciario extends LinearOpMode {
     private final Pose prepColetaFlowerControl1 = poseFactory.of(67.8287, 116.669, 0);
     private final Pose coletaFlower = poseFactory.of(46.6, 120, 90);
     private final Pose posFlower = poseFactory.of(46.6, 110, 90);
-    private final Pose lancamento3 = poseFactory.of(59.8174, 130.7026, 200 );
+    private final Pose lancamento3 = poseFactory.of(59.8174, 130.7026, 270);
     private final Pose lancamento3Control1 = poseFactory.of(68.0113, 117.3994, 0);
     private final Pose estacionamentoStart = poseFactory.of(59.8174, 136.7026, 270);
     private final Pose estacionamento = poseFactory.of(10, 120, 0);
@@ -317,7 +317,7 @@ public class AutoTerciario extends LinearOpMode {
     }
 
     public Path retornolancamento3() {
-        return Paths.path(Paths.curve(posFlower, lancamento3Control1, lancamento3).reverseTangent());
+        return Paths.path(Paths.curve(posFlower, lancamento3Control1, lancamento3).constant(lancamento3));
     }
 
     public Path estacionamento() {

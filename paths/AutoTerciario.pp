@@ -113,8 +113,8 @@
             }
           ],
           "heading": {
-            "type": "tangential",
-            "reverse": true
+            "type": "constant",
+            "degrees": 270
           },
           "color": "#f28e2b",
           "locked": false,

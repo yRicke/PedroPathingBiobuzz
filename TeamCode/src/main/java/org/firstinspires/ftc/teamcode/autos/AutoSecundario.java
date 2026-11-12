@@ -59,7 +59,7 @@ public class AutoSecundario extends LinearOpMode {
     private final Pose point6 = poseFactory.of(48.5646, 128.8933, 90);
     private final Pose point7 = poseFactory.of(48.6154, 111.25, 90.1559);
     private final Pose point8Start = poseFactory.of(46.6154, 111.25, -90);
-    private final Pose point8 = poseFactory.of(21.1567, 126.6408, -36);
+    private final Pose point8 = poseFactory.of(21.1567, 126.6408, 270);
     //private final Pose point9 = poseFactory.of(60.4364, 119.4291, 89.4008);
     //private final Pose point10 = poseFactory.of(8.6851, 119.4314, -0.0025);
     private Follower follower;
@@ -360,7 +360,7 @@ public class AutoSecundario extends LinearOpMode {
     }
 
     public Path path8() {
-        return Paths.line(point8Start, point8).linear(point8Start, point8);
+        return Paths.line(point8Start, point8).constant(point8);
     }
 
     //public Path path9() {

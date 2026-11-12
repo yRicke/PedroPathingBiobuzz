@@ -347,7 +347,7 @@ public class AutoPrincipal extends LinearOpMode {
     public Path coletaflower() { return Paths.line(prepColetaFlower, coletaFlower).constant(coletaFlower); }
     public Path posflower() { return Paths.line(coletaFlower, posFlower).reverseTangent(); }
     public Path lancamento3() {
-        return Paths.curve(posFlower, lancamento3Control1, lancamento3).reverseTangent();
+        return Paths.curve(posFlower, lancamento3Control1, lancamento3).constant(lancamento3);
     }
     public Path estacionamento() {
         return Paths.curve(estacionamentoStart, estacionamentoControl1, estacionamento)

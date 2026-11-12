@@ -170,10 +170,9 @@ public class AutonomousSouthOutsideV3Test {
         assertAngle(90, paths[4].endPose().heading());
         assertAngle(90, paths[5].get(0.5).heading());
         assertAngle(90, paths[6].get(0.5).heading());
-        double reverseHeading = Math.atan2(147 - 120, 60 - 46.6) + Math.PI;
-        assertAngle(Math.toDegrees(reverseHeading), paths[7].get(0.5).heading());
-        double finalReverseHeading = Math.atan2(147 - 117.3994, 60 - 67.4635) + Math.PI;
-        assertAngle(Math.toDegrees(finalReverseHeading), paths[7].endPose().heading());
+        assertAngle(270, paths[7].get(0).heading());
+        assertAngle(270, paths[7].get(0.5).heading());
+        assertAngle(270, paths[7].endPose().heading());
         assertAngle(270, paths[8].get(0).heading());
         assertAngle(0, paths[8].endPose().heading());
     }

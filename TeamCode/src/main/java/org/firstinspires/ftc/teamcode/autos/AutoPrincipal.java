@@ -144,6 +144,7 @@ public class AutoPrincipal extends LinearOpMode {
         pathIndex = -1;
         shotNumber = 0;
         audienceCell = false;
+
         phase = Phase.WARMING;
         phaseStartedNanos = nanoClock.getAsLong();
         shotStatus = "Aquecendo para o lancamento inicial";
